@@ -4,6 +4,7 @@ import ai.codriverlabs.microvm.aws.lambdamicrovms.LambdaMicrovmsClient;
 import ai.codriverlabs.microvm.aws.lambdamicrovms.model.*;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.regions.Region;
 
 import java.util.List;
@@ -30,7 +31,9 @@ public class ImageBaseImagesCommand implements Runnable {
     @Override
     public void run() {
         try (LambdaMicrovmsClient awsClient = LambdaMicrovmsClient.builder()
-                .region(Region.of(region)).build()) {
+                .region(Region.of(region))
+                .httpClient(UrlConnectionHttpClient.create())
+                .build()) {
 
             if (imageArn != null) {
                 // List versions of a specific base image
