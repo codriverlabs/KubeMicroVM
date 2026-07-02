@@ -4,6 +4,7 @@ import ai.codriverlabs.microvm.operator.core.model.MicroVMReplicaSet;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMReplicaSetStatus;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import jakarta.inject.Inject;
+import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -25,7 +26,15 @@ import java.util.List;
                 ReplicaSetCommand.RsDescribeCommand.class,
                 ReplicaSetCommand.RsScaleCommand.class
         })
-public class ReplicaSetCommand {
+public class ReplicaSetCommand implements Runnable {
+
+    @CommandLine.Spec
+    CommandLine.Model.CommandSpec spec;
+
+    @Override
+    public void run() {
+        spec.commandLine().usage(System.out);
+    }
 
     @Command(name = "list", description = "List MicroVMReplicaSet resources", mixinStandardHelpOptions = true)
     public static class RsListCommand implements Runnable {

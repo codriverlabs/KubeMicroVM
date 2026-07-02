@@ -70,7 +70,7 @@ public class ExecCommand implements Runnable {
     public void run() {
         MicroVM vm = client.resources(MicroVM.class).inNamespace(namespace).withName(name).get();
         if (vm == null) {
-            System.err.printf("MicroVM '%s' not found%n", name); System.exit(1); return;
+            System.err.printf("MicroVM \"%s\" not found%n", name); System.exit(1); return;
         }
         if (vm.getStatus() == null || vm.getStatus().getMicroVmId() == null) {
             System.err.printf("MicroVM '%s' has no microvmId (state: %s)%n",

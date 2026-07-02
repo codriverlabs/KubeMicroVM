@@ -43,7 +43,7 @@ public class ImageUpdateCommand implements Runnable {
                 .inNamespace(namespace).withName(name).get();
 
             if (image == null) {
-                System.err.printf("MicroVMImage '%s' not found in namespace '%s'%n", name, namespace);
+                System.err.printf("Error: MicroVMImage \"%s\" not found in namespace \"%s\"%n", name, namespace);
                 System.exit(1);
                 return;
             }

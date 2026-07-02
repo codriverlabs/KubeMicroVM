@@ -1,6 +1,7 @@
 package ai.codriverlabs.microvm.operator.cli.commands;
 
 import io.quarkus.picocli.runtime.annotations.TopCommand;
+import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 /**
@@ -31,5 +32,13 @@ import picocli.CommandLine.Command;
         NetworkCommand.class
     }
 )
-public class MicroVMCommand {
+public class MicroVMCommand implements Runnable {
+
+    @CommandLine.Spec
+    CommandLine.Model.CommandSpec spec;
+
+    @Override
+    public void run() {
+        spec.commandLine().usage(System.out);
+    }
 }

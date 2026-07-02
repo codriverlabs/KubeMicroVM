@@ -7,26 +7,40 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import jakarta.inject.Inject;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 @Command(name = "describe", description = "Show details of a MicroVM image", mixinStandardHelpOptions = true)
 public class ImageDescribeCommand implements Runnable {
 
-    @Option(names = {"--name"}, required = true, description = "Name of the MicroVMImage")
-    String name;
+    @Parameters(index = "0", arity = "0..1", description = "Name of the MicroVMImage")
+    String namePos;
+
+    @Option(names = {"--name"}, description = "Name of the MicroVMImage")
+    String nameOpt;
 
     @Option(names = {"-n", "--namespace"}, defaultValue = "default", description = "Namespace")
     String namespace;
+
+    private String resolveName() {
+        String n = nameOpt != null ? nameOpt : namePos;
+        if (n == null || n.isBlank()) {
+            System.err.println("Error: name required — pass as positional arg or --name");
+            System.exit(1);
+        }
+        return n;
+    }
 
     @Inject
     KubernetesClient client;
 
     @Override
     public void run() {
+        String name = resolveName();
         MicroVMImage image = client.resources(MicroVMImage.class)
             .inNamespace(namespace).withName(name).get();
 
         if (image == null) {
-            System.err.printf("MicroVMImage '%s' not found in namespace '%s'%n", name, namespace);
+            System.err.printf("Error: MicroVMImage \"%s\" not found in namespace \"%s\"%n", name, namespace);
             System.exit(1);
             return;
         }

@@ -74,7 +74,7 @@ public class TokenCommand implements Runnable {
     public void run() {
         MicroVM vm = client.resources(MicroVM.class).inNamespace(namespace).withName(name).get();
         if (vm == null) {
-            System.err.printf("MicroVM '%s' not found in namespace '%s'%n", name, namespace);
+            System.err.printf("Error: MicroVM \"%s\" not found in namespace \"%s\"%n", name, namespace);
             System.exit(1); return;
         }
         if (vm.getStatus() == null || vm.getStatus().getMicroVmId() == null) {

@@ -3,6 +3,7 @@ package ai.codriverlabs.microvm.operator.cli.commands;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMNetwork;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import jakarta.inject.Inject;
+import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -22,7 +23,15 @@ import java.util.List;
 @Command(name = "network", description = "Inspect MicroVMNetwork resources",
         mixinStandardHelpOptions = true,
         subcommands = {NetworkCommand.NetworkListCommand.class, NetworkCommand.NetworkDescribeCommand.class})
-public class NetworkCommand {
+public class NetworkCommand implements Runnable {
+
+    @CommandLine.Spec
+    CommandLine.Model.CommandSpec spec;
+
+    @Override
+    public void run() {
+        spec.commandLine().usage(System.out);
+    }
 
     @Command(name = "list", description = "List MicroVMNetwork resources", mixinStandardHelpOptions = true)
     public static class NetworkListCommand implements Runnable {
@@ -89,7 +98,7 @@ public class NetworkCommand {
                     .inNamespace(namespace).withName(name).get();
 
             if (network == null) {
-                System.err.printf("MicroVMNetwork '%s' not found in namespace '%s'%n", name, namespace);
+                System.err.printf("Error: MicroVMNetwork \"%s\" not found in namespace \"%s\"%n", name, namespace);
                 System.exit(1);
                 return;
             }
