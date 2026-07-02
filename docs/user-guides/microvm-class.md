@@ -1,30 +1,29 @@
-# MicroVMClass — Runtime Profiles
+# User Guide: MicroVMClass
 
-## Overview
-
-`MicroVMClass` defines a named runtime profile (idle policy, networking, sizing) that platform
-admins create once and developers reference by name via `spec.className` on a `MicroVM`.
+`MicroVMClass` defines a named runtime profile — idle policy, networking connectors,
+and sizing — that platform admins create once and developers reference by name via
+`spec.className` on a `MicroVM`.
 
 This follows the Kubernetes `StorageClass` / `IngressClass` pattern:
-- Admins define what classes are available
+- Admins define what classes are available cluster-wide or per-namespace
 - Developers pick a class by name — no need to know the underlying ARNs or tuning values
-- `spec.className` is **optional** — MicroVMs without a class use their own spec values
+- `spec.className` is **optional** — MicroVMs without a class use their own spec values directly
 
-## Built-in Profiles (recommended starting point)
+---
 
-### `agentic-standard` — AI agents and interactive sessions
+## Creating a MicroVMClass
 
 ```yaml
 apiVersion: lambda.aws.amazon.com/v1alpha1
 kind: MicroVMClass
 metadata:
   name: agentic-standard
-  namespace: my-app
+  namespace: default
 spec:
-  description: "AI coding assistants, interactive dev environments — suspend when idle"
+  description: "AI coding assistants, interactive sessions"
   maxIdleDurationSeconds: 300        # suspend after 5 min idle
   suspendedDurationSeconds: 7200     # keep suspended for 2 hr, then terminate
-  autoResumeEnabled: true            # wake up automatically when traffic arrives
+  autoResumeEnabled: true            # wake on incoming traffic
   maximumDurationSeconds: 28800      # 8 hr hard cap
   ingressNetworkConnectors:
     - arn:aws:lambda:us-east-1:aws:network-connector:aws-network-connector:ALL_INGRESS
@@ -32,32 +31,41 @@ spec:
     - arn:aws:lambda:us-east-1:aws:network-connector:aws-network-connector:INTERNET_EGRESS
 ```
 
-### `batch-job` — CI/CD jobs, security scans, one-shot tasks
+---
+
+## Built-in Profiles (recommended starting points)
+
+### `agentic-standard` — AI agents and interactive sessions
+
+| Setting | Value |
+|---------|-------|
+| Idle suspension | 5 min |
+| Suspended TTL | 2 hr |
+| Auto-resume | ✅ |
+| Hard cap | 8 hr |
+| Ingress | ALL_INGRESS |
+| Egress | INTERNET_EGRESS |
+
+Best for: coding assistants, interactive dev environments, agentic AI workloads.
+
+### `batch-job` — CI/CD jobs, one-shot tasks
 
 ```yaml
-apiVersion: lambda.aws.amazon.com/v1alpha1
-kind: MicroVMClass
-metadata:
-  name: batch-job
-  namespace: my-app
 spec:
   description: "Run-to-completion jobs — no suspend, hard 1 hr cap"
   autoResumeEnabled: false
-  maximumDurationSeconds: 3600       # 1 hr max
+  maximumDurationSeconds: 3600
   ingressNetworkConnectors:
     - arn:aws:lambda:us-east-1:aws:network-connector:aws-network-connector:NO_INGRESS
   egressNetworkConnectors:
     - arn:aws:lambda:us-east-1:aws:network-connector:aws-network-connector:INTERNET_EGRESS
 ```
 
-### `vpc-agent` — Agents needing private VPC access
+Best for: security scans, build jobs, data pipelines.
+
+### `vpc-agent` — agents needing private VPC access
 
 ```yaml
-apiVersion: lambda.aws.amazon.com/v1alpha1
-kind: MicroVMClass
-metadata:
-  name: vpc-agent
-  namespace: my-app
 spec:
   description: "Agents that access RDS, ElastiCache, or internal APIs"
   maxIdleDurationSeconds: 300
@@ -66,72 +74,68 @@ spec:
   ingressNetworkConnectors:
     - arn:aws:lambda:us-east-1:aws:network-connector:aws-network-connector:ALL_INGRESS
   egressNetworkConnectors:
-    - arn:aws:lambda:us-east-1:123456789012:network-connector:my-vpc-connector  # customer-managed
+    - arn:aws:lambda:us-east-1:123456789012:network-connector:my-vpc-connector
 ```
+
+Best for: agents that query internal databases or private APIs.
+
+---
 
 ## Using a MicroVMClass
 
-Reference the class by `spec.className`:
+Reference by `spec.className`:
 
 ```yaml
 apiVersion: lambda.aws.amazon.com/v1alpha1
 kind: MicroVM
 metadata:
-  name: agent-session-abc123
+  name: agent-session-1
+  namespace: default
 spec:
   imageRef: my-agent-image
-  className: agentic-standard        # ← picks up idle policy + connectors
-  executionRoleArn: arn:aws:iam::123456789012:role/AgentRole
-  runHookPayload: '{"tenantId":"tenant-42","sessionId":"s-abc123"}'
+  className: agentic-standard    # ← picks up idle policy + connectors
+  desiredState: Running
 ```
 
-The mutating webhook resolves the class and injects its values at admission time.
-Fields explicitly set in the `MicroVM` spec always take precedence over class values.
+---
 
-## Override class values per-MicroVM
+## Field Precedence
 
-```yaml
-spec:
-  className: agentic-standard
-  maxIdleDurationSeconds: 60   # override: suspend faster for this VM
-  # all other fields from the class apply
-```
-
-## Field precedence
+Fields set explicitly on the `MicroVM` always win over the class:
 
 ```
 MicroVM spec field explicitly set  →  wins
 MicroVMClass spec field            →  applied if MicroVM field is null
 Global webhook default             →  applied if both are null
-                                      (maximumDurationSeconds=28800, autoResumeEnabled=true)
 ```
 
-## Without className (backward compatible)
-
-`className` is always optional. Existing MicroVMs without it continue to work exactly as before.
+Override a single field:
 
 ```yaml
 spec:
-  imageRef: my-image
-  # no className — spec values and global defaults used directly
-  maxIdleDurationSeconds: 900
-  autoResumeEnabled: true
+  className: agentic-standard
+  maxIdleDurationSeconds: 60    # override: suspend faster for this VM
 ```
 
-## Listing available classes
+---
+
+## Listing Available Classes
 
 ```bash
-kubectl get microvmclasses -n my-app
-# NAME               MAXIDLE   AUTORESUME   DESCRIPTION
-# agentic-standard   300       true         AI coding assistants...
-# batch-job          <none>    false        Run-to-completion jobs...
+kubectl get microvmclasses -n default
 ```
 
-## Cost implications
+The validating webhook checks that the referenced class exists in the same namespace
+before admitting a `MicroVM` create.
 
-| Class | Active time | Idle cost | Best for |
-|-------|-------------|-----------|----------|
-| `agentic-standard` | Pay while active | ~$0 when suspended | < 13% utilization |
-| `batch-job` | Pay for job duration | None (terminates) | Predictable jobs |
+---
 
-See [pricing comparison](../aws-microvms-official/01-overview.md) for detailed cost analysis.
+## Cost Implications
+
+| Class | Cost model | Best for |
+|-------|------------|----------|
+| `agentic-standard` | Pay while active, ~$0 when suspended | < 13% utilization |
+| `batch-job` | Pay for job duration only | Predictable run-to-completion |
+| `vpc-agent` | Pay while active, suspend when idle | Private network workloads |
+
+See [AWS Lambda MicroVMs pricing](../aws-microvms-official/01-overview.md) for details.
