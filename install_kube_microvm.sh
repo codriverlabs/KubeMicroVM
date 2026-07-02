@@ -43,11 +43,32 @@ CONFIG_DIR="${HOME}/.kube-microvm"
 CONFIG_FILE="${CONFIG_DIR}/config"
 
 # Resolved at runtime from GitHub Release or bundled in installer image
-VERSION="${KUBE_MICROVM_VERSION:-latest}"
+VERSION="${KUBE_MICROVM_VERSION:-}"
 GHCR_OPERATOR="ghcr.io/plasticity-of-cloud/kube-microvm-operator"
 GHCR_AGENT="ghcr.io/plasticity-of-cloud/microvm-auth-agent"
 GHCR_HELM="oci://ghcr.io/plasticity-of-cloud/helm"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Resolve version — prefer env var, then bundled VERSION file, then GitHub API
+resolve_version() {
+    [[ -n "$VERSION" ]] && return 0
+    # Check for bundled VERSION file (installer Docker image)
+    if [[ -f "${SCRIPT_DIR}/VERSION" ]]; then
+        VERSION=$(cat "${SCRIPT_DIR}/VERSION")
+        info "Version from bundle: $VERSION"
+        return 0
+    fi
+    # Query GitHub Releases API for latest
+    info "Resolving latest version from GitHub..."
+    VERSION=$(curl -fsSL \
+        "https://api.github.com/repos/plasticity-of-cloud/KubeMicroVM/releases/latest" \
+        2>/dev/null | grep '"tag_name"' | grep -oP 'v[\d.]+(-rc\d+)?' | head -1)
+    if [[ -z "$VERSION" ]]; then
+        error "Could not resolve version. Set KUBE_MICROVM_VERSION env var or pass bundled installer."
+        exit 1
+    fi
+    info "Latest version: $VERSION"
+}
 
 # ─── Colors ───────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
@@ -241,11 +262,11 @@ install_operator() {
     step "c. Installing kube-microvm-operator Helm chart"
 
     # Determine chart source
-    if [[ -f "${SCRIPT_DIR}/charts/kube-microvm-operator-${VERSION}.tar.gz" ]]; then
-        CHART="${SCRIPT_DIR}/charts/kube-microvm-operator-${VERSION}.tar.gz"
+    if [[ -f "${SCRIPT_DIR}/charts/kube-microvm-operator-${HELM_VERSION}.tar.gz" ]]; then
+        CHART="${SCRIPT_DIR}/charts/kube-microvm-operator-${HELM_VERSION}.tar.gz"
         info "Using bundled chart: $CHART"
     else
-        CHART="${GHCR_HELM}/kube-microvm-operator --version $VERSION"
+        CHART="${GHCR_HELM}/kube-microvm-operator --version $HELM_VERSION"
         info "Using GHCR chart: $CHART"
     fi
 
@@ -276,10 +297,10 @@ install_auth_agent() {
     AGENT_IMAGE="${GHCR_AGENT}:${VERSION}"
     [[ -n "$REGISTRY" ]] && AGENT_IMAGE="${REGISTRY}/plasticity-of-cloud/microvm-auth-agent:${VERSION}"
 
-    if [[ -f "${SCRIPT_DIR}/charts/microvm-auth-agent-${VERSION}.tar.gz" ]]; then
-        CHART="${SCRIPT_DIR}/charts/microvm-auth-agent-${VERSION}.tar.gz"
+    if [[ -f "${SCRIPT_DIR}/charts/microvm-auth-agent-${HELM_VERSION}.tar.gz" ]]; then
+        CHART="${SCRIPT_DIR}/charts/microvm-auth-agent-${HELM_VERSION}.tar.gz"
     else
-        CHART="${GHCR_HELM}/microvm-auth-agent --version $VERSION"
+        CHART="${GHCR_HELM}/microvm-auth-agent --version $HELM_VERSION"
     fi
 
     run "helm upgrade --install microvm-auth-agent $CHART \
@@ -302,13 +323,9 @@ install_cli() {
         info "Installing bundled binary: $BUNDLED"
         run "cp $BUNDLED $INSTALL_DIR/microvm"
     else
-        # Download from GitHub Release
+        # Download from GitHub Release — VERSION includes 'v' prefix (e.g. v1.0.0-rc3)
         info "Downloading microvm-linux-${ARCH_TAG} (version: ${VERSION})"
-        if [[ "$VERSION" == "latest" ]]; then
-            DOWNLOAD_URL="https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/microvm-linux-${ARCH_TAG}"
-        else
-            DOWNLOAD_URL="https://github.com/plasticity-of-cloud/KubeMicroVM/releases/download/${VERSION}/microvm-linux-${ARCH_TAG}"
-        fi
+        DOWNLOAD_URL="https://github.com/plasticity-of-cloud/KubeMicroVM/releases/download/${VERSION}/microvm-linux-${ARCH_TAG}"
         run "curl -fsSL $DOWNLOAD_URL -o $INSTALL_DIR/microvm"
     fi
 
@@ -376,9 +393,15 @@ validate() {
 # ─── Main ─────────────────────────────────────────────────────────────────────
 main() {
     echo ""
-    echo -e "${BOLD}KubeMicroVM Installer${NC} (version: ${VERSION})"
+    echo -e "${BOLD}KubeMicroVM Installer${NC} (version: ${VERSION:-resolving...})"
     echo "────────────────────────────────────────"
     $DRY_RUN && warn "DRY-RUN mode — no changes will be made"
+
+    resolve_version
+    # Helm chart version must not have 'v' prefix
+    HELM_VERSION="${VERSION#v}"
+
+    echo -e "${BOLD}KubeMicroVM Installer${NC} (version: ${VERSION})"
 
     load_config
     check_prerequisites
