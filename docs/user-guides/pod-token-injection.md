@@ -1,7 +1,10 @@
-# User Guide: Accessing MicroVMs from Pods
+# User Guide: Pod Token Injection (Sidecar)
 
-This guide explains how to call a MicroVM endpoint from a Kubernetes pod
-without embedding AWS credentials in your application.
+This guide explains how to access MicroVM endpoints from pods **without embedding
+AWS credentials** in your application, using automatic sidecar injection.
+
+> For full RBAC details see [rbac.md](rbac.md).
+> For manual token fetching (no sidecar) see the [CLI reference](cli-reference.md#microvm-token).
 
 ## How It Works
 

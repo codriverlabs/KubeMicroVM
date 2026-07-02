@@ -290,9 +290,14 @@ The `microvm-auth-agent` sidecar is injected automatically. Token is available a
 
 | Guide | Description |
 |-------|-------------|
-| [Quick Start](#quick-example) | Get a MicroVM running in 5 minutes |
+| [Quick Start](docs/user-guides/quick-start.md) | Get a MicroVM running in 5 minutes |
+| [RBAC](docs/user-guides/rbac.md) | All roles — IAM, Kubernetes, app SA setup |
 | [Pod Token Injection](docs/user-guides/pod-token-injection.md) | Auth tokens in pods without AWS credentials |
 | [MicroVMClass](docs/user-guides/microvm-class.md) | Runtime profiles for idle policy and networking |
+| [Networking](docs/user-guides/networking.md) | Networking modes, VPC egress, MicroVMNetwork |
+| [ReplicaSet](docs/user-guides/replicaset.md) | Scaling and managing VM pools |
+| [Drift & Auto-Suspend](docs/user-guides/drift-and-autosuspend.md) | Drift detection and idle policy |
+| [CLI Reference](docs/user-guides/cli-reference.md) | Complete `microvm` CLI reference |
 | [Namespace Watching](docs/design/namespace-watching.md) | Controlling which namespaces the operator manages |
 | [Token Injection Design](docs/design/token-injection.md) | Auth architecture and RBAC design |
 | [CLI Naming](docs/design/cli-naming.md) | `microvm` vs `kubectl microvm` |
