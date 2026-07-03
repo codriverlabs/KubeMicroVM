@@ -13,7 +13,10 @@ Get a MicroVM running in about 5 minutes.
 
 ## Prerequisites
 
-- EKS cluster with Pod Identity enabled
+- **Kubernetes cluster on AWS**, one of:
+  - **Amazon EKS** with [Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html) enabled (recommended)
+  - **Any Kubernetes distribution** on AWS with [IRSA](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) configured
+  - **[EKS-DX](https://eksdx.express)** — Kubernetes distribution with built-in EKS Pod Identity support
 - `kubectl` configured for your cluster
 - AWS credentials with permission to create IAM roles
 - `helm` 3.x
