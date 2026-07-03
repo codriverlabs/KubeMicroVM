@@ -32,8 +32,12 @@ This creates the IAM role, deploys the Helm chart, and installs the `microvm` CL
 Or manually with Helm:
 
 ```bash
+# Pin to a specific version (recommended — find latest at github.com/plasticity-of-cloud/KubeMicroVM/releases)
+CHART_VERSION=1.0.0-rc5   # replace with the version you want
+
 helm install kube-microvm-operator \
   oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator \
+  --version $CHART_VERSION \
   --namespace kube-microvm --create-namespace \
   --set app.envs.AWS_REGION=us-east-1
 

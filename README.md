@@ -79,9 +79,13 @@ curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/do
 ### Helm (manual)
 
 ```bash
+# Pin to a specific version (find latest at github.com/plasticity-of-cloud/KubeMicroVM/releases)
+CHART_VERSION=1.0.0-rc5   # replace with the version you want
+
 # EKS Pod Identity (recommended)
 helm install kube-microvm-operator \
   oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator \
+  --version $CHART_VERSION \
   --namespace kube-microvm --create-namespace \
   --set app.envs.AWS_REGION=us-east-1
 
