@@ -51,7 +51,6 @@ metadata:
   name: my-vpc-egress
   namespace: default
 spec:
-  vpcId: vpc-0abc123
   subnetIds:
     - subnet-0abc123
     - subnet-0def456
@@ -81,13 +80,18 @@ spec:
 
 ## No Egress (sandboxed)
 
-For fully isolated execution:
+> **Note**: MicroVMs have default internet egress. Omitting `egressNetworkConnectors`
+> does NOT block outbound traffic. To restrict egress, use a VPC network connector
+> (`MicroVMNetwork`) with subnets in a VPC that has no NAT Gateway or Internet Gateway.
+
+For isolated execution via VPC without internet:
 
 ```yaml
 spec:
+  networkRef: private-vpc-no-nat    # VPC connector with no NAT/IGW
   ingressNetworkConnectors:
     - "arn:aws:lambda:us-east-1:aws:network-connector:aws-network-connector:ALL_INGRESS"
-  # no egressNetworkConnectors — outbound blocked
+  # Egress restricted by VPC routing (no NAT/IGW)
 ```
 
 ---
