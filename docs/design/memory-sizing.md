@@ -16,7 +16,7 @@ images default to 2 GB / 1 vCPU.
 
 ## AWS API
 
-The `memory` parameter is set at **image creation time** (not run time):
+The `resources` parameter is set at **image creation time** (not run time):
 
 ```bash
 aws lambda-microvms create-microvm-image \
@@ -24,8 +24,10 @@ aws lambda-microvms create-microvm-image \
   --code-artifact uri=s3://bucket/app.zip \
   --base-image-arn arn:aws:lambda:us-east-1:aws:microvm-image:al2023-1 \
   --build-role-arn arn:aws:iam::123456789012:role/BuildRole \
-  --memory 4096    # <-- baseline memory in MB
+  --resources '[{"minimumMemoryInMiB": 4096}]'
 ```
+
+The CLI parameter is `--resources` containing a list (max 1 item) with `minimumMemoryInMiB`.
 
 ### Available sizes (baseline-peak model)
 
