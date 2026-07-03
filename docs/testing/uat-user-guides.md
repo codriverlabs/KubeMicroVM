@@ -175,19 +175,43 @@ Must pass before tagging `v1.0.0` GA.
 
 **Source**: `docs/user-guides/microvm-class.md`
 **Goal**: Class creation, inheritance, and field override work as documented.
+**Date**: 2026-07-03
+**Result**: ✅ PASS (3 bugs fixed)
+
+### Bugs found during walkthrough
+
+1. **MicroVMClass CRD missing from Helm chart** — JOSDK only auto-generates CRDs for resources
+   with reconcilers. MicroVMClass is a static lookup resource (no reconciler). Fixed: added
+   CRD manually in `operator-controller/src/main/helm/crds/`.
+
+2. **Mutating webhook MicroVMSpec deserialization failure** — `objectMapper.convertValue(
+   request.getObject(), MicroVM.class)` stored spec as String. Fixed: changed to
+   `objectMapper.treeToValue(objectMapper.valueToTree(request.getObject()), MicroVM.class)`.
+
+3. **Validating webhook checked phantom fields** — `validateMemory()` read
+   `getMaximumDurationSeconds()` as memoryMB, `validateVcpus()` read
+   `getMaxIdleDurationSeconds()` as vcpus. These fields don't exist in MicroVMSpec.
+   Fixed: removed bogus validations (Lambda MicroVMs don't expose memory/vcpu config).
+
+4. **MicroVMClass guide missing `suspendedDurationSeconds`** — AWS API requires it when
+   idle policy is set. Updated guide example to include it.
 
 ### Checklist
 
 | # | Step | Expected | Result |
 |---|------|----------|--------|
-| CLASS-01 | Create `MicroVMClass` with `maxIdleDurationSeconds: 60` and `autoResumeEnabled: true` | Class CR exists | ⬜ |
-| CLASS-02 | Create MicroVM with `className: my-class` | VM inherits idle policy from class | ⬜ |
-| CLASS-03 | `microvm describe my-vm` shows values from class | Idle policy visible in spec | ⬜ |
-| CLASS-04 | Create MicroVM with `className: my-class` + `maxIdleDurationSeconds: 300` (override) | VM uses 300s, not class value | ⬜ |
-| CLASS-05 | `kubectl get microvmclasses -n default` | Class listed | ⬜ |
-| CLASS-06 | Create MicroVM referencing non-existent class | Webhook rejects: `spec.className 'x' not found` | ⬜ |
+| CLASS-01 | Create `MicroVMClass` with idle policy | Class CR exists with printer columns | ✅ |
+| CLASS-02 | Create MicroVM with `className: agentic-standard` | VM inherits idle policy from class | ✅ (after fix) |
+| CLASS-03 | Spec shows values from class | `maxIdleDurationSeconds: 60`, `autoResumeEnabled: true`, etc. | ✅ (after fix) |
+| CLASS-04 | Create MicroVM with className + override `maxIdleDurationSeconds: 300` | VM uses 300, not class value 60 | ✅ |
+| CLASS-05 | `kubectl get microvmclasses -n default` | Class listed with Description, Idle, AutoResume columns | ✅ |
+| CLASS-06 | Create MicroVM referencing non-existent class | Webhook rejects: `spec.className 'x' not found` | ✅ |
 
 ### Notes
+
+- MicroVMClass has no reconciler — it's read by the mutating webhook at admission time
+- `suspendedDurationSeconds` is required by AWS when `maxIdleDurationSeconds` is set
+- User-set spec fields always take precedence over class defaults (merge, not override)
 
 ---
 

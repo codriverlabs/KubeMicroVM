@@ -122,7 +122,8 @@ public class MicroVMMutatingWebhook {
         List<String> patches = new ArrayList<>();
 
         try {
-            MicroVM microVM = objectMapper.convertValue(request.getObject(), MicroVM.class);
+            MicroVM microVM = objectMapper.treeToValue(
+                    objectMapper.valueToTree(request.getObject()), MicroVM.class);
             MicroVMSpec spec = microVM.getSpec();
 
             if (spec != null) {

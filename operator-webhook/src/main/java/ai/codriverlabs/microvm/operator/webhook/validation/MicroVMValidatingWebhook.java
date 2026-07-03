@@ -73,8 +73,6 @@ public class MicroVMValidatingWebhook {
             errors.add("spec is required");
             return errors;
         }
-        validateMemory(spec, errors);
-        validateVcpus(spec, errors);
         validateRuntime(spec, errors);
         validateTimeout(spec, errors);
         return errors;
@@ -121,8 +119,6 @@ public class MicroVMValidatingWebhook {
                 if (spec == null) {
                     errors.add("spec is required");
                 } else {
-                    validateMemory(spec, errors);
-                    validateVcpus(spec, errors);
                     validateRuntime(spec, errors);
                     validateTimeout(spec, errors);
                     validateNetworkRef(spec, request.getNamespace(), errors);
