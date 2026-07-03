@@ -80,7 +80,7 @@ curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/do
 
 ```bash
 # Pin to a specific version (find latest at github.com/plasticity-of-cloud/KubeMicroVM/releases)
-CHART_VERSION=1.0.0-rc5   # replace with the version you want
+CHART_VERSION=1.0.0   # replace with the version you want
 
 # EKS Pod Identity (recommended)
 helm install kube-microvm-operator \

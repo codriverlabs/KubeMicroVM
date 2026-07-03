@@ -33,7 +33,7 @@ Or manually with Helm:
 
 ```bash
 # Pin to a specific version (recommended — find latest at github.com/plasticity-of-cloud/KubeMicroVM/releases)
-CHART_VERSION=1.0.0-rc5   # replace with the version you want
+CHART_VERSION=1.0.0   # replace with the version you want
 
 helm install kube-microvm-operator \
   oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator \

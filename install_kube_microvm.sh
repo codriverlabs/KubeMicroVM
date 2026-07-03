@@ -323,7 +323,7 @@ install_cli() {
         info "Installing bundled binary: $BUNDLED"
         run "cp $BUNDLED $INSTALL_DIR/microvm"
     else
-        # Download from GitHub Release — VERSION includes 'v' prefix (e.g. v1.0.0-rc3)
+        # Download from GitHub Release — VERSION includes 'v' prefix (e.g. v1.0.0)
         info "Downloading microvm-linux-${ARCH_TAG} (version: ${VERSION})"
         DOWNLOAD_URL="https://github.com/plasticity-of-cloud/KubeMicroVM/releases/download/${VERSION}/microvm-linux-${ARCH_TAG}"
         run "curl -fsSL $DOWNLOAD_URL -o $INSTALL_DIR/microvm"
