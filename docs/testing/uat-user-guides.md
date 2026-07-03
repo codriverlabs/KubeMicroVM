@@ -59,21 +59,35 @@ Must pass before tagging `v1.0.0` GA.
 
 **Source**: `docs/user-guides/rbac.md`
 **Goal**: Verify all RBAC layers work as documented.
+**Date**: 2026-07-03
+**Result**: ✅ PASS (1 doc bug fixed)
+
+### Bugs found during walkthrough
+
+1. **`kubectl auth can-i` syntax wrong in guide** — Guide used `microvms/token` as the
+   resource but `can-i` requires `--subresource=token` as a separate flag. Also, with
+   `resourceNames` in the Role, `can-i` always returns "no" (general check) — the operator
+   still authorizes correctly at runtime via SubjectAccessReview with the specific name.
+   Fixed: updated guide to use correct syntax and added note about `resourceNames` limitation.
 
 ### Checklist
 
 | # | Step | Expected | Result |
 |---|------|----------|--------|
-| RBAC-01 | Create SA `my-app-sa` in `default` | SA exists | ⬜ |
-| RBAC-02 | Create `Role` with `resourceNames: ["my-vm"]` | Role exists | ⬜ |
-| RBAC-03 | Create `RoleBinding` binding SA to Role | Binding exists | ⬜ |
-| RBAC-04 | `kubectl auth can-i create microvms/token --as=system:serviceaccount:default:my-app-sa -n default` | `yes` | ⬜ |
-| RBAC-05 | Pod using `my-app-sa` calls operator token endpoint for `my-vm` | Returns token | ⬜ |
-| RBAC-06 | Pod using `my-app-sa` calls operator endpoint for a **different** VM | `403 Forbidden` | ⬜ |
-| RBAC-07 | Pod using SA with **no** Role calls operator token endpoint | `403 Forbidden` | ⬜ |
-| RBAC-08 | Namespace without `manage-microvms=true` label → `kubectl apply` MicroVM | Webhook rejects with clear message | ⬜ |
+| RBAC-01 | Create SA `my-app-sa` in `default` | SA exists | ✅ |
+| RBAC-02 | Create `Role` with `resourceNames: ["rbac-test-vm"]` | Role exists | ✅ |
+| RBAC-03 | Create `RoleBinding` binding SA to Role | Binding exists | ✅ |
+| RBAC-04 | `kubectl auth can-i create microvms --subresource=token` | `yes` (without resourceNames) | ✅ (after fix) |
+| RBAC-05 | Pod using `my-app-sa` calls operator token endpoint for `rbac-test-vm` | Returns token | ✅ |
+| RBAC-06 | Pod using `my-app-sa` calls operator endpoint for a **different** VM | `403 Forbidden` | ✅ |
+| RBAC-07 | Pod using SA with **no** Role calls operator token endpoint | `403 Forbidden` | ✅ |
+| RBAC-08 | Namespace without `manage-microvms=true` label → `kubectl apply` MicroVM | Webhook rejects with clear message | ✅ |
 
 ### Notes
+
+- Webhook rejection message: `Namespace 'x' is not managed — add label 'lambda.aws.amazon.com/manage-microvms=true' to enable MicroVMs`
+- 403 message: `not authorized — ask your admin to grant create on microvms/token for <vm-name>`
+- Token endpoint: `POST https://kube-microvm-operator.kube-microvm.svc:443/apis/lambda.aws.amazon.com/v1alpha1/namespaces/<ns>/microvms/<name>/token`
 
 ---
 

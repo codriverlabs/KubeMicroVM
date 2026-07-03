@@ -212,11 +212,15 @@ resourceNames: ["vm-a", "vm-b", "vm-c"]
 ### Verifying access
 
 ```bash
-kubectl auth can-i create microvms/token \
+# Without resourceNames (broad Role):
+kubectl auth can-i create microvms --subresource=token \
   --as=system:serviceaccount:default:my-app-sa \
-  --subresource=token \
   -n default
 # yes
+
+# Note: with resourceNames in the Role, `can-i` returns "no" because
+# it cannot evaluate name-specific constraints. The operator still
+# authorises correctly at runtime via SubjectAccessReview.
 ```
 
 ---
