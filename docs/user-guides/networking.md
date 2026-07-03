@@ -2,6 +2,11 @@
 
 KubeMicroVM supports three networking modes for MicroVMs.
 
+> **Replace throughout this guide**:
+> - `123456789012` → your AWS account ID
+> - `vpc-0abc123`, `subnet-0abc123`, `sg-0abc123` → your actual VPC/subnet/SG IDs
+> - `us-east-1` → your AWS region
+
 ## Modes
 
 | Mode | Ingress | Egress | Use case |

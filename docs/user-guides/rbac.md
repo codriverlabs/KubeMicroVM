@@ -3,6 +3,11 @@
 KubeMicroVM uses Kubernetes RBAC at several layers. This guide explains every
 role in the system, who needs what permissions, and how to set it up.
 
+> **Replace throughout this guide**:
+> - `123456789012` → your AWS account ID (`aws sts get-caller-identity --query Account --output text`)
+> - `my-cluster` → your EKS cluster name
+> - `us-east-1` → your AWS region
+
 ---
 
 ## Overview

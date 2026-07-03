@@ -2,6 +2,15 @@
 
 Get a MicroVM running in about 5 minutes.
 
+> **Before you start**: Replace the following placeholders throughout this guide:
+>
+> | Placeholder | Replace with |
+> |-------------|-------------|
+> | `123456789012` | Your 12-digit AWS account ID (`aws sts get-caller-identity --query Account --output text`) |
+> | `my-cluster` | Your EKS cluster name |
+> | `my-bucket` | Your S3 bucket name |
+> | `us-east-1` | Your AWS region |
+
 ## Prerequisites
 
 - EKS cluster with Pod Identity enabled

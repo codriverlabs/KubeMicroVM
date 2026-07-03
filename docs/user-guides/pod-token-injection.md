@@ -3,6 +3,11 @@
 This guide explains how to access MicroVM endpoints from pods **without embedding
 AWS credentials** in your application, using automatic sidecar injection.
 
+> **Replace throughout this guide**:
+> - `my-vm` → your MicroVM name
+> - `my-app-sa` → your application's ServiceAccount name
+> - `default` → your namespace
+
 > For full RBAC details see [rbac.md](rbac.md).
 > For manual token fetching (no sidecar) see the [CLI reference](cli-reference.md#microvm-token).
 

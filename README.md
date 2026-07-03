@@ -134,6 +134,8 @@ complete CloudFormation template.
 
 ## Quick Example
 
+> Replace `123456789012` with your AWS account ID and `my-bucket` with your S3 bucket name.
+
 ```yaml
 # 1. Build a MicroVM image from your S3 source
 apiVersion: lambda.aws.amazon.com/v1alpha1
