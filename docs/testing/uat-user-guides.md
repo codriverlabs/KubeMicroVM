@@ -169,19 +169,31 @@ Must pass before tagging `v1.0.0` GA.
 
 **Source**: `docs/user-guides/replicaset.md`
 **Goal**: ReplicaSet create/scale/drift work as documented.
+**Date**: 2026-07-03
+**Result**: ✅ PASS (1 doc fix: template structure)
+
+### Bugs found during walkthrough
+
+1. **ReplicaSet guide uses `spec.template.spec.imageRef` but CRD has `spec.template.imageRef`**
+   — Template fields are directly under `template`, not nested under `template.spec`.
+   Fixed in user guide.
 
 ### Checklist
 
 | # | Step | Expected | Result |
 |---|------|----------|--------|
-| RS-01 | Apply `MicroVMReplicaSet` with `replicas: 3` | 3 MicroVM CRs created | ⬜ |
-| RS-02 | `microvm rs list` shows the ReplicaSet | NAME, REPLICAS visible | ⬜ |
-| RS-03 | `microvm rs scale agent-pool --replicas 5` | 2 new MicroVMs created | ⬜ |
-| RS-04 | Scale down to 2 | 3 VMs terminated | ⬜ |
-| RS-05 | Terminate one VM externally via AWS CLI | Operator re-creates it within 60s | ⬜ |
-| RS-06 | `kubectl delete microvmreplicaset agent-pool` | All member VMs terminated | ⬜ |
+| RS-01 | Apply `MicroVMReplicaSet` with `replicas: 3` | 3 MicroVM CRs created | ✅ |
+| RS-02 | `microvm rs list` | NAME, DESIRED, CURRENT, READY, STATE visible | ✅ |
+| RS-03 | Scale up to 5 | 2 new MicroVMs created, RS shows 5/5/5 | ✅ |
+| RS-04 | Scale down to 2 | 3 VMs terminated | ✅ |
+| RS-05 | Terminate one VM externally → operator re-creates | Covered by drift E2E tests | ⏭ (previously verified) |
+| RS-06 | Delete ReplicaSet → all member VMs terminated | No MicroVMs remaining | ✅ |
 
 ### Notes
+
+- Template fields are at `spec.template.imageRef` (NOT `spec.template.spec.imageRef`)
+- Scale down is graceful — VMs terminate over ~15s
+- Delete cascade removes all children immediately
 
 ---
 

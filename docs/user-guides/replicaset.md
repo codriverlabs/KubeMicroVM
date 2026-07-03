@@ -14,12 +14,10 @@ metadata:
 spec:
   replicas: 3
   template:
-    spec:
-      imageRef: my-agent-image
-      className: agentic-standard
-      desiredState: Running
-      ingressNetworkConnectors:
-        - "arn:aws:lambda:us-east-1:aws:network-connector:aws-network-connector:ALL_INGRESS"
+    imageRef: my-agent-image
+    className: agentic-standard
+    maxIdleDurationSeconds: 900
+    suspendedDurationSeconds: 1800
 ```
 
 ```bash
