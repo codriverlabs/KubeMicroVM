@@ -18,6 +18,10 @@ public class MicroVMImageStatus {
     private String latestVersionStateReason;
     private List<MicroVMImageVersionInfo> versions = new ArrayList<>();
     private Long observedGeneration;
+    /** Effective memory size in MiB (from spec or AWS default). */
+    private Integer memorySizeMiB;
+    /** Human-readable compute profile, e.g. "4096 MiB / 2 vCPU (peak: 16384 MiB / 8 vCPU)" */
+    private String computeProfile;
 
     public String getImageState() { return imageState; }
     public void setImageState(String imageState) { this.imageState = imageState; }
@@ -42,4 +46,10 @@ public class MicroVMImageStatus {
 
     public Long getObservedGeneration() { return observedGeneration; }
     public void setObservedGeneration(Long observedGeneration) { this.observedGeneration = observedGeneration; }
+
+    public Integer getMemorySizeMiB() { return memorySizeMiB; }
+    public void setMemorySizeMiB(Integer memorySizeMiB) { this.memorySizeMiB = memorySizeMiB; }
+
+    public String getComputeProfile() { return computeProfile; }
+    public void setComputeProfile(String computeProfile) { this.computeProfile = computeProfile; }
 }

@@ -2,6 +2,8 @@ package ai.codriverlabs.microvm.operator.webhook.validation;
 
 
 import ai.codriverlabs.microvm.operator.core.model.MicroVM;
+import ai.codriverlabs.microvm.operator.core.model.MicroVMImage;
+import ai.codriverlabs.microvm.operator.core.model.MicroVMImageSpec;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMNetwork;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMSpec;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -123,6 +125,17 @@ public class MicroVMValidatingWebhook {
                     validateTimeout(spec, errors);
                     validateNetworkRef(spec, request.getNamespace(), errors);
                     validateClassName(spec, request.getNamespace(), errors);
+                }
+            } else if ("microvmimages".equals(resource)) {
+                Object rawObject = request.getObject();
+                MicroVMImage image = objectMapper.convertValue(rawObject, MicroVMImage.class);
+                if (image.getSpec() != null) {
+                    validateMemorySizeMiB(image.getSpec(), errors);
+                    // Immutability check on UPDATE
+                    if ("UPDATE".equals(request.getOperation()) && request.getOldObject() != null) {
+                        MicroVMImage oldImage = objectMapper.convertValue(request.getOldObject(), MicroVMImage.class);
+                        validateMemoryImmutability(oldImage.getSpec(), image.getSpec(), errors);
+                    }
                 }
             }
 
@@ -275,5 +288,28 @@ public class MicroVMValidatingWebhook {
         AdmissionReview responseReview = new AdmissionReview();
         responseReview.setResponse(response);
         return responseReview;
+    }
+
+    // --- MicroVMImage validation ---
+
+    private static final java.util.Set<Integer> ALLOWED_MEMORY_SIZES =
+            java.util.Set.of(512, 1024, 2048, 4096, 8192);
+
+    void validateMemorySizeMiB(MicroVMImageSpec spec, List<String> errors) {
+        Integer memory = spec.getMemorySizeMiB();
+        if (memory != null && !ALLOWED_MEMORY_SIZES.contains(memory)) {
+            errors.add(String.format(
+                    "spec.memorySizeMiB must be one of %s, got %d",
+                    ALLOWED_MEMORY_SIZES, memory));
+        }
+    }
+
+    void validateMemoryImmutability(MicroVMImageSpec oldSpec, MicroVMImageSpec newSpec, List<String> errors) {
+        if (oldSpec == null || newSpec == null) return;
+        Integer oldMemory = oldSpec.getMemorySizeMiB();
+        Integer newMemory = newSpec.getMemorySizeMiB();
+        if (oldMemory != null && newMemory != null && !oldMemory.equals(newMemory)) {
+            errors.add("spec.memorySizeMiB is immutable after image creation");
+        }
     }
 }

@@ -11,6 +11,8 @@ public class MicroVMImageSpec {
     private Integer buildTimeoutSeconds;
     private Boolean autoActivate;
     private String region;
+    /** Baseline memory in MiB. Valid: 512, 1024, 2048, 4096, 8192. Omit for AWS default (2048). */
+    private Integer memorySizeMiB;
 
     public MicroVMImageSource getSource() { return source; }
     public void setSource(MicroVMImageSource source) { this.source = source; }
@@ -29,4 +31,7 @@ public class MicroVMImageSpec {
 
     public String getRegion() { return region; }
     public void setRegion(String region) { this.region = region; }
+
+    public Integer getMemorySizeMiB() { return memorySizeMiB; }
+    public void setMemorySizeMiB(Integer memorySizeMiB) { this.memorySizeMiB = memorySizeMiB; }
 }

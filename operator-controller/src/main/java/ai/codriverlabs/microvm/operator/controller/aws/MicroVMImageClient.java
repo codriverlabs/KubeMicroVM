@@ -33,12 +33,24 @@ public class MicroVMImageClient {
 
     public CompletableFuture<CreateMicrovmImageResponse> createImage(
             String name, String s3Uri, String baseImageArn, String buildRoleArn) {
-        return sdk.createMicrovmImage(CreateMicrovmImageRequest.builder()
+        return createImage(name, s3Uri, baseImageArn, buildRoleArn, null);
+    }
+
+    public CompletableFuture<CreateMicrovmImageResponse> createImage(
+            String name, String s3Uri, String baseImageArn, String buildRoleArn,
+            Integer memorySizeMiB) {
+        var builder = CreateMicrovmImageRequest.builder()
                 .name(name)
                 .codeArtifact(CodeArtifact.fromUri(s3Uri))
                 .baseImageArn(baseImageArn)
-                .buildRoleArn(buildRoleArn)
-                .build());
+                .buildRoleArn(buildRoleArn);
+        if (memorySizeMiB != null) {
+            builder.resources(List.of(
+                    Resources.builder()
+                            .minimumMemoryInMiB(memorySizeMiB)
+                            .build()));
+        }
+        return sdk.createMicrovmImage(builder.build());
     }
 
     public CompletableFuture<UpdateMicrovmImageResponse> updateImage(

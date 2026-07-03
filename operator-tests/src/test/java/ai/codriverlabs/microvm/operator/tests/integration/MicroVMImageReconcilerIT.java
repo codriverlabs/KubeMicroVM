@@ -49,7 +49,7 @@ class MicroVMImageReconcilerIT {
                 .imageVersion("1.0")
                 .state(MicrovmImageState.CREATING)
                 .build();
-        when(mockImageClient.createImage(eq("hello-node"), anyString(), anyString(), anyString()))
+        when(mockImageClient.createImage(eq("hello-node"), anyString(), anyString(), anyString(), any()))
                 .thenReturn(CompletableFuture.completedFuture(createResp));
 
         var ctx = mockContext();
@@ -63,7 +63,7 @@ class MicroVMImageReconcilerIT {
         assertEquals("1.0", image.getStatus().getLatestVersion());
         assertEquals("PENDING", image.getStatus().getLatestVersionState());
         verify(mockImageClient).createImage(eq("hello-node"),
-                eq("s3://test-bucket/test/app.zip"), anyString(), anyString());
+                eq("s3://test-bucket/test/app.zip"), anyString(), anyString(), any());
     }
 
     @Test
@@ -97,7 +97,7 @@ class MicroVMImageReconcilerIT {
         assertTrue(result.isPatchStatus());
         assertEquals("CREATING", image.getStatus().getImageState());
         assertEquals("IN_PROGRESS", image.getStatus().getLatestVersionState());
-        verify(mockImageClient, never()).createImage(any(), any(), any(), any());
+        verify(mockImageClient, never()).createImage(any(), any(), any(), any(), any());
     }
 
     @Test

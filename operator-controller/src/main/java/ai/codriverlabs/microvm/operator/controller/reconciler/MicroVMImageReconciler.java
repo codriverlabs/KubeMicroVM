@@ -47,7 +47,8 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
                 String s3Uri = "s3://" + spec.getSource().getS3Bucket() + "/" + spec.getSource().getS3Key();
                 LOG.infof("Creating image %s from %s", name, s3Uri);
                 var response = imageClient.createImage(
-                        name, s3Uri, spec.getBaseImageArn(), spec.getBuildRoleArn())
+                        name, s3Uri, spec.getBaseImageArn(), spec.getBuildRoleArn(),
+                        spec.getMemorySizeMiB())
                         .get(TIMEOUT_S, TimeUnit.SECONDS);
 
                 status.setImageArn(response.imageArn());
@@ -55,7 +56,10 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
                 status.setLatestVersion(response.imageVersion());
                 status.setLatestVersionState(MicrovmImageVersionState.PENDING.toString());
                 status.setObservedGeneration(resource.getMetadata().getGeneration());
-                LOG.infof("Image %s created: arn=%s state=%s", name, response.imageArn(), response.stateAsString());
+                updateMemoryStatus(status, spec.getMemorySizeMiB());
+                LOG.infof("Image %s created: arn=%s state=%s memory=%s",
+                        name, response.imageArn(), response.stateAsString(),
+                        spec.getMemorySizeMiB() != null ? spec.getMemorySizeMiB() + " MiB" : "default");
                 return UpdateControl.patchStatus(resource).rescheduleAfter(POLL_INTERVAL);
             }
 
@@ -166,5 +170,19 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
             resource.setStatus(new MicroVMImageStatus());
         }
         return resource.getStatus();
+    }
+
+    private void updateMemoryStatus(MicroVMImageStatus status, Integer memorySizeMiB) {
+        int effectiveMemory = memorySizeMiB != null ? memorySizeMiB : 2048;
+        status.setMemorySizeMiB(effectiveMemory);
+        status.setComputeProfile(buildComputeProfile(effectiveMemory));
+    }
+
+    static String buildComputeProfile(int memoryMiB) {
+        double vcpu = memoryMiB / 2048.0;
+        int peakMemory = memoryMiB * 4;
+        double peakVcpu = vcpu * 4;
+        return String.format("%d MiB / %.2g vCPU (peak: %d MiB / %.2g vCPU)",
+                memoryMiB, vcpu, peakMemory, peakVcpu);
     }
 }
