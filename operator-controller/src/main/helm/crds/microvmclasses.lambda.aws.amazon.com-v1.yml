@@ -1,0 +1,59 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: microvmclasses.lambda.aws.amazon.com
+spec:
+  group: lambda.aws.amazon.com
+  names:
+    kind: MicroVMClass
+    singular: microvmclass
+    plural: microvmclasses
+    shortNames:
+      - vmclass
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                maxIdleDurationSeconds:
+                  type: integer
+                  description: "Seconds without traffic before Lambda auto-suspends the MicroVM. Max 28800."
+                suspendedDurationSeconds:
+                  type: integer
+                  description: "Seconds in SUSPENDED state before Lambda auto-terminates."
+                autoResumeEnabled:
+                  type: boolean
+                  description: "When true, a suspended MicroVM auto-resumes when traffic arrives."
+                maximumDurationSeconds:
+                  type: integer
+                  description: "Hard cap on total MicroVM lifetime. Max 28800 (8h)."
+                ingressNetworkConnectors:
+                  type: array
+                  items:
+                    type: string
+                  description: "Inbound connector ARNs (e.g. ALL_INGRESS)."
+                egressNetworkConnectors:
+                  type: array
+                  items:
+                    type: string
+                  description: "Outbound connector ARNs (e.g. INTERNET_EGRESS or VPC connector)."
+                description:
+                  type: string
+                  description: "Human-readable description of this class."
+      additionalPrinterColumns:
+        - name: Description
+          type: string
+          jsonPath: .spec.description
+        - name: Idle
+          type: integer
+          jsonPath: .spec.maxIdleDurationSeconds
+        - name: AutoResume
+          type: boolean
+          jsonPath: .spec.autoResumeEnabled
