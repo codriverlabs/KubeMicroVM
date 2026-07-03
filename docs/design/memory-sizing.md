@@ -168,6 +168,35 @@ On UPDATE admission:
 
 ---
 
+## Documentation & UAT
+
+### User guide
+
+Add `docs/user-guides/memory-sizing.md` covering:
+- What memory sizing controls (baseline compute, vCPU proportional, 4x burst)
+- Available sizes table
+- How to set it in MicroVMImage spec
+- Default behaviour (omit = AWS default 2048 MiB)
+- Immutability (cannot change after creation — must create new image)
+- How to check current size (`microvm image describe`, `kubectl get microvmimages`)
+- Example: choosing the right size for your workload
+
+### UAT
+
+Add test cases to `docs/testing/uat-user-guides.md` under a new **UG-MEM** section:
+
+| # | Step | Expected |
+|---|------|----------|
+| MEM-01 | Create MicroVMImage with `memorySizeMiB: 4096` | Image created, status shows 4096 MiB |
+| MEM-02 | Create MicroVMImage without memorySizeMiB | Image created, status shows 2048 (AWS default) |
+| MEM-03 | Create MicroVMImage with `memorySizeMiB: 999` | Webhook rejects |
+| MEM-04 | Update existing image changing memorySizeMiB | Webhook rejects (immutable) |
+| MEM-05 | `microvm image describe` shows memory/compute profile | "4096 MiB / 2 vCPU" visible |
+| MEM-06 | `kubectl get microvmimages` shows MEMORY column | Column populated |
+| MEM-07 | Run MicroVM from 4096 MiB image, verify it works | VM runs, endpoint responds |
+
+---
+
 ## User-facing example
 
 ```yaml
