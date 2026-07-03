@@ -245,18 +245,25 @@ Must pass before tagging `v1.0.0` GA.
 
 **Source**: `docs/user-guides/drift-and-autosuspend.md`
 **Goal**: Drift detection and idle policy work as documented.
+**Date**: 2026-07-03
+**Result**: ✅ PASS
 
 ### Checklist
 
 | # | Step | Expected | Result |
 |---|------|----------|--------|
-| DRIFT-01 | Get VM ID, terminate via `aws lambda-microvms terminate-microvm` | VM transitions to `Pending` | ⬜ |
-| DRIFT-02 | Wait 60s — operator re-creates VM | New VM-ID, state → `Running` | ⬜ |
-| AUTO-01 | Create VM with `maxIdleDurationSeconds: 60`, wait 90s idle | `status.state` → `Suspended` | ⬜ |
-| AUTO-02 | Send request with `autoResumeEnabled: true` | Response received, state → `Running` | ⬜ |
-| AUTO-03 | Operator does NOT fight idle policy | No spurious `RESUME` calls in operator logs | ⬜ |
+| DRIFT-01 | Terminate VM externally via `aws lambda-microvms terminate-microvm` | Operator detects, state → Pending | ✅ (~60s detection) |
+| DRIFT-02 | Wait for operator re-creation | New VM-ID, state → Running | ✅ (microvm-f967... replaced microvm-6153...) |
+| AUTO-01 | VM with `maxIdleDurationSeconds: 60`, wait 90s idle | state → Suspended | ✅ (~150s total from creation) |
+| AUTO-02 | Send request with `autoResumeEnabled: true` | Response received, state → Running | ✅ (`{"status":"ok"}`) |
+| AUTO-03 | Operator does NOT fight idle policy | No spurious RESUME calls in logs | ✅ |
 
 ### Notes
+
+- Drift detection cycle: ~60s (one reconcile interval)
+- Auto-suspend timing: AWS suspends after `maxIdleDurationSeconds` of no traffic through endpoint
+- Auto-resume: AWS handles transparently on incoming traffic; operator updates CR status on next reconcile
+- Operator correctly recognizes Suspended state and doesn't issue RESUME calls
 
 ---
 
