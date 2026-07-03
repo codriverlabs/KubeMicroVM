@@ -34,12 +34,6 @@ public class MicroVMValidatingWebhook {
 
     private static final Logger LOG = Logger.getLogger(MicroVMValidatingWebhook.class);
     private static final int MIN_MEMORY_MB = 128;
-    private static final int MAX_MEMORY_MB = 10240;
-    private static final int MEMORY_ALIGNMENT = 64;
-    private static final int MIN_VCPUS = 1;
-    private static final int MAX_VCPUS = 6;
-    private static final int MIN_TIMEOUT = 1;
-    private static final int MAX_TIMEOUT = 900;
     private static final String MANAGE_VMS_ANNOTATION = "lambda.aws.amazon.com/manage-microvms";
     private static final String QUOTA_NAME = "count/microvms.lambda.aws.amazon.com";
 
@@ -75,8 +69,9 @@ public class MicroVMValidatingWebhook {
             errors.add("spec is required");
             return errors;
         }
-        validateRuntime(spec, errors);
-        validateTimeout(spec, errors);
+        if (spec.getImageRef() == null || spec.getImageRef().isBlank()) {
+            errors.add("spec.imageRef is required");
+        }
         return errors;
     }
 
@@ -121,8 +116,9 @@ public class MicroVMValidatingWebhook {
                 if (spec == null) {
                     errors.add("spec is required");
                 } else {
-                    validateRuntime(spec, errors);
-                    validateTimeout(spec, errors);
+                    if (spec.getImageRef() == null || spec.getImageRef().isBlank()) {
+                        errors.add("spec.imageRef is required");
+                    }
                     validateNetworkRef(spec, request.getNamespace(), errors);
                     validateClassName(spec, request.getNamespace(), errors);
                 }
@@ -153,53 +149,6 @@ public class MicroVMValidatingWebhook {
         return buildResponse(review, errors);
     }
 
-    void validateMemory(MicroVMSpec spec, List<String> errors) {
-        Integer memoryMB = spec.getMaximumDurationSeconds();
-        if (memoryMB == null) return; // Will be set by mutation webhook default
-
-        if (memoryMB < MIN_MEMORY_MB || memoryMB > MAX_MEMORY_MB) {
-            errors.add(String.format("spec.memoryMB must be between %d and %d, got %d",
-                MIN_MEMORY_MB, MAX_MEMORY_MB, memoryMB));
-        }
-        if (memoryMB % MEMORY_ALIGNMENT != 0) {
-            errors.add(String.format("spec.memoryMB must be a multiple of %d, got %d",
-                MEMORY_ALIGNMENT, memoryMB));
-        }
-    }
-
-    void validateVcpus(MicroVMSpec spec, List<String> errors) {
-        Integer vcpus = spec.getMaxIdleDurationSeconds();
-        if (vcpus == null) return;
-
-        if (vcpus < MIN_VCPUS || vcpus > MAX_VCPUS) {
-            errors.add(String.format("spec.vcpus must be between %d and %d, got %d",
-                MIN_VCPUS, MAX_VCPUS, vcpus));
-        }
-    }
-
-    void validateRuntime(MicroVMSpec spec, List<String> errors) {
-        if (spec.getImageRef() == null) {
-            errors.add("spec.imageRef is required");
-            return;
-        }
-        // Runtime enum already validated by Jackson deserialization
-        // But verify explicitly for safety
-        try {
-            spec.getImageRef();
-        } catch (IllegalArgumentException e) {
-            errors.add("spec.runtime must be one of: java21, python3.12, nodejs20, custom");
-        }
-    }
-
-    void validateTimeout(MicroVMSpec spec, List<String> errors) {
-        Integer timeout = spec.getSuspendedDurationSeconds();
-        if (timeout == null) return; // Will be set by mutation webhook default
-
-        if (timeout < MIN_TIMEOUT || timeout > MAX_TIMEOUT) {
-            errors.add(String.format("spec.timeoutSeconds must be between %d and %d, got %d",
-                MIN_TIMEOUT, MAX_TIMEOUT, timeout));
-        }
-    }
 
     void validateNetworkRef(MicroVMSpec spec, String namespace, List<String> errors) {
         String networkRef = spec.getNetworkRef();

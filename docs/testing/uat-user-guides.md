@@ -247,3 +247,37 @@ Must pass before tagging `v1.0.0` GA.
 | Drift & Auto-Suspend | ⬜ | |
 
 **GA release `v1.0.0` requires all guides signed off.**
+
+---
+
+## UG-MEM: Memory Sizing Guide
+
+**Source**: `docs/user-guides/memory-sizing.md`
+**Goal**: Memory sizing creation, validation, immutability, and VM execution work as documented.
+**Date**: 2026-07-03
+**Result**: ✅ PASS (1 pre-existing bug fixed during walkthrough)
+
+### Bugs found during walkthrough
+
+1. **Phantom `validateTimeout` blocked `suspendedDurationSeconds > 900`** — Dead code from
+   Lambda Function template treated `suspendedDurationSeconds` as "timeout" with max 900s.
+   MicroVMs allow up to 28800s. Fixed: removed all phantom validations (validateMemory,
+   validateVcpus, validateRuntime, validateTimeout) and their constants.
+
+### Checklist
+
+| # | Step | Expected | Result |
+|---|------|----------|--------|
+| MEM-01 | Create MicroVMImage with `memorySizeMiB: 4096` | Status: 4096 MiB, compute profile correct | ✅ |
+| MEM-02 | Create MicroVMImage without memorySizeMiB | Status: 2048 MiB (AWS default) | ✅ |
+| MEM-03 | Create MicroVMImage with `memorySizeMiB: 999` | Webhook rejects: "must be one of [512, 1024, 2048, 4096, 8192]" | ✅ |
+| MEM-04 | Update existing image changing memorySizeMiB | Webhook rejects: "immutable after image creation" | ✅ |
+| MEM-05 | `microvm image describe` | Shows "Memory: 4096 MiB" + "Compute: 4096 MiB / 2.0 vCPU" | ✅ |
+| MEM-06 | `kubectl get microvmimages` MEMORY column | Deferred (printer column annotation not available) | ⏭ |
+| MEM-07 | Run MicroVM from 4096 MiB image, call endpoint | `{"status":"ok"}` | ✅ |
+
+### Notes
+
+- CRD must be updated on cluster before `memorySizeMiB` is accepted (strict decoding)
+- Endpoint URL takes ~30s to populate after VM reaches Running state
+- AWS requires `maxIdleDurationSeconds` + `suspendedDurationSeconds` when idle policy is configured
