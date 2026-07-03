@@ -37,7 +37,6 @@ When deploying to the EKS test cluster during development:
    helm install kube-microvm-operator <chart> -n kube-microvm \
      --set app.image=<ecr-image> \
      --set app.envs.AWS_REGION=us-east-1 \
-     --set app.envs.AWS_MICROVM_ENDPOINT=https://lambda-microvm.us-east-1.on.aws \
      --timeout 4m --wait
    ```
 
@@ -141,4 +140,7 @@ The operator running in private subnets requires these VPC endpoints:
 - `com.amazonaws.<region>.ecr.api` + `com.amazonaws.<region>.ecr.dkr` — image pulls
 - `com.amazonaws.<region>.s3` (Gateway) — ECR layers + S3 code artifacts
 
-The `aws.microvm.endpoint` config property overrides the SDK endpoint to use the VPC endpoint DNS.
+**Do NOT set `AWS_MICROVM_ENDPOINT`** — the SDK resolves the service endpoint automatically.
+The VPC endpoint's private DNS maps the service hostname to the VPCE IPs transparently.
+Setting an explicit endpoint override causes TLS certificate mismatches because the VPCE
+cert SANs don't include the `.on.aws` hostname.
