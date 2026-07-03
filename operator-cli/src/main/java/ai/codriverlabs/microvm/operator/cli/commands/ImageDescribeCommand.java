@@ -59,12 +59,18 @@ public class ImageDescribeCommand implements Runnable {
             image.getSpec().getBuildTimeoutSeconds() != null ? image.getSpec().getBuildTimeoutSeconds() : 600);
         System.out.printf("Auto-Activate:  %s%n",
             image.getSpec().getAutoActivate() != null ? image.getSpec().getAutoActivate() : true);
+        if (image.getSpec().getMemorySizeMiB() != null) {
+            System.out.printf("Memory:         %d MiB%n", image.getSpec().getMemorySizeMiB());
+        } else {
+            System.out.printf("Memory:         default (2048 MiB)%n");
+        }
 
         MicroVMImageStatus status = image.getStatus();
         if (status != null) {
             System.out.println();
             System.out.printf("State:          %s%n", status.getImageState() != null ? status.getImageState() : "-");
             if (status.getImageArn() != null) System.out.printf("Image ARN:      %s%n", status.getImageArn());
+            if (status.getComputeProfile() != null) System.out.printf("Compute:        %s%n", status.getComputeProfile());
             System.out.printf("Active Version: %s%n", status.getActiveVersion() != null ? status.getActiveVersion() : "-");
             System.out.printf("Latest Version: %s%n", status.getLatestVersion() != null ? status.getLatestVersion() : "-");
 
