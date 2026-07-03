@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** — document first, implement on feature branch.
+**Proposed** — document first, implement on `feature/memory-sizing` branch.
 
 ## Motivation
 
@@ -11,12 +11,12 @@ Memory determines the baseline compute allocation, with vCPU scaling proportiona
 (2 GB = 1 vCPU). During peak activity, MicroVMs burst to 4x baseline automatically.
 
 This is a core feature that should be exposed in the `MicroVMImage` CRD spec. Currently
-our operator passes no `memory` parameter to the `create-microvm-image` API, so all
-images default to 2 GB / 1 vCPU.
+our operator passes no `resources` parameter to the `create-microvm-image` API, so all
+images default to 2048 MiB / 1 vCPU.
 
 ## AWS API
 
-The `resources` parameter is set at **image creation time** (not run time):
+The `--resources` parameter is set at **image creation time** (not run time):
 
 ```bash
 aws lambda-microvms create-microvm-image \
@@ -27,25 +27,28 @@ aws lambda-microvms create-microvm-image \
   --resources '[{"minimumMemoryInMiB": 4096}]'
 ```
 
-The CLI parameter is `--resources` containing a list (max 1 item) with `minimumMemoryInMiB`.
+- CLI parameter: `--resources` (list, max 1 item)
+- Field: `minimumMemoryInMiB` (integer, required within the resource object)
+- `run-microvm` has NO memory/resource parameter — sizing is per-image only
+- `update-microvm-image` does NOT accept `--resources` — memory is immutable after creation
 
 ### Available sizes (baseline-peak model)
 
-| Baseline | Peak (4x) | Max Disk | Bandwidth |
-|----------|-----------|----------|-----------|
-| 512 MB / 0.25 vCPU | 2 GB / 1 vCPU | 8 GB | 8 Mbps |
-| 1024 MB / 0.5 vCPU | 4 GB / 2 vCPU | 8 GB | 16 Mbps |
-| 2048 MB / 1 vCPU (default) | 8 GB / 4 vCPU | 8 GB | 32 Mbps |
-| 4096 MB / 2 vCPU | 16 GB / 8 vCPU | 16 GB | 64 Mbps |
-| 8192 MB / 4 vCPU | 32 GB / 16 vCPU | 32 GB | 128 Mbps |
+| Baseline | Peak (4x burst) | Max Disk | Bandwidth |
+|----------|-----------------|----------|-----------|
+| 512 MiB / 0.25 vCPU | 2048 MiB / 1 vCPU | 8 GB | 8 Mbps |
+| 1024 MiB / 0.5 vCPU | 4096 MiB / 2 vCPU | 8 GB | 16 Mbps |
+| 2048 MiB / 1 vCPU **(default)** | 8192 MiB / 4 vCPU | 8 GB | 32 Mbps |
+| 4096 MiB / 2 vCPU | 16384 MiB / 8 vCPU | 16 GB | 64 Mbps |
+| 8192 MiB / 4 vCPU | 32768 MiB / 16 vCPU | 32 GB | 128 Mbps |
 
-Valid values: 512, 1024, 2048, 4096, 8192 (MB).
+Valid values: 512, 1024, 2048, 4096, 8192 (MiB).
+
+---
 
 ## Design
 
-### CRD Change: `MicroVMImageSpec`
-
-Add `memorySizeMB` field to the `MicroVMImage` spec:
+### CRD field: `MicroVMImageSpec.memorySizeMiB`
 
 ```yaml
 apiVersion: lambda.aws.amazon.com/v1alpha1
@@ -58,52 +61,136 @@ spec:
     s3Key: agent/app.zip
   baseImageArn: "arn:aws:lambda:us-east-1:aws:microvm-image:al2023-1"
   buildRoleArn: "arn:aws:iam::123456789012:role/BuildRole"
-  memorySizeMB: 4096    # optional, default: 2048
+  memorySizeMiB: 4096    # optional — omit for AWS default (2048)
 ```
 
-### Field spec
+### Field specification
 
-| Field | Type | Required | Default | Valid values |
-|-------|------|----------|---------|--------------|
-| `memorySizeMB` | Integer | No | 2048 | 512, 1024, 2048, 4096, 8192 |
+| Aspect | Value | Reasoning |
+|--------|-------|-----------|
+| **Name** | `memorySizeMiB` | Matches AWS unit (MiB), unambiguous. AWS field is `minimumMemoryInMiB`. |
+| **Type** | Integer | Direct pass-through to AWS API |
+| **Required** | No | AWS defaults to 2048 when omitted |
+| **CRD default** | None | See "Default strategy" below |
+| **Validation** | Webhook | Allowed: 512, 1024, 2048, 4096, 8192 |
+| **Immutable** | Yes (after first build) | AWS doesn't allow changing memory on update |
 
-### Behaviour
+### Default strategy: Option A (chosen)
 
-- If not set, the AWS default (2048 MB / 1 vCPU) applies.
-- The field is **immutable after creation** — changing memory requires creating a new image
-  (same as AWS behaviour: memory is set at image creation, cannot be changed with update).
-- Validating webhook rejects values not in the allowed set.
-- `microvm image describe` shows the configured memory size.
+**Do not set a default in the CRD schema.** If the user omits `memorySizeMiB`:
 
-### Status field
+1. Operator does NOT pass `--resources` to the `create-microvm-image` API call
+2. AWS applies its own server-side default (currently 2048 MiB / 1 vCPU)
+3. Status field reflects what AWS returned (the effective size)
 
-Add to `MicroVMImageStatus`:
+**Why Option A:**
+- If AWS changes the default in the future, we automatically follow
+- No coupling between our CRD schema and AWS's server-side defaults
+- Less risk of drift between what the CRD says and what AWS does
+- Simpler validation: null = don't send, non-null = validate + send
 
-```java
-private Integer memorySizeMB;   // reflects what was passed to AWS
-private String computeProfile;  // e.g. "4096 MB / 2 vCPU (peak: 16 GB / 8 vCPU)"
+**Rejected alternative (Option B):** Set `default: 2048` in CRD schema. This makes the
+field always non-null after admission, coupling us to AWS's current default. If AWS
+changes the default, all existing CRs would still have 2048 baked in.
+
+### Data flow
+
+```
+User YAML: memorySizeMiB: 4096  (or omitted)
+    │
+    ▼
+Validating Webhook
+    │  - If set: reject unless value ∈ {512, 1024, 2048, 4096, 8192}
+    │  - If null: allow (AWS default applies)
+    │  - On UPDATE: reject if changed from non-null (immutable)
+    │
+    ▼
+MicroVMImageReconciler (CREATE path)
+    │  - If memorySizeMiB != null:
+    │      request.resources([Resource.builder().minimumMemoryInMiB(value).build()])
+    │  - If null: don't set resources on request (AWS default)
+    │
+    ▼
+AWS API: create-microvm-image
+    │
+    ▼
+MicroVMImageReconciler (status update)
+    │  - Set status.memorySizeMiB from AWS response (or from spec if AWS doesn't echo it)
+    │  - Set status.computeProfile = "4096 MiB / 2 vCPU (peak: 16384 MiB / 8 vCPU)"
+    │
+    ▼
+Status visible via: kubectl get microvmimage -o wide, microvm image describe
 ```
 
-### Implementation plan
+### Immutability enforcement
 
-1. Add `memorySizeMB` to `MicroVMImageSpec.java`
-2. Update CRD schema (auto-generated from model)
-3. Pass to `CreateMicrovmImageRequest` in `MicroVMImageClient`
-4. Add validation in webhook (allowed values: 512, 1024, 2048, 4096, 8192)
-5. Add to `microvm image describe` CLI output
-6. Update `MicroVMImageStatus` with resolved memory
-7. Update user guide and quick-start examples
-8. Integration tests
+On UPDATE admission:
+- If `oldSpec.memorySizeMiB != null` and `newSpec.memorySizeMiB != oldSpec.memorySizeMiB`:
+  reject with `"spec.memorySizeMiB is immutable after image creation"`
+- Setting from null → value on first update is allowed (in case user forgot on create)
+- Changing from value → different value is blocked
+
+---
+
+## Implementation plan
+
+### Code changes
+
+| # | File | Change |
+|---|------|--------|
+| 1 | `operator-core/.../MicroVMImageSpec.java` | Add `private Integer memorySizeMiB;` + getter/setter |
+| 2 | `operator-controller/.../MicroVMImageClient.java` | Pass `resources` to `CreateMicrovmImageRequest` when non-null |
+| 3 | `operator-webhook/.../MicroVMValidatingWebhook.java` | Validate allowed values + immutability on UPDATE |
+| 4 | `operator-core/.../MicroVMImageStatus.java` | Add `memorySizeMiB`, `computeProfile` fields |
+| 5 | `operator-controller/.../MicroVMImageReconciler.java` | Set status.memorySizeMiB after create |
+| 6 | `operator-cli/.../ImageDescribeCommand.java` | Show memory + compute profile |
+| 7 | CRD (auto-generated) | New field in spec + printer column |
 
 ### What NOT to change
 
 - `MicroVMSpec` — memory is NOT a per-VM setting, it's per-image
 - `MicroVMClass` — no memory field (class applies to run-time params only)
-- `run-microvm` API — AWS doesn't accept memory at run time
+- `run-microvm` call in `DefaultMicroVMClient` — no memory at run time
+- `update-microvm-image` call — memory cannot be changed after creation
+
+---
 
 ## Testing
 
-- Create image with `memorySizeMB: 4096` → verify AWS receives it
-- Create image without memorySizeMB → verify default 2048 used
-- Create image with `memorySizeMB: 999` → webhook rejects
-- Describe shows correct compute profile
+| # | Test | Expected |
+|---|------|----------|
+| 1 | Create image with `memorySizeMiB: 4096` | AWS receives `resources: [{minimumMemoryInMiB: 4096}]` |
+| 2 | Create image without memorySizeMiB | No `resources` sent, AWS uses default 2048 |
+| 3 | Create image with `memorySizeMiB: 999` | Webhook rejects: "must be one of: 512, 1024, 2048, 4096, 8192" |
+| 4 | Update image changing memorySizeMiB 4096 → 8192 | Webhook rejects: "immutable after creation" |
+| 5 | `microvm image describe` | Shows "Memory: 4096 MiB / 2 vCPU (peak: 16384 MiB / 8 vCPU)" |
+| 6 | `kubectl get microvmimages` | Printer column shows MEMORY |
+
+---
+
+## User-facing example
+
+```yaml
+# Small (batch jobs, lightweight agents)
+apiVersion: lambda.aws.amazon.com/v1alpha1
+kind: MicroVMImage
+metadata:
+  name: batch-worker
+spec:
+  source: { s3Bucket: my-bucket, s3Key: worker.zip }
+  baseImageArn: "arn:aws:lambda:us-east-1:aws:microvm-image:al2023-1"
+  buildRoleArn: "arn:aws:iam::123456789012:role/BuildRole"
+  memorySizeMiB: 512    # 0.25 vCPU baseline, bursts to 1 vCPU
+
+---
+# Large (data processing, ML inference)
+apiVersion: lambda.aws.amazon.com/v1alpha1
+kind: MicroVMImage
+metadata:
+  name: ml-inference
+spec:
+  source: { s3Bucket: my-bucket, s3Key: model.zip }
+  baseImageArn: "arn:aws:lambda:us-east-1:aws:microvm-image:al2023-1"
+  buildRoleArn: "arn:aws:iam::123456789012:role/BuildRole"
+  memorySizeMiB: 8192   # 4 vCPU baseline, bursts to 16 vCPU
+```
