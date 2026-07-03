@@ -97,6 +97,11 @@ public class MicroVMTokenResource {
         // 5. Determine token parameters
         int expiryMinutes = request != null && request.expirationInMinutes != null
                 ? Math.min(request.expirationInMinutes, maxExpiryMinutes) : 30;
+        if (expiryMinutes < 1) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("error", "expirationInMinutes must be between 1 and " + maxExpiryMinutes))
+                    .build();
+        }
         boolean allPorts = request == null || request.allowedPorts == null
                 || request.allowedPorts.stream().anyMatch(p -> p.containsKey("allPorts"));
 
@@ -112,7 +117,7 @@ public class MicroVMTokenResource {
         } catch (Exception e) {
             LOG.errorf(e, "Failed to create auth token for MicroVM %s/%s", namespace, vmName);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(Map.of("error", "failed to create token: " + e.getMessage())).build();
+                    .entity(Map.of("error", "failed to create token")).build();
         }
     }
 
