@@ -2,125 +2,94 @@ package ai.codriverlabs.microvm.operator.webhook;
 
 
 import ai.codriverlabs.microvm.operator.core.model.MicroVMSpec;
+import ai.codriverlabs.microvm.operator.core.model.MicroVMImageSpec;
 import ai.codriverlabs.microvm.operator.webhook.validation.MicroVMValidatingWebhook;
 import net.jqwik.api.*;
 
 import java.util.List;
+import java.util.Set;
 
 /**
- * Feature: kube-microvm-operator, Property 4: Webhook Range Validation
- * Validates: Requirements 5.1, 5.2, 5.3
+ * Property-based tests for webhook validation.
  *
- * Feature: kube-microvm-operator, Property 5: Webhook Mutation Applies Defaults
- * Validates: Requirements 5.5, 5.6
+ * Property 1: imageRef required — null/blank always rejected
+ * Property 2: memorySizeMiB — only {512, 1024, 2048, 4096, 8192} accepted
+ * Property 3: memorySizeMiB immutability — changing from non-null to different non-null rejected
  */
 class WebhookValidationPropertyTest {
 
+    private static final Set<Integer> ALLOWED_MEMORY = Set.of(512, 1024, 2048, 4096, 8192);
     private final MicroVMValidatingWebhook webhook = new MicroVMValidatingWebhook();
 
-    // Property 4a: Valid memory is accepted (128-10240, multiple of 64)
-    @Property(tries = 100)
-    void validMemoryIsAccepted(@ForAll("validMemory") int memoryMB) {
-        MicroVMSpec spec = createValidSpec();
-        spec.setMaximumDurationSeconds(memoryMB);
-        List<String> errors = webhook.validate(spec, "default");
-        assert errors.isEmpty() : "Valid memory " + memoryMB + " should be accepted, got: " + errors;
-    }
-
-    // Property 4b: Invalid memory is rejected
-    @Property(tries = 100)
-    void invalidMemoryIsRejected(@ForAll("invalidMemory") int memoryMB) {
-        MicroVMSpec spec = createValidSpec();
-        spec.setMaximumDurationSeconds(memoryMB);
-        List<String> errors = webhook.validate(spec, "default");
-        assert !errors.isEmpty() : "Invalid memory " + memoryMB + " should be rejected";
-    }
-
-    // Property 4c: Valid vcpus accepted (1-6)
-    @Property(tries = 100)
-    void validVcpusAccepted(@ForAll("validVcpus") int vcpus) {
-        MicroVMSpec spec = createValidSpec();
-        spec.setMaxIdleDurationSeconds(vcpus);
-        List<String> errors = webhook.validate(spec, "default");
-        assert errors.isEmpty() : "Valid vcpus " + vcpus + " should be accepted, got: " + errors;
-    }
-
-    // Property 4d: Invalid vcpus rejected
-    @Property(tries = 100)
-    void invalidVcpusRejected(@ForAll("invalidVcpus") int vcpus) {
-        MicroVMSpec spec = createValidSpec();
-        spec.setMaxIdleDurationSeconds(vcpus);
-        List<String> errors = webhook.validate(spec, "default");
-        assert !errors.isEmpty() : "Invalid vcpus " + vcpus + " should be rejected";
-    }
-
-    // Property 4e: Valid timeout accepted (1-900)
-    @Property(tries = 100)
-    void validTimeoutAccepted(@ForAll("validTimeout") int timeout) {
-        MicroVMSpec spec = createValidSpec();
-        spec.setSuspendedDurationSeconds(timeout);
-        List<String> errors = webhook.validate(spec, "default");
-        assert errors.isEmpty() : "Valid timeout " + timeout + " should be accepted, got: " + errors;
-    }
-
-    // Property 4f: Invalid timeout rejected
-    @Property(tries = 100)
-    void invalidTimeoutRejected(@ForAll("invalidTimeout") int timeout) {
-        MicroVMSpec spec = createValidSpec();
-        spec.setSuspendedDurationSeconds(timeout);
-        List<String> errors = webhook.validate(spec, "default");
-        assert !errors.isEmpty() : "Invalid timeout " + timeout + " should be rejected";
-    }
-
-    private MicroVMSpec createValidSpec() {
+    // Property 1: valid imageRef always passes
+    @Property(tries = 50)
+    void validImageRefAccepted(@ForAll("validImageRef") String imageRef) {
         MicroVMSpec spec = new MicroVMSpec();
-        spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(512);
-        spec.setMaxIdleDurationSeconds(2);
-        return spec;
+        spec.setImageRef(imageRef);
+        List<String> errors = webhook.validate(spec, "default");
+        assert errors.isEmpty() : "Valid imageRef '" + imageRef + "' should be accepted, got: " + errors;
+    }
+
+    // Property 2a: allowed memorySizeMiB values always pass
+    @Property(tries = 20)
+    void allowedMemorySizeAccepted(@ForAll("allowedMemorySize") int memory) {
+        MicroVMImageSpec spec = new MicroVMImageSpec();
+        spec.setMemorySizeMiB(memory);
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateMemorySizeMiB(spec, errors);
+        assert errors.isEmpty() : "Allowed memory " + memory + " should pass, got: " + errors;
+    }
+
+    // Property 2b: disallowed memorySizeMiB values always rejected
+    @Property(tries = 100)
+    void disallowedMemorySizeRejected(@ForAll("disallowedMemorySize") int memory) {
+        MicroVMImageSpec spec = new MicroVMImageSpec();
+        spec.setMemorySizeMiB(memory);
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateMemorySizeMiB(spec, errors);
+        assert !errors.isEmpty() : "Disallowed memory " + memory + " should be rejected";
+    }
+
+    // Property 3: changing memorySizeMiB from value A to different value B is always rejected
+    @Property(tries = 50)
+    void memoryImmutabilityEnforced(
+            @ForAll("allowedMemorySize") int oldMemory,
+            @ForAll("allowedMemorySize") int newMemory) {
+        Assume.that(oldMemory != newMemory);
+        MicroVMImageSpec oldSpec = new MicroVMImageSpec();
+        oldSpec.setMemorySizeMiB(oldMemory);
+        MicroVMImageSpec newSpec = new MicroVMImageSpec();
+        newSpec.setMemorySizeMiB(newMemory);
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateMemoryImmutability(oldSpec, newSpec, errors);
+        assert !errors.isEmpty() : "Changing " + oldMemory + " -> " + newMemory + " should be rejected";
+    }
+
+    // Property 3b: same value is always allowed
+    @Property(tries = 20)
+    void memorySameValueAllowed(@ForAll("allowedMemorySize") int memory) {
+        MicroVMImageSpec oldSpec = new MicroVMImageSpec();
+        oldSpec.setMemorySizeMiB(memory);
+        MicroVMImageSpec newSpec = new MicroVMImageSpec();
+        newSpec.setMemorySizeMiB(memory);
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateMemoryImmutability(oldSpec, newSpec, errors);
+        assert errors.isEmpty() : "Same value " + memory + " should be allowed";
     }
 
     @Provide
-    Arbitrary<Integer> validMemory() {
-        // 128 to 10240, multiple of 64
-        return Arbitraries.integers().between(2, 160).map(i -> i * 64);
+    Arbitrary<String> validImageRef() {
+        return Arbitraries.of("my-image", "python-sandbox", "agent-v2", "ml-model", "ci-runner");
     }
 
     @Provide
-    Arbitrary<Integer> invalidMemory() {
-        return Arbitraries.oneOf(
-            // Below range
-            Arbitraries.integers().between(-100, 127),
-            // Above range
-            Arbitraries.integers().between(10241, 20000),
-            // In range but not multiple of 64
-            Arbitraries.integers().between(128, 10240).filter(i -> i % 64 != 0)
-        );
+    Arbitrary<Integer> allowedMemorySize() {
+        return Arbitraries.of(512, 1024, 2048, 4096, 8192);
     }
 
     @Provide
-    Arbitrary<Integer> validVcpus() {
-        return Arbitraries.integers().between(1, 6);
-    }
-
-    @Provide
-    Arbitrary<Integer> invalidVcpus() {
-        return Arbitraries.oneOf(
-            Arbitraries.integers().between(-10, 0),
-            Arbitraries.integers().between(7, 100)
-        );
-    }
-
-    @Provide
-    Arbitrary<Integer> validTimeout() {
-        return Arbitraries.integers().between(1, 900);
-    }
-
-    @Provide
-    Arbitrary<Integer> invalidTimeout() {
-        return Arbitraries.oneOf(
-            Arbitraries.integers().between(-100, 0),
-            Arbitraries.integers().between(901, 2000)
-        );
+    Arbitrary<Integer> disallowedMemorySize() {
+        return Arbitraries.integers().between(1, 10000)
+                .filter(i -> !ALLOWED_MEMORY.contains(i));
     }
 }

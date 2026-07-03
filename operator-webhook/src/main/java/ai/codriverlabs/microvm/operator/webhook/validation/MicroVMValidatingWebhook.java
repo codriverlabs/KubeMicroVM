@@ -244,7 +244,7 @@ public class MicroVMValidatingWebhook {
     private static final java.util.Set<Integer> ALLOWED_MEMORY_SIZES =
             java.util.Set.of(512, 1024, 2048, 4096, 8192);
 
-    void validateMemorySizeMiB(MicroVMImageSpec spec, List<String> errors) {
+    public void validateMemorySizeMiB(MicroVMImageSpec spec, List<String> errors) {
         Integer memory = spec.getMemorySizeMiB();
         if (memory != null && !ALLOWED_MEMORY_SIZES.contains(memory)) {
             errors.add(String.format(
@@ -253,7 +253,7 @@ public class MicroVMValidatingWebhook {
         }
     }
 
-    void validateMemoryImmutability(MicroVMImageSpec oldSpec, MicroVMImageSpec newSpec, List<String> errors) {
+    public void validateMemoryImmutability(MicroVMImageSpec oldSpec, MicroVMImageSpec newSpec, List<String> errors) {
         if (oldSpec == null || newSpec == null) return;
         Integer oldMemory = oldSpec.getMemorySizeMiB();
         Integer newMemory = newSpec.getMemorySizeMiB();

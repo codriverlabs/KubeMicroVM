@@ -32,14 +32,12 @@ class WebhookIntegrationTest {
     void fullPipelineMutationThenValidation() {
         MicroVMSpec spec = new MicroVMSpec();
         spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(512);
-        spec.setMaxIdleDurationSeconds(2);
-        // autoResumeEnabled is null - should get default
+        // autoResumeEnabled and maximumDurationSeconds are null — should get defaults
 
         // Step 1: Mutate
         MicroVMSpec mutated = mutator.applyDefaults(spec, "default");
-        assertEquals(512, mutated.getMaximumDurationSeconds()); // explicit, not overridden
-        assertTrue(mutated.getAutoResumeEnabled()); // defaulted
+        assertEquals(28800, mutated.getMaximumDurationSeconds()); // global default
+        assertTrue(mutated.getAutoResumeEnabled()); // global default
 
         // Step 2: Validate
         List<String> errors = validator.validate(mutated, "default");
@@ -47,51 +45,10 @@ class WebhookIntegrationTest {
     }
 
     @Test
-    @DisplayName("Invalid memoryMB rejected: below minimum")
-    void invalidMemoryBelowMinimumRejected() {
-        MicroVMSpec spec = new MicroVMSpec();
-        spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(64); // below 128 minimum
-        spec.setMaxIdleDurationSeconds(2);
-
-        List<String> errors = validator.validate(spec, "default");
-        assertFalse(errors.isEmpty());
-        assertTrue(errors.stream().anyMatch(e -> e.contains("memoryMB")));
-    }
-
-    @Test
-    @DisplayName("Invalid memoryMB rejected: not multiple of 64")
-    void invalidMemoryNotMultipleOf64Rejected() {
-        MicroVMSpec spec = new MicroVMSpec();
-        spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(500); // not multiple of 64
-        spec.setMaxIdleDurationSeconds(2);
-
-        List<String> errors = validator.validate(spec, "default");
-        assertFalse(errors.isEmpty());
-        assertTrue(errors.stream().anyMatch(e -> e.contains("multiple of 64")));
-    }
-
-    @Test
-    @DisplayName("Invalid vcpus rejected: above maximum")
-    void invalidVcpusAboveMaxRejected() {
-        MicroVMSpec spec = new MicroVMSpec();
-        spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(512);
-        spec.setMaxIdleDurationSeconds(8); // above 6 maximum
-
-        List<String> errors = validator.validate(spec, "default");
-        assertFalse(errors.isEmpty());
-        assertTrue(errors.stream().anyMatch(e -> e.contains("vcpus")));
-    }
-
-    @Test
-    @DisplayName("Invalid runtime rejected: null")
-    void invalidRuntimeNullRejected() {
+    @DisplayName("Null imageRef rejected by validator")
+    void invalidImageRefNullRejected() {
         MicroVMSpec spec = new MicroVMSpec();
         spec.setImageRef(null);
-        spec.setMaximumDurationSeconds(512);
-        spec.setMaxIdleDurationSeconds(2);
 
         List<String> errors = validator.validate(spec, "default");
         assertFalse(errors.isEmpty());
@@ -103,50 +60,59 @@ class WebhookIntegrationTest {
     void mutationPreservesExplicitValues() {
         MicroVMSpec spec = new MicroVMSpec();
         spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(1024);
-        spec.setMaxIdleDurationSeconds(4);
-        spec.setSuspendedDurationSeconds(600);
+        spec.setMaximumDurationSeconds(3600);
+        spec.setMaxIdleDurationSeconds(60);
+        spec.setSuspendedDurationSeconds(300);
+        spec.setAutoResumeEnabled(false);
         spec.setNetworkRef("custom-network");
 
         MicroVMSpec mutated = mutator.applyDefaults(spec, "default");
 
         assertEquals("python-sandbox", mutated.getImageRef());
-        assertEquals(1024, mutated.getMaximumDurationSeconds());
-        assertEquals(4, mutated.getMaxIdleDurationSeconds());
-        assertEquals(600, mutated.getSuspendedDurationSeconds());
+        assertEquals(3600, mutated.getMaximumDurationSeconds()); // preserved, not overridden to 28800
+        assertEquals(60, mutated.getMaxIdleDurationSeconds());
+        assertEquals(300, mutated.getSuspendedDurationSeconds());
+        assertFalse(mutated.getAutoResumeEnabled()); // preserved, not overridden to true
         assertEquals("custom-network", mutated.getNetworkRef());
     }
 
     @Test
-    @DisplayName("Multiple validation errors aggregated in single response")
-    void multipleValidationErrorsAggregated() {
+    @DisplayName("Mutation applies both defaults when both are null")
+    void mutationAppliesBothDefaults() {
         MicroVMSpec spec = new MicroVMSpec();
-        spec.setImageRef(null);       // invalid
-        spec.setMaximumDurationSeconds(50);        // invalid (below minimum)
-        spec.setMaxIdleDurationSeconds(10);           // invalid (above maximum)
-        spec.setSuspendedDurationSeconds(0);   // invalid (below minimum)
+        spec.setImageRef("my-agent");
+        // maximumDurationSeconds = null, autoResumeEnabled = null
 
-        List<String> errors = validator.validate(spec, "default");
-        assertTrue(errors.size() >= 3, "Should have at least 3 errors, got " + errors.size() + ": " + errors);
+        MicroVMSpec mutated = mutator.applyDefaults(spec, "default");
+        assertEquals(28800, mutated.getMaximumDurationSeconds());
+        assertTrue(mutated.getAutoResumeEnabled());
     }
 
     @Test
-    @DisplayName("Valid spec at boundary values passes")
-    void boundaryValuesPass() {
-        // Minimum valid values
-        MicroVMSpec minSpec = new MicroVMSpec();
-        minSpec.setImageRef("python-sandbox");
-        minSpec.setMaximumDurationSeconds(128);
-        minSpec.setMaxIdleDurationSeconds(1);
-        minSpec.setSuspendedDurationSeconds(1);
-        assertTrue(validator.validate(minSpec, "default").isEmpty());
+    @DisplayName("Valid spec with all idle policy fields passes end-to-end")
+    void validSpecWithIdlePolicyPasses() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-agent");
+        spec.setMaxIdleDurationSeconds(900);
+        spec.setSuspendedDurationSeconds(1800);
+        spec.setMaximumDurationSeconds(14400);
+        spec.setAutoResumeEnabled(true);
 
-        // Maximum valid values
-        MicroVMSpec maxSpec = new MicroVMSpec();
-        maxSpec.setImageRef("ci-runner");
-        maxSpec.setMaximumDurationSeconds(10240);
-        maxSpec.setMaxIdleDurationSeconds(6);
-        maxSpec.setSuspendedDurationSeconds(900);
-        assertTrue(validator.validate(maxSpec, "default").isEmpty());
+        MicroVMSpec mutated = mutator.applyDefaults(spec, "default");
+        List<String> errors = validator.validate(mutated, "default");
+        assertTrue(errors.isEmpty(), "Full idle policy spec should pass: " + errors);
+    }
+
+    @Test
+    @DisplayName("Large idle policy values pass (AWS validates limits, not webhook)")
+    void largeIdlePolicyValuesPass() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("batch-worker");
+        spec.setMaxIdleDurationSeconds(28800);
+        spec.setSuspendedDurationSeconds(28800);
+        spec.setMaximumDurationSeconds(28800);
+
+        List<String> errors = validator.validate(spec, "default");
+        assertTrue(errors.isEmpty(), "Large values should pass webhook (AWS validates): " + errors);
     }
 }

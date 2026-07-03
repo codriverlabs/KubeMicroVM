@@ -2,6 +2,7 @@ package ai.codriverlabs.microvm.operator.webhook;
 
 
 import ai.codriverlabs.microvm.operator.core.model.MicroVMSpec;
+import ai.codriverlabs.microvm.operator.core.model.MicroVMImageSpec;
 import ai.codriverlabs.microvm.operator.webhook.validation.MicroVMValidatingWebhook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,108 +26,113 @@ class MicroVMValidatingWebhookTest {
     void validSpecPassesValidation() {
         MicroVMSpec spec = new MicroVMSpec();
         spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(512);
-        spec.setMaxIdleDurationSeconds(2);
-        spec.setSuspendedDurationSeconds(300);
+        spec.setMaximumDurationSeconds(3600);
+        spec.setMaxIdleDurationSeconds(900);
+        spec.setSuspendedDurationSeconds(1800);
 
         List<String> errors = webhook.validate(spec, "default");
         assertTrue(errors.isEmpty(), "Valid spec should have no errors: " + errors);
     }
 
-    @ParameterizedTest
-    @ValueSource(ints = {0, 64, 127, 10241, 10304, -1})
-    void invalidMemoryRejected(int memoryMB) {
+    @Test
+    void nullImageRefRejected() {
         MicroVMSpec spec = new MicroVMSpec();
-        spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(memoryMB);
-        spec.setMaxIdleDurationSeconds(2);
+        spec.setImageRef(null);
 
         List<String> errors = webhook.validate(spec, "default");
-        assertFalse(errors.isEmpty(), "Memory " + memoryMB + " should be rejected");
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {128, 256, 512, 1024, 10240})
-    void validMemoryAccepted(int memoryMB) {
-        MicroVMSpec spec = new MicroVMSpec();
-        spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(memoryMB);
-        spec.setMaxIdleDurationSeconds(2);
-
-        List<String> errors = webhook.validate(spec, "default");
-        assertTrue(errors.isEmpty(), "Memory " + memoryMB + " should be accepted: " + errors);
+        assertFalse(errors.isEmpty(), "Null imageRef should be rejected");
+        assertTrue(errors.stream().anyMatch(e -> e.contains("imageRef")));
     }
 
     @Test
-    void memoryNotMultipleOf64Rejected() {
+    void blankImageRefRejected() {
         MicroVMSpec spec = new MicroVMSpec();
-        spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(500); // not multiple of 64
-        spec.setMaxIdleDurationSeconds(2);
+        spec.setImageRef("   ");
 
         List<String> errors = webhook.validate(spec, "default");
-        assertFalse(errors.isEmpty(), "Memory 500 (not multiple of 64) should be rejected");
-        assertTrue(errors.stream().anyMatch(e -> e.contains("multiple of 64")));
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {0, -1, 7, 8, 100})
-    void invalidVcpusRejected(int vcpus) {
-        MicroVMSpec spec = new MicroVMSpec();
-        spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(512);
-        spec.setMaxIdleDurationSeconds(vcpus);
-
-        List<String> errors = webhook.validate(spec, "default");
-        assertFalse(errors.isEmpty(), "Vcpus " + vcpus + " should be rejected");
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {1, 2, 3, 4, 5, 6})
-    void validVcpusAccepted(int vcpus) {
-        MicroVMSpec spec = new MicroVMSpec();
-        spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(512);
-        spec.setMaxIdleDurationSeconds(vcpus);
-
-        List<String> errors = webhook.validate(spec, "default");
-        assertTrue(errors.isEmpty(), "Vcpus " + vcpus + " should be accepted: " + errors);
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {0, -1, 901, 1000})
-    void invalidTimeoutRejected(int timeout) {
-        MicroVMSpec spec = new MicroVMSpec();
-        spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(512);
-        spec.setMaxIdleDurationSeconds(2);
-        spec.setSuspendedDurationSeconds(timeout);
-
-        List<String> errors = webhook.validate(spec, "default");
-        assertFalse(errors.isEmpty(), "Timeout " + timeout + " should be rejected");
+        assertFalse(errors.isEmpty(), "Blank imageRef should be rejected");
     }
 
     @Test
-    void nullTimeoutIsAccepted() {
-        MicroVMSpec spec = new MicroVMSpec();
-        spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(512);
-        spec.setMaxIdleDurationSeconds(2);
-        spec.setSuspendedDurationSeconds(null); // optional
-
-        List<String> errors = webhook.validate(spec, "default");
-        assertTrue(errors.isEmpty(), "Null timeout should be accepted: " + errors);
+    void nullSpecRejected() {
+        List<String> errors = webhook.validate(null, "default");
+        assertFalse(errors.isEmpty());
+        assertTrue(errors.stream().anyMatch(e -> e.contains("spec is required")));
     }
 
     @Test
-    void multipleErrorsAggregated() {
+    void arbitraryIdlePolicyValuesAccepted() {
+        // MicroVM idle policy values are not validated by webhook —
+        // AWS validates them at API call time
         MicroVMSpec spec = new MicroVMSpec();
-        spec.setImageRef("python-sandbox");
-        spec.setMaximumDurationSeconds(100);   // invalid
-        spec.setMaxIdleDurationSeconds(10);       // invalid
-        spec.setSuspendedDurationSeconds(0); // invalid
+        spec.setImageRef("my-image");
+        spec.setMaxIdleDurationSeconds(28800);
+        spec.setSuspendedDurationSeconds(28800);
+        spec.setMaximumDurationSeconds(28800);
 
         List<String> errors = webhook.validate(spec, "default");
-        assertTrue(errors.size() >= 3, "Should have at least 3 errors, got: " + errors);
+        assertTrue(errors.isEmpty(), "Idle policy values should pass webhook: " + errors);
+    }
+
+    // --- MicroVMImage memorySizeMiB validation ---
+
+    @ParameterizedTest
+    @ValueSource(ints = {512, 1024, 2048, 4096, 8192})
+    void validMemorySizeMiBAccepted(int memory) {
+        MicroVMImageSpec spec = new MicroVMImageSpec();
+        spec.setMemorySizeMiB(memory);
+
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateMemorySizeMiB(spec, errors);
+        assertTrue(errors.isEmpty(), "Memory " + memory + " should be accepted: " + errors);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 128, 256, 500, 999, 2000, 3000, 5000, 10240})
+    void invalidMemorySizeMiBRejected(int memory) {
+        MicroVMImageSpec spec = new MicroVMImageSpec();
+        spec.setMemorySizeMiB(memory);
+
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateMemorySizeMiB(spec, errors);
+        assertFalse(errors.isEmpty(), "Memory " + memory + " should be rejected");
+        assertTrue(errors.get(0).contains("must be one of"));
+    }
+
+    @Test
+    void nullMemorySizeMiBAccepted() {
+        MicroVMImageSpec spec = new MicroVMImageSpec();
+        spec.setMemorySizeMiB(null);
+
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateMemorySizeMiB(spec, errors);
+        assertTrue(errors.isEmpty(), "Null memorySizeMiB should be accepted (AWS default)");
+    }
+
+    @Test
+    void memorySizeMiBImmutabilityEnforced() {
+        MicroVMImageSpec oldSpec = new MicroVMImageSpec();
+        oldSpec.setMemorySizeMiB(4096);
+
+        MicroVMImageSpec newSpec = new MicroVMImageSpec();
+        newSpec.setMemorySizeMiB(8192);
+
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateMemoryImmutability(oldSpec, newSpec, errors);
+        assertFalse(errors.isEmpty(), "Changing memorySizeMiB should be rejected");
+        assertTrue(errors.get(0).contains("immutable"));
+    }
+
+    @Test
+    void memorySizeMiBSameValueAllowed() {
+        MicroVMImageSpec oldSpec = new MicroVMImageSpec();
+        oldSpec.setMemorySizeMiB(4096);
+
+        MicroVMImageSpec newSpec = new MicroVMImageSpec();
+        newSpec.setMemorySizeMiB(4096);
+
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateMemoryImmutability(oldSpec, newSpec, errors);
+        assertTrue(errors.isEmpty(), "Same memorySizeMiB should be allowed");
     }
 }
