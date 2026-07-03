@@ -126,8 +126,8 @@ public class MicroVMMutatingWebhook {
             MicroVMSpec spec = microVM.getSpec();
 
             if (spec != null) {
-                MicroVMSpec before = objectMapper.convertValue(
-                        objectMapper.writeValueAsString(spec), MicroVMSpec.class);
+                MicroVMSpec before = objectMapper.treeToValue(
+                        objectMapper.valueToTree(spec), MicroVMSpec.class);
                 applyDefaults(spec, request.getNamespace());
 
                 // Build JSON patches for fields that changed

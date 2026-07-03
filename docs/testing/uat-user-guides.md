@@ -13,21 +13,45 @@ Must pass before tagging `v1.0.0` GA.
 
 **Source**: `docs/user-guides/quick-start.md`
 **Goal**: Full flow from zero to a running MicroVM as documented.
+**Date**: 2026-07-03
+**Result**: ✅ PASS (3 bugs found and fixed)
+
+### Bugs found during walkthrough
+
+1. **Webhook checking annotation instead of label** — `validateNamespacePermission` called
+   `getAnnotations()` instead of `getLabels()`. Fixed: changed to `getLabels()` and updated
+   error message from "does not have annotation" to "is not managed — add label".
+
+2. **`microvm image describe` missing State field** — `imageState` not shown in output.
+   Fixed: added `State: CREATED/BUILDING/...` line to `ImageDescribeCommand`.
+
+3. **Mutating webhook `MicroVMSpec` deserialization error** — `objectMapper.convertValue(
+   writeValueAsString(spec), MicroVMSpec.class)` serialized to String then tried to deserialize
+   from String (wrong). Fixed: changed to `treeToValue(valueToTree(spec), MicroVMSpec.class)`.
+
+4. **Endpoint shows `PENDING` immediately after VM created** — timing issue, not a bug.
+   Updated guide note: wait for `microvm list` to show `Running` before getting endpoint.
+
+5. **Guide uses `CHART_VERSION=1.0.0` but GA not tagged yet** — add note to guide that
+   users should use latest RC version until GA is tagged.
 
 ### Checklist
 
 | # | Step (as written in guide) | Expected | Result |
 |---|---------------------------|----------|--------|
-| QS-01 | `kubectl label namespace default lambda.aws.amazon.com/manage-microvms=true` | Namespace labelled | ⬜ |
-| QS-02 | Upload zip to S3, create `MicroVMImage` with `kubectl apply` | Image CR created | ⬜ |
-| QS-03 | `microvm image describe my-app` shows build progress | State transitions visible | ⬜ |
-| QS-04 | `kubectl apply` the `MicroVM` with `desiredState: Running` | VM CR created | ⬜ |
-| QS-05 | `microvm list` shows VM in `Running` state | NAME, STATE, VM-ID visible | ⬜ |
-| QS-06 | `microvm token --name my-vm --direct` returns a token | JWT token printed | ⬜ |
-| QS-07 | `curl -H "X-aws-proxy-auth: $TOKEN" "https://$ENDPOINT/"` | `{"status":"ok"}` or app response | ⬜ |
-| QS-08 | Tear down: `desiredState: Terminated` → delete VM → delete image | All CRs gone | ⬜ |
+| QS-01 | Install operator via Helm chart `v1.0.0-rc5` | Operator pod Running, both webhooks active | ✅ |
+| QS-02 | `kubectl label namespace default lambda.aws.amazon.com/manage-microvms=true` | MicroVMImage admitted | ✅ |
+| QS-03 | `microvm image describe my-app` shows `State: CREATED` | Build progress visible | ✅ (after fix) |
+| QS-04 | `kubectl apply` MicroVM with `desiredState: Running` | VM CR created | ✅ |
+| QS-05 | `microvm list` shows VM in `Running` state | NAME, STATE, VM-ID visible | ✅ |
+| QS-06 | `microvm token --name my-vm --direct` returns a token | JWT token printed | ✅ |
+| QS-07 | `curl -H "X-aws-proxy-auth: $TOKEN" "https://$ENDPOINT/"` | `{"status":"ok"}` response | ✅ |
+| QS-08 | Teardown: patch desiredState → delete VM → delete image | All CRs gone | ✅ |
 
 ### Notes
+
+- `endpointUrl` in status shows as `PENDING` briefly after creation — normal, updates within 60s
+- Guide step 1 should reference latest RC version until v1.0.0 GA is tagged
 
 ---
 

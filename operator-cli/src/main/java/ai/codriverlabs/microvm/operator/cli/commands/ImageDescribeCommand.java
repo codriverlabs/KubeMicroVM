@@ -63,6 +63,7 @@ public class ImageDescribeCommand implements Runnable {
         MicroVMImageStatus status = image.getStatus();
         if (status != null) {
             System.out.println();
+            System.out.printf("State:          %s%n", status.getImageState() != null ? status.getImageState() : "-");
             if (status.getImageArn() != null) System.out.printf("Image ARN:      %s%n", status.getImageArn());
             System.out.printf("Active Version: %s%n", status.getActiveVersion() != null ? status.getActiveVersion() : "-");
             System.out.printf("Latest Version: %s%n", status.getLatestVersion() != null ? status.getLatestVersion() : "-");

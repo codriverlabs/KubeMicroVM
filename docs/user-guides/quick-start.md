@@ -108,8 +108,11 @@ spec:
 
 ```bash
 kubectl apply -f vm.yaml
-microvm list   # watch it come up
+microvm list   # watch it come up — wait until STATE shows Running
 ```
+
+> **Note**: After the VM reaches `Running`, allow up to 60s for `status.endpointUrl`
+> to be populated before calling it.
 
 ## Step 5: Call it
 

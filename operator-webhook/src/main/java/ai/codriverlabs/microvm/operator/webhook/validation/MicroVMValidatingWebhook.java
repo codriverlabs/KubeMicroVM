@@ -225,9 +225,9 @@ public class MicroVMValidatingWebhook {
         try {
             var ns = kubernetesClient.namespaces().withName(namespace).get();
             if (ns != null) {
-                var annotations = ns.getMetadata().getAnnotations();
-                if (annotations == null || !"true".equals(annotations.get(MANAGE_VMS_ANNOTATION))) {
-                    errors.add(String.format("Namespace '%s' does not have annotation '%s=true'",
+                var labels = ns.getMetadata().getLabels();
+                if (labels == null || !"true".equals(labels.get(MANAGE_VMS_ANNOTATION))) {
+                    errors.add(String.format("Namespace '%s' is not managed — add label '%s=true' to enable MicroVMs",
                         namespace, MANAGE_VMS_ANNOTATION));
                 }
             }
