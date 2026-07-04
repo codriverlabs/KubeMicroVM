@@ -51,9 +51,9 @@ KubeMicroVM brings them into the Kubernetes resource model:
 > **Latest stable release: `v1.0.0`** — [Download](https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest)
 >
 > **Replace throughout this section**:
-> - `my-eks-cluster` / `my-cluster` → your EKS cluster name
-> - `us-east-1` → your AWS region
-> - `123456789012` → your 12-digit AWS account ID
+> - `<CLUSTER>` → your EKS cluster name
+> - `<REGION>` → your AWS region
+> - `<ACCOUNT_ID>` → your 12-digit AWS account ID
 >
 > **Requires a Kubernetes cluster on AWS**, one of:
 > - **Amazon EKS** with [Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html) enabled (recommended)
@@ -72,8 +72,8 @@ sha256sum -c install_kube_microvm.sh.sha256
 chmod +x install_kube_microvm.sh
 
 ./install_kube_microvm.sh \
-  --cluster my-eks-cluster \
-  --region us-east-1 \
+  --cluster <CLUSTER> \
+  --region <REGION> \
   --iam
 ```
 
@@ -90,9 +90,9 @@ chmod +x install_kube_microvm.sh
 
 # Install with private ECR registry + IAM setup
 ./install_kube_microvm.sh \
-  --cluster my-cluster \
-  --region us-east-1 \
-  --registry 123456789012.dkr.ecr.us-east-1.amazonaws.com \
+  --cluster <CLUSTER> \
+  --region <REGION> \
+  --registry <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com \
   --iam
 
 # CLI only (no cluster required)
@@ -110,7 +110,7 @@ helm install kube-microvm-operator \
   oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator \
   --version $CHART_VERSION \
   --namespace kube-microvm --create-namespace \
-  --set app.envs.AWS_REGION=us-east-1
+  --set app.envs.AWS_REGION=<REGION>
 
 # Create Pod Identity association
 aws eks create-pod-identity-association \
@@ -165,7 +165,7 @@ complete CloudFormation template.
 
 ## Quick Example
 
-> Replace `123456789012` with your AWS account ID and `my-bucket` with your S3 bucket name.
+> Replace `<ACCOUNT_ID>` with your AWS account ID and `<BUCKET>` with your S3 bucket name.
 
 ```yaml
 # 1. Build a MicroVM image from your S3 source
@@ -176,10 +176,10 @@ metadata:
   namespace: default
 spec:
   source:
-    s3Bucket: my-bucket
-    s3Key: agent/app.zip
-  baseImageArn: "arn:aws:lambda:us-east-1:aws:microvm-image:al2023-1"
-  buildRoleArn: "arn:aws:iam::123456789012:role/KubeMicroVMBuildRole"
+    s3Bucket: <BUCKET>
+    s3Key: <S3_KEY>
+  baseImageArn: "arn:aws:lambda:<REGION>:aws:microvm-image:al2023-1"
+  buildRoleArn: "arn:aws:iam::<ACCOUNT_ID>:role/KubeMicroVMBuildRole"
 ---
 # 2. Run a MicroVM
 apiVersion: lambda.aws.amazon.com/v1alpha1
