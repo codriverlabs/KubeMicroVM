@@ -291,6 +291,16 @@ The `microvm-auth-agent` sidecar is injected automatically. Token is available a
 
 ---
 
+## First-run provisioning
+
+Creating a MicroVM image involves building and snapshotting your application environment —
+this takes 2–4 minutes on first build (same as AWS Console or CLI). VPC network connectors
+also provision underlying ENIs in this timeframe. These are one-time setup costs: once built,
+MicroVMs launch from snapshots in seconds. The operator handles polling and status updates
+transparently.
+
+---
+
 ## Security
 
 - **TLS**: Operator webhook endpoint uses cert-manager-issued certificate (port 8443)

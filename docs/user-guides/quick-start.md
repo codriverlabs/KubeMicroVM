@@ -99,6 +99,9 @@ kubectl apply -f image.yaml
 microvm image describe my-app
 ```
 
+> **Build time**: Image builds take 2–4 minutes (same as AWS Console or CLI) — this is
+> a one-time cost. Once built, MicroVMs launch from the snapshot in seconds.
+
 ## Step 4: Run a MicroVM
 
 ```yaml
