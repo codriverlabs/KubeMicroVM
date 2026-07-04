@@ -10,7 +10,7 @@
 #   --registry   <url>    Private registry URL — import images here (e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com)
 #   --iam                 Create IAM role + Pod Identity association via CloudFormation
 #   --role-arn   <arn>    Use existing IAM role ARN (skips --iam)
-#   --auth-agent          Import microvm-auth-agent image (for private registries)
+
 #   --cli-only            Only install the microvm CLI (skip Helm installs)
 #   --dry-run             Print what would be done without executing
 #   --help                Show this help
@@ -35,7 +35,7 @@ REGION="${AWS_REGION:-us-east-1}"
 REGISTRY=""
 ROLE_ARN=""
 DO_IAM=false
-DO_AUTH_AGENT=false
+
 CLI_ONLY=false
 DRY_RUN=false
 INSTALL_DIR="${HOME}/bin"
@@ -89,7 +89,7 @@ while [[ $# -gt 0 ]]; do
         --registry)  REGISTRY="$2";  shift 2 ;;
         --role-arn)  ROLE_ARN="$2";  shift 2 ;;
         --iam)       DO_IAM=true;    shift ;;
-        --auth-agent) DO_AUTH_AGENT=true; shift ;;
+
         --cli-only)  CLI_ONLY=true;  shift ;;
         --dry-run)   DRY_RUN=true;   shift ;;
         --help|-h)
@@ -105,7 +105,7 @@ Options:
   --registry   <url>    Private registry URL (e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com)
   --iam                 Create IAM role + Pod Identity association via CloudFormation
   --role-arn   <arn>    Use existing IAM role ARN (skips --iam)
-  --auth-agent          Also install microvm-auth-agent Helm chart
+
   --cli-only            Only install the microvm CLI (skip Helm installs)
   --dry-run             Print what would be done without executing
   --help                Show this help
@@ -294,17 +294,17 @@ install_operator() {
     success "kube-microvm-operator installed"
 }
 
-# ─── d. Ensure auth-agent image is available ──────────────────────────────────
+# ─── d. Auth-agent image availability ─────────────────────────────────────────
 install_auth_agent() {
-    ! $DO_AUTH_AGENT && return 0
-    step "d. Ensuring microvm-auth-agent image is available"
+    step "d. Verifying microvm-auth-agent image"
 
-    # Image import is already handled by import_images() in step (a)
-    # Operator already configured with MICROVM_AUTH_AGENT_IMAGE env in step (c)
+    # Image import is already handled by import_images() in step (a) when --registry is set
+    # Operator is configured with MICROVM_AUTH_AGENT_IMAGE env in step (c)
     if [[ -n "$REGISTRY" ]]; then
         success "Auth-agent image imported to $REGISTRY (step a) and operator configured (step c)"
     else
-        success "Auth-agent will be pulled from GHCR at injection time: ${GHCR_AGENT}:${VERSION}"
+        info "Auth-agent image: ${GHCR_AGENT}:${VERSION} (pulled from GHCR at injection time)"
+        success "Auth-agent ready"
     fi
 }    success "microvm-auth-agent installed"
 }

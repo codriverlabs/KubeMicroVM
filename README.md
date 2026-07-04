@@ -84,8 +84,7 @@ curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/do
   --cluster my-cluster \
   --region us-east-1 \
   --registry 123456789012.dkr.ecr.us-east-1.amazonaws.com \
-  --iam \
-  --auth-agent
+  --iam
 
 # CLI only (no cluster required)
 ./install_kube_microvm.sh --cli-only
