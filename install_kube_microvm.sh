@@ -199,19 +199,19 @@ import_images() {
 
         # Pull, retag, push both arches
         for ARCH in amd64 arm64; do
-            SRC="${SRC_REPO}:${VERSION}-${ARCH}"
-            DST="${DST_REPO}:${VERSION}"
+            SRC="${SRC_REPO}:${IMAGE_TAG}-${ARCH}"
+            DST="${DST_REPO}:${IMAGE_TAG}"
             info "  $SRC → $DST (${ARCH})"
             run "docker pull --platform linux/${ARCH} $SRC"
-            run "docker tag $SRC ${DST_REPO}:${VERSION}-${ARCH}"
-            run "docker push ${DST_REPO}:${VERSION}-${ARCH}"
+            run "docker tag $SRC ${DST_REPO}:${IMAGE_TAG}-${ARCH}"
+            run "docker push ${DST_REPO}:${IMAGE_TAG}-${ARCH}"
         done
 
         # Create and push multi-arch manifest
-        run "docker manifest create ${DST_REPO}:${VERSION} \
-            ${DST_REPO}:${VERSION}-amd64 \
-            ${DST_REPO}:${VERSION}-arm64"
-        run "docker manifest push ${DST_REPO}:${VERSION}"
+        run "docker manifest create ${DST_REPO}:${IMAGE_TAG} \
+            ${DST_REPO}:${IMAGE_TAG}-amd64 \
+            ${DST_REPO}:${IMAGE_TAG}-arm64"
+        run "docker manifest push ${DST_REPO}:${IMAGE_TAG}"
         success "Pushed $IMAGE_NAME → $REGISTRY"
     done
 }
@@ -271,12 +271,12 @@ install_operator() {
     fi
 
     # Determine image
-    OPERATOR_IMAGE="${GHCR_OPERATOR}:${VERSION}"
-    [[ -n "$REGISTRY" ]] && OPERATOR_IMAGE="${REGISTRY}/plasticity-of-cloud/kube-microvm-operator:${VERSION}"
+    OPERATOR_IMAGE="${GHCR_OPERATOR}:${IMAGE_TAG}"
+    [[ -n "$REGISTRY" ]] && OPERATOR_IMAGE="${REGISTRY}/plasticity-of-cloud/kube-microvm-operator:${IMAGE_TAG}"
 
     # Determine auth-agent image (injected as sidecar by mutating webhook)
-    AGENT_IMAGE="${GHCR_AGENT}:${VERSION}"
-    [[ -n "$REGISTRY" ]] && AGENT_IMAGE="${REGISTRY}/plasticity-of-cloud/microvm-auth-agent:${VERSION}"
+    AGENT_IMAGE="${GHCR_AGENT}:${IMAGE_TAG}"
+    [[ -n "$REGISTRY" ]] && AGENT_IMAGE="${REGISTRY}/plasticity-of-cloud/microvm-auth-agent:${IMAGE_TAG}"
 
     # Ensure namespace
     run "kubectl create namespace kube-microvm --dry-run=client -o yaml | kubectl apply -f -"
@@ -303,7 +303,7 @@ install_auth_agent() {
     if [[ -n "$REGISTRY" ]]; then
         success "Auth-agent image imported to $REGISTRY (step a) and operator configured (step c)"
     else
-        info "Auth-agent image: ${GHCR_AGENT}:${VERSION} (pulled from GHCR at injection time)"
+        info "Auth-agent image: ${GHCR_AGENT}:${IMAGE_TAG} (pulled from GHCR at injection time)"
         success "Auth-agent ready"
     fi
 }    success "microvm-auth-agent installed"
@@ -396,8 +396,9 @@ main() {
     $DRY_RUN && warn "DRY-RUN mode — no changes will be made"
 
     resolve_version
-    # Helm chart version must not have 'v' prefix
+    # Helm chart and image tags must not have 'v' prefix
     HELM_VERSION="${VERSION#v}"
+    IMAGE_TAG="${VERSION#v}"
 
     echo -e "${BOLD}KubeMicroVM Installer${NC} (version: ${VERSION})"
 
