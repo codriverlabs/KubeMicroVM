@@ -58,7 +58,11 @@ KubeMicroVM brings them into the Kubernetes resource model:
 ### Quickstart (one command)
 
 ```bash
-curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh | bash -s -- \
+# Download and run installer
+curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh \
+  -o install_kube_microvm.sh && chmod +x install_kube_microvm.sh
+
+./install_kube_microvm.sh \
   --cluster my-eks-cluster \
   --region us-east-1 \
   --iam
