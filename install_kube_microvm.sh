@@ -257,13 +257,33 @@ setup_iam() {
         --query 'Stacks[0].Outputs[?OutputKey==`RoleArn`].OutputValue' \
         --output text 2>/dev/null)
 
-    info "Creating Pod Identity association"
-    run "aws eks create-pod-identity-association \
-        --cluster-name $CLUSTER \
-        --namespace kube-microvm \
-        --service-account kube-microvm-operator \
-        --role-arn $ROLE_ARN \
-        --region $REGION 2>/dev/null || true"
+    info "Configuring IAM role for operator service account"
+
+    # Detect if cluster supports Pod Identity (EKS add-on: eks-pod-identity-agent)
+    POD_IDENTITY_SUPPORTED=false
+    if aws eks list-addons --cluster-name "$CLUSTER" --region "$REGION" 2>/dev/null | grep -q "eks-pod-identity-agent"; then
+        POD_IDENTITY_SUPPORTED=true
+    fi
+
+    if $POD_IDENTITY_SUPPORTED; then
+        info "Pod Identity detected — creating association"
+        run "aws eks create-pod-identity-association \
+            --cluster-name $CLUSTER \
+            --namespace kube-microvm \
+            --service-account kube-microvm-operator \
+            --role-arn $ROLE_ARN \
+            --region $REGION 2>/dev/null || true"
+        success "Pod Identity association created: $ROLE_ARN"
+    else
+        info "Pod Identity not available — configuring IRSA annotation"
+        run "kubectl annotate serviceaccount kube-microvm-operator \
+            -n kube-microvm \
+            eks.amazonaws.com/role-arn=$ROLE_ARN \
+            --overwrite 2>/dev/null || true"
+        # Restart operator to pick up new annotation
+        run "kubectl rollout restart deployment kube-microvm-operator -n kube-microvm 2>/dev/null || true"
+        success "IRSA annotation set: $ROLE_ARN"
+    fi
 
     success "IAM role: $ROLE_ARN"
 }
