@@ -226,10 +226,21 @@ setup_iam() {
     STACK_NAME="kube-microvm-operator-role-${CLUSTER}"
     IAM_TEMPLATE="${SCRIPT_DIR}/iam/kube-microvm-operator-role.yaml"
 
+    # Download IAM template from release if not bundled locally
     if [[ ! -f "$IAM_TEMPLATE" ]]; then
-        error "IAM template not found: $IAM_TEMPLATE"
-        error "Run from the KubeMicroVM release directory, or pass --role-arn"
-        exit 1
+        info "Downloading IAM CloudFormation template from release..."
+        RELEASE_BASE="https://github.com/plasticity-of-cloud/KubeMicroVM/releases/download/${VERSION}"
+        mkdir -p "${SCRIPT_DIR}/iam"
+        run "curl -fsSL ${RELEASE_BASE}/kube-microvm-operator-role.yaml -o $IAM_TEMPLATE"
+        run "curl -fsSL ${RELEASE_BASE}/kube-microvm-operator-role.yaml.sha256 -o ${IAM_TEMPLATE}.sha256"
+        info "Verifying IAM template checksum..."
+        if ! sha256sum -c "${IAM_TEMPLATE}.sha256" 2>/dev/null; then
+            error "Checksum verification failed for IAM template!"
+            error "The downloaded file may be corrupted or tampered with."
+            rm -f "$IAM_TEMPLATE" "${IAM_TEMPLATE}.sha256"
+            exit 1
+        fi
+        success "IAM template verified"
     fi
 
     info "Deploying CloudFormation stack: $STACK_NAME"
