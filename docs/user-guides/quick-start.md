@@ -24,9 +24,13 @@ Get a MicroVM running in about 5 minutes.
 ## Step 1: Install the operator
 
 ```bash
-# Download installer
+# Download and verify installer
 curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh \
-  -o install_kube_microvm.sh && chmod +x install_kube_microvm.sh
+  -o install_kube_microvm.sh
+curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256 \
+  -o install_kube_microvm.sh.sha256
+sha256sum -c install_kube_microvm.sh.sha256
+chmod +x install_kube_microvm.sh
 
 # Run
 ./install_kube_microvm.sh \
