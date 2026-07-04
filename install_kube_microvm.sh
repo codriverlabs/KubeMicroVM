@@ -274,6 +274,10 @@ install_operator() {
     OPERATOR_IMAGE="${GHCR_OPERATOR}:${VERSION}"
     [[ -n "$REGISTRY" ]] && OPERATOR_IMAGE="${REGISTRY}/plasticity-of-cloud/kube-microvm-operator:${VERSION}"
 
+    # Determine auth-agent image (injected as sidecar by mutating webhook)
+    AGENT_IMAGE="${GHCR_AGENT}:${VERSION}"
+    [[ -n "$REGISTRY" ]] && AGENT_IMAGE="${REGISTRY}/plasticity-of-cloud/microvm-auth-agent:${VERSION}"
+
     # Ensure namespace
     run "kubectl create namespace kube-microvm --dry-run=client -o yaml | kubectl apply -f -"
 
@@ -281,6 +285,7 @@ install_operator() {
     HELM_ARGS="--namespace kube-microvm \
         --set app.image=${OPERATOR_IMAGE} \
         --set app.envs.AWS_REGION=${REGION} \
+        --set app.envs.MICROVM_AUTH_AGENT_IMAGE=${AGENT_IMAGE} \
         --timeout 4m --wait"
 
     [[ -n "$ROLE_ARN" ]] && HELM_ARGS="$HELM_ARGS --set serviceAccount.roleArn=${ROLE_ARN}"
@@ -294,28 +299,12 @@ install_auth_agent() {
     ! $DO_AUTH_AGENT && return 0
     step "d. Ensuring microvm-auth-agent image is available"
 
-    AGENT_IMAGE="${GHCR_AGENT}:${VERSION}"
-
+    # Image import is already handled by import_images() in step (a)
+    # Operator already configured with MICROVM_AUTH_AGENT_IMAGE env in step (c)
     if [[ -n "$REGISTRY" ]]; then
-        # Import to private registry so EKS nodes can pull without internet
-        TARGET="${REGISTRY}/plasticity-of-cloud/microvm-auth-agent:${VERSION}"
-        info "Importing auth-agent image to private registry: $TARGET"
-        run "docker pull $AGENT_IMAGE"
-        run "docker tag $AGENT_IMAGE $TARGET"
-        run "docker push $TARGET"
-        # Update operator Helm values to use private registry image
-        run "helm upgrade kube-microvm-operator \
-            --namespace kube-microvm \
-            --reuse-values \
-            --set authAgent.image.repository=${REGISTRY}/plasticity-of-cloud/microvm-auth-agent \
-            --set authAgent.image.tag=${VERSION} \
-            --timeout 2m --wait \
-            ${GHCR_HELM}/kube-microvm-operator --version $HELM_VERSION"
-        success "Auth-agent image imported + operator configured: $TARGET"
+        success "Auth-agent image imported to $REGISTRY (step a) and operator configured (step c)"
     else
-        info "Auth-agent image will be pulled from GHCR: $AGENT_IMAGE"
-        info "The mutating webhook injects it as a sidecar — no separate deploy needed"
-        success "Auth-agent ready (GHCR)"
+        success "Auth-agent will be pulled from GHCR at injection time: ${GHCR_AGENT}:${VERSION}"
     fi
 }    success "microvm-auth-agent installed"
 }
