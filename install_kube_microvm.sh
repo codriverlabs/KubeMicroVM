@@ -259,9 +259,10 @@ setup_iam() {
 
     info "Configuring IAM role for operator service account"
 
-    # Detect if cluster supports Pod Identity (EKS add-on: eks-pod-identity-agent)
+    # Detect if cluster supports Pod Identity by calling the API directly.
+    # Works for both EKS Auto Mode (built-in) and standard EKS (add-on).
     POD_IDENTITY_SUPPORTED=false
-    if aws eks list-addons --cluster-name "$CLUSTER" --region "$REGION" 2>/dev/null | grep -q "eks-pod-identity-agent"; then
+    if aws eks list-pod-identity-associations --cluster-name "$CLUSTER" --region "$REGION" &>/dev/null; then
         POD_IDENTITY_SUPPORTED=true
     fi
 
