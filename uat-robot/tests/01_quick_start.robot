@@ -13,6 +13,16 @@ ${QS_VM}       qs-vm-${RUN_ID}
 ${RUN_ID}      ${EMPTY}
 
 *** Test Cases ***
+QS-00 Installer Download And Checksum Verification
+    [Documentation]    Validates Step 1: download installer from release + verify SHA256
+    [Tags]    smoke
+    ${dl}=    Run Process    curl    -fsSL    https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh    -o    /tmp/install_kube_microvm.sh
+    Should Be Equal As Integers    ${dl.rc}    0    Failed to download installer script
+    ${sha}=    Run Process    curl    -fsSL    https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256    -o    /tmp/install_kube_microvm.sh.sha256
+    Should Be Equal As Integers    ${sha.rc}    0    Failed to download checksum
+    ${verify}=    Run Process    sha256sum    -c    /tmp/install_kube_microvm.sh.sha256    cwd=/tmp
+    Should Be Equal As Integers    ${verify.rc}    0    Checksum verification failed: ${verify.stdout}
+
 QS-01 Operator Running
     [Tags]    smoke
     ${result}=    Run Process    kubectl    get    pods    -n    ${OPERATOR_NS}    -l    app.kubernetes.io/name\=kube-microvm-operator    -o    jsonpath\={.items[0].status.phase}
