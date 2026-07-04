@@ -7,6 +7,11 @@ Suite Setup      Run Keywords    Verify Cluster Ready    AND    Create Quick Sta
 Suite Teardown   Cleanup Quick Start Resources
 Force Tags       quick-start
 
+*** Variables ***
+${QS_IMAGE}    qs-img-${RUN_ID}
+${QS_VM}       qs-vm-${RUN_ID}
+${RUN_ID}      ${EMPTY}
+
 *** Test Cases ***
 QS-01 Operator Running
     [Tags]    smoke
@@ -18,43 +23,74 @@ QS-02 Namespace Labelled For MicroVMs
     Should Be Equal    ${result.stdout}    true
 
 QS-03 MicroVMImage Created And Built
-    Wait For Image Ready    qs-test-app
+    Wait For Image Ready    ${QS_IMAGE}
 
 QS-04 MicroVM Created And Running
-    Kubectl Apply    apiVersion: lambda.aws.amazon.com/v1alpha1\nkind: MicroVM\nmetadata:\n  name: qs-test-vm\n  namespace: ${NAMESPACE}\nspec:\n  imageRef: qs-test-app\n  desiredState: Running\n  maxIdleDurationSeconds: 900\n  suspendedDurationSeconds: 1800
-    Wait For VM Running    qs-test-vm
+    Create MicroVM    ${QS_VM}    ${QS_IMAGE}
+    Wait For VM Running    ${QS_VM}
 
 QS-05 MicroVM List Shows VM
     ${result}=    Microvm CLI    list    -n    ${NAMESPACE}
-    Should Contain    ${result.stdout}    qs-test-vm
+    Should Contain    ${result.stdout}    ${QS_VM}
     Should Contain    ${result.stdout}    Running
 
 QS-06 Token Via Direct Flag
-    ${token}=    Get MicroVM Token    qs-test-vm
+    ${token}=    Get MicroVM Token    ${QS_VM}
     Should Not Be Empty    ${token}
-    Length Should Be Greater Than    ${token}    100
+    ${length}=    Get Length    ${token}
+    Should Be True    ${length} > 100
 
 QS-07 Curl Endpoint Returns OK
     [Tags]    smoke
-    ${endpoint}=    Get MicroVM Endpoint    qs-test-vm
-    ${token}=    Get MicroVM Token    qs-test-vm
+    ${endpoint}=    Get MicroVM Endpoint    ${QS_VM}
+    ${token}=    Get MicroVM Token    ${QS_VM}
     ${response}=    Call MicroVM Endpoint    ${endpoint}    ${token}
     Should Contain    ${response}    "status":"ok"
 
 QS-08 Teardown Delete VM And Image
-    Kubectl Delete Force    microvm    qs-test-vm
-    ${result}=    Run Process    kubectl    get    microvm    qs-test-vm    -n    ${NAMESPACE}
+    Kubectl Delete Force    microvm    ${QS_VM}
+    ${result}=    Run Process    kubectl    get    microvm    ${QS_VM}    -n    ${NAMESPACE}
     Should Not Be Equal As Integers    ${result.rc}    0
 
 *** Keywords ***
 Create Quick Start Resources
-    Kubectl Apply    apiVersion: lambda.aws.amazon.com/v1alpha1\nkind: MicroVMImage\nmetadata:\n  name: qs-test-app\n  namespace: ${NAMESPACE}\nspec:\n  source:\n    s3Bucket: ${S3_BUCKET}\n    s3Key: ${S3_KEY}\n  baseImageArn: ${BASE_IMAGE_ARN}\n  buildRoleArn: ${BUILD_ROLE_ARN}
+    ${id}=    Evaluate    __import__('time').strftime('%H%M%S')
+    Set Suite Variable    ${RUN_ID}    ${id}
+    Set Suite Variable    ${QS_IMAGE}    qs-img-${id}
+    Set Suite Variable    ${QS_VM}    qs-vm-${id}
+    Create MicroVM Image    ${QS_IMAGE}
+
+Create MicroVM Image
+    [Arguments]    ${name}
+    ${yaml}=    Catenate    SEPARATOR=\n
+    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
+    ...    kind: MicroVMImage
+    ...    metadata:
+    ...    ${SPACE}${SPACE}name: ${name}
+    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
+    ...    spec:
+    ...    ${SPACE}${SPACE}source:
+    ...    ${SPACE}${SPACE}${SPACE}${SPACE}s3Bucket: ${S3_BUCKET}
+    ...    ${SPACE}${SPACE}${SPACE}${SPACE}s3Key: ${S3_KEY}
+    ...    ${SPACE}${SPACE}baseImageArn: "${BASE_IMAGE_ARN}"
+    ...    ${SPACE}${SPACE}buildRoleArn: "${BUILD_ROLE_ARN}"
+    Kubectl Apply    ${yaml}
+
+Create MicroVM
+    [Arguments]    ${name}    ${image_ref}
+    ${yaml}=    Catenate    SEPARATOR=\n
+    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
+    ...    kind: MicroVM
+    ...    metadata:
+    ...    ${SPACE}${SPACE}name: ${name}
+    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
+    ...    spec:
+    ...    ${SPACE}${SPACE}imageRef: ${image_ref}
+    ...    ${SPACE}${SPACE}desiredState: Running
+    ...    ${SPACE}${SPACE}maxIdleDurationSeconds: 900
+    ...    ${SPACE}${SPACE}suspendedDurationSeconds: 1800
+    Kubectl Apply    ${yaml}
 
 Cleanup Quick Start Resources
-    Run Keyword And Ignore Error    Kubectl Delete Force    microvm    qs-test-vm
-    Run Keyword And Ignore Error    Kubectl Delete Force    microvmimage    qs-test-app
-
-Length Should Be Greater Than
-    [Arguments]    ${string}    ${min_length}
-    ${length}=    Get Length    ${string}
-    Should Be True    ${length} > ${min_length}
+    Run Keyword And Ignore Error    Kubectl Delete Force    microvm    ${QS_VM}
+    Run Keyword And Ignore Error    Kubectl Delete Force    microvmimage    ${QS_IMAGE}

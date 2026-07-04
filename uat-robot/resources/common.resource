@@ -7,13 +7,31 @@ Library    Collections
 *** Keywords ***
 Kubectl Apply
     [Arguments]    ${yaml}
-    ${result}=    Run Process    kubectl    apply    -f    -    input=${yaml}    shell=True
+    ${tmpfile}=    Set Variable    /tmp/robot-kubectl-apply.yaml
+    Create File    ${tmpfile}    ${yaml}
+    ${result}=    Run Process    kubectl    apply    -f    ${tmpfile}
+    Remove File    ${tmpfile}
+    Should Be Equal As Integers    ${result.rc}    0    kubectl apply failed: ${result.stderr}
+    RETURN    ${result.stdout}
+
+Kubectl Apply File
+    [Arguments]    ${filepath}
+    ${result}=    Run Process    kubectl    apply    -f    ${filepath}
     Should Be Equal As Integers    ${result.rc}    0    kubectl apply failed: ${result.stderr}
     RETURN    ${result.stdout}
 
 Kubectl Apply Expect Failure
     [Arguments]    ${yaml}
-    ${result}=    Run Process    kubectl    apply    -f    -    input=${yaml}    shell=True
+    ${tmpfile}=    Set Variable    /tmp/robot-kubectl-apply.yaml
+    Create File    ${tmpfile}    ${yaml}
+    ${result}=    Run Process    kubectl    apply    -f    ${tmpfile}
+    Remove File    ${tmpfile}
+    Should Not Be Equal As Integers    ${result.rc}    0
+    RETURN    ${result.stderr}${result.stdout}
+
+Kubectl Apply File Expect Failure
+    [Arguments]    ${filepath}
+    ${result}=    Run Process    kubectl    apply    -f    ${filepath}
     Should Not Be Equal As Integers    ${result.rc}    0
     RETURN    ${result.stderr}${result.stdout}
 
@@ -29,7 +47,7 @@ Kubectl Delete Force
 
 Wait For Image Ready
     [Arguments]    ${name}    ${namespace}=${NAMESPACE}    ${timeout}=300
-    FOR    ${i}    IN RANGE    ${timeout // 10}
+    FOR    ${i}    IN RANGE    ${{int($timeout) // 10}}
         ${state}=    Kubectl Get JsonPath    microvmimage    ${name}    {.status.imageState}    ${namespace}
         ${vstate}=    Kubectl Get JsonPath    microvmimage    ${name}    {.status.latestVersionState}    ${namespace}
         IF    "${state}" == "CREATED" and "${vstate}" == "SUCCESSFUL"
@@ -41,7 +59,7 @@ Wait For Image Ready
 
 Wait For VM Running
     [Arguments]    ${name}    ${namespace}=${NAMESPACE}    ${timeout}=120
-    FOR    ${i}    IN RANGE    ${timeout // 5}
+    FOR    ${i}    IN RANGE    ${{int($timeout) // 5}}
         ${state}=    Kubectl Get JsonPath    microvm    ${name}    {.status.state}    ${namespace}
         IF    "${state}" == "Running"
             RETURN
@@ -52,7 +70,7 @@ Wait For VM Running
 
 Wait For VM State
     [Arguments]    ${name}    ${expected_state}    ${namespace}=${NAMESPACE}    ${timeout}=180
-    FOR    ${i}    IN RANGE    ${timeout // 10}
+    FOR    ${i}    IN RANGE    ${{int($timeout) // 10}}
         ${state}=    Kubectl Get JsonPath    microvm    ${name}    {.status.state}    ${namespace}
         IF    "${state}" == "${expected_state}"
             RETURN
@@ -69,7 +87,7 @@ Get MicroVM Token
 
 Get MicroVM Endpoint
     [Arguments]    ${name}    ${namespace}=${NAMESPACE}    ${timeout}=60
-    FOR    ${i}    IN RANGE    ${timeout // 5}
+    FOR    ${i}    IN RANGE    ${{int($timeout) // 5}}
         ${ep}=    Kubectl Get JsonPath    microvm    ${name}    {.status.endpointUrl}    ${namespace}
         IF    "${ep}" != "PENDING" and "${ep}" != ""
             RETURN    ${ep}
