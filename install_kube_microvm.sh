@@ -10,7 +10,7 @@
 #   --registry   <url>    Private registry URL — import images here (e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com)
 #   --iam                 Create IAM role + Pod Identity association via CloudFormation
 #   --role-arn   <arn>    Use existing IAM role ARN (skips --iam)
-#   --auth-agent          Also install microvm-auth-agent Helm chart
+#   --auth-agent          Import microvm-auth-agent image (for private registries)
 #   --cli-only            Only install the microvm CLI (skip Helm installs)
 #   --dry-run             Print what would be done without executing
 #   --help                Show this help
@@ -289,26 +289,35 @@ install_operator() {
     success "kube-microvm-operator installed"
 }
 
-# ─── d. helm install microvm-auth-agent ───────────────────────────────────────
+# ─── d. Ensure auth-agent image is available ──────────────────────────────────
 install_auth_agent() {
     ! $DO_AUTH_AGENT && return 0
-    step "d. Installing microvm-auth-agent Helm chart"
+    step "d. Ensuring microvm-auth-agent image is available"
 
     AGENT_IMAGE="${GHCR_AGENT}:${VERSION}"
-    [[ -n "$REGISTRY" ]] && AGENT_IMAGE="${REGISTRY}/plasticity-of-cloud/microvm-auth-agent:${VERSION}"
 
-    if [[ -f "${SCRIPT_DIR}/charts/microvm-auth-agent-${HELM_VERSION}.tar.gz" ]]; then
-        CHART="${SCRIPT_DIR}/charts/microvm-auth-agent-${HELM_VERSION}.tar.gz"
+    if [[ -n "$REGISTRY" ]]; then
+        # Import to private registry so EKS nodes can pull without internet
+        TARGET="${REGISTRY}/plasticity-of-cloud/microvm-auth-agent:${VERSION}"
+        info "Importing auth-agent image to private registry: $TARGET"
+        run "docker pull $AGENT_IMAGE"
+        run "docker tag $AGENT_IMAGE $TARGET"
+        run "docker push $TARGET"
+        # Update operator Helm values to use private registry image
+        run "helm upgrade kube-microvm-operator \
+            --namespace kube-microvm \
+            --reuse-values \
+            --set authAgent.image.repository=${REGISTRY}/plasticity-of-cloud/microvm-auth-agent \
+            --set authAgent.image.tag=${VERSION} \
+            --timeout 2m --wait \
+            ${GHCR_HELM}/kube-microvm-operator --version $HELM_VERSION"
+        success "Auth-agent image imported + operator configured: $TARGET"
     else
-        CHART="${GHCR_HELM}/microvm-auth-agent --version $HELM_VERSION"
+        info "Auth-agent image will be pulled from GHCR: $AGENT_IMAGE"
+        info "The mutating webhook injects it as a sidecar — no separate deploy needed"
+        success "Auth-agent ready (GHCR)"
     fi
-
-    run "helm upgrade --install microvm-auth-agent $CHART \
-        --namespace kube-microvm \
-        --set image=${AGENT_IMAGE} \
-        --timeout 2m --wait"
-
-    success "microvm-auth-agent installed"
+}    success "microvm-auth-agent installed"
 }
 
 # ─── e. Install CLI ───────────────────────────────────────────────────────────
