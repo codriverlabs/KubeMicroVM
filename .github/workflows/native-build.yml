@@ -163,7 +163,13 @@ jobs:
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
             MAJOR="${VERSION%%.*}"; MINOR="${VERSION%.*}"
-            TAGS="${IMAGE}:${VERSION} ${IMAGE}:${MINOR} ${IMAGE}:${MAJOR} ${IMAGE}:latest"
+            if [[ "${GITHUB_REF_NAME}" == *-rc* || "${GITHUB_REF_NAME}" == *-beta* || "${GITHUB_REF_NAME}" == *-alpha* ]]; then
+              # Pre-release: only version tag, no latest/major/minor
+              TAGS="${IMAGE}:${VERSION}"
+            else
+              # GA release: version + minor + major + latest
+              TAGS="${IMAGE}:${VERSION} ${IMAGE}:${MINOR} ${IMAGE}:${MAJOR} ${IMAGE}:latest"
+            fi
             SHA_TAG="${VERSION}"
           else
             SHA="${GITHUB_SHA::8}"
@@ -258,9 +264,13 @@ jobs:
           sha256sum iam/kube-microvm-operator-role.yaml > dist/kube-microvm-operator-role.yaml.sha256
           # Append to combined checksums
           sha256sum install_kube_microvm.sh iam/kube-microvm-operator-role.yaml >> dist/checksums.sha256
+      - name: Determine if pre-release
+        id: prerelease
+        run: echo "value=${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}" >> $GITHUB_OUTPUT
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          prerelease: ${{ steps.prerelease.outputs.value == 'true' }}
           files: |
             dist/microvm-linux-amd64
             dist/microvm-linux-amd64.sha256
