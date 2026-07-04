@@ -319,4 +319,4 @@ The `microvm-auth-agent` sidecar is injected automatically. Token is available a
 
 Copyright (c) 2026 Plasticity.Cloud & Codriverlabs
 
-Licensed under the [Express-Compute Community License](LICENSE.md).
+Licensed under the [Elastic License 2.0 (ELv2)](LICENSE.md).
