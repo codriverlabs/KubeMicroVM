@@ -50,6 +50,11 @@ KubeMicroVM brings them into the Kubernetes resource model:
 
 > **Latest stable release: `v1.0.0`** — [Download](https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest)
 >
+> **Replace throughout this section**:
+> - `my-eks-cluster` / `my-cluster` → your EKS cluster name
+> - `us-east-1` → your AWS region
+> - `123456789012` → your 12-digit AWS account ID
+>
 > **Requires a Kubernetes cluster on AWS**, one of:
 > - **Amazon EKS** with [Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html) enabled (recommended)
 > - **Any Kubernetes distribution** on AWS with [IRSA](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) configured
