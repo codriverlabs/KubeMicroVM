@@ -107,10 +107,14 @@ aws eks create-pod-identity-association \
 ### CLI
 
 ```bash
-# Install microvm binary + kubectl-microvm symlink
-curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/microvm-linux-amd64 \
+# Detect architecture and install microvm binary
+ARCH=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
+curl -fsSL "https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/microvm-linux-${ARCH}" \
   -o ~/bin/microvm && chmod +x ~/bin/microvm
 ln -sf ~/bin/microvm ~/bin/kubectl-microvm
+
+# Verify
+microvm --version
 
 # Shell completion
 source <(microvm completion bash)   # or zsh

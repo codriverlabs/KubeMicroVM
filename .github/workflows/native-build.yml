@@ -243,6 +243,12 @@ jobs:
           # Combined checksums.sha256
           sha256sum microvm-linux-amd64 microvm-linux-arm64 kube-microvm-operator-*.tar.gz > checksums.sha256
       - uses: actions/checkout@v4
+      - name: Checksum installer and IAM template
+        run: |
+          sha256sum install_kube_microvm.sh > dist/install_kube_microvm.sh.sha256
+          sha256sum iam/kube-microvm-operator-role.yaml > dist/kube-microvm-operator-role.yaml.sha256
+          # Append to combined checksums
+          sha256sum install_kube_microvm.sh iam/kube-microvm-operator-role.yaml >> dist/checksums.sha256
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
@@ -254,5 +260,7 @@ jobs:
             dist/kube-microvm-operator-*.tar.gz
             dist/kube-microvm-operator-*.tar.gz.sha256
             dist/checksums.sha256
+            dist/install_kube_microvm.sh.sha256
+            dist/kube-microvm-operator-role.yaml.sha256
             install_kube_microvm.sh
             iam/kube-microvm-operator-role.yaml
