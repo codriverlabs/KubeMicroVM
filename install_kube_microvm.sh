@@ -259,15 +259,14 @@ setup_iam() {
 
     info "Configuring IAM role for operator service account"
 
-    # Detect if cluster supports Pod Identity by calling the API directly.
-    # Works for both EKS Auto Mode (built-in) and standard EKS (add-on).
-    POD_IDENTITY_SUPPORTED=false
-    if aws eks list-pod-identity-associations --cluster-name "$CLUSTER" --region "$REGION" &>/dev/null; then
-        POD_IDENTITY_SUPPORTED=true
-    fi
+    # Detect cluster type and configure credentials accordingly:
+    # 1. EKS (standard or Auto Mode): aws eks list-pod-identity-associations succeeds
+    # 2. EKS-DX: eks-dx CLI available
+    # 3. Fallback: IRSA annotation on ServiceAccount
 
-    if $POD_IDENTITY_SUPPORTED; then
-        info "Pod Identity detected — creating association"
+    if aws eks list-pod-identity-associations --cluster-name "$CLUSTER" --region "$REGION" &>/dev/null; then
+        # EKS cluster (standard or Auto Mode) — use native Pod Identity
+        info "EKS Pod Identity detected — creating association"
         run "aws eks create-pod-identity-association \
             --cluster-name $CLUSTER \
             --namespace kube-microvm \
@@ -275,7 +274,22 @@ setup_iam() {
             --role-arn $ROLE_ARN \
             --region $REGION 2>/dev/null || true"
         success "Pod Identity association created: $ROLE_ARN"
+
+    elif command -v eks-dx &>/dev/null; then
+        # EKS-DX cluster — tag role for automatic trust policy, use eks-dx CLI
+        info "EKS-DX detected — configuring Pod Identity via eks-dx CLI"
+        ROLE_NAME="${ROLE_ARN##*/}"
+        run "aws iam tag-role --role-name $ROLE_NAME \
+            --tags Key=eks-dx-managed,Value=true"
+        run "eks-dx create-pod-identity-association \
+            --cluster $CLUSTER \
+            --namespace kube-microvm \
+            --service-account kube-microvm-operator \
+            --role-arn $ROLE_ARN"
+        success "EKS-DX Pod Identity association created: $ROLE_ARN"
+
     else
+        # Fallback: IRSA annotation
         info "Pod Identity not available — configuring IRSA annotation"
         run "kubectl annotate serviceaccount kube-microvm-operator \
             -n kube-microvm \
