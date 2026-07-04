@@ -111,8 +111,8 @@ metadata:
 spec:
   imageRef: my-app
   desiredState: Running
-  ingressNetworkConnectors:
-    - "arn:aws:lambda:us-east-1:aws:network-connector:aws-network-connector:ALL_INGRESS"
+  maxIdleDurationSeconds: 900
+  suspendedDurationSeconds: 1800
 ```
 
 ```bash

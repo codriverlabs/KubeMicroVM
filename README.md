@@ -75,9 +75,13 @@ chmod +x install_kube_microvm.sh
 ### Full installer (with private registry)
 
 ```bash
-# Download installer
+# Download and verify installer
 curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh \
-  -o install_kube_microvm.sh && chmod +x install_kube_microvm.sh
+  -o install_kube_microvm.sh
+curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256 \
+  -o install_kube_microvm.sh.sha256
+sha256sum -c install_kube_microvm.sh.sha256
+chmod +x install_kube_microvm.sh
 
 # Install with private ECR registry + IAM setup
 ./install_kube_microvm.sh \
@@ -180,8 +184,9 @@ metadata:
   namespace: default
 spec:
   imageRef: my-agent
-  className: agentic-standard
   desiredState: Running
+  maxIdleDurationSeconds: 900
+  suspendedDurationSeconds: 1800
 ```
 
 ```bash
@@ -321,6 +326,7 @@ The `microvm-auth-agent` sidecar is injected automatically. Token is available a
 | [Networking](docs/user-guides/networking.md) | Networking modes, VPC egress, MicroVMNetwork |
 | [ReplicaSet](docs/user-guides/replicaset.md) | Scaling and managing VM pools |
 | [Drift & Auto-Suspend](docs/user-guides/drift-and-autosuspend.md) | Drift detection and idle policy |
+| [Memory Sizing](docs/user-guides/memory-sizing.md) | Configure baseline memory/vCPU for MicroVM images |
 | [CLI Reference](docs/user-guides/cli-reference.md) | Complete `microvm` CLI reference |
 | [Namespace Watching](docs/design/namespace-watching.md) | Controlling which namespaces the operator manages |
 | [Token Injection Design](docs/design/token-injection.md) | Auth architecture and RBAC design |
