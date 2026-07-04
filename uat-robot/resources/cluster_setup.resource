@@ -74,3 +74,35 @@ Install Operator
     ...    --wait
     Should Be Equal As Integers    ${result.rc}    0    Helm install failed: ${result.stderr}
     Log    Operator installed successfully
+
+Ensure Shared Image Ready
+    [Documentation]    Creates the shared MicroVMImage if it doesn't exist, waits for build.
+    ...    Called by suites that depend on Quick Start having run first.
+    ${result}=    Run Process    kubectl    get    microvmimage    ${SHARED_IMAGE}    -n    ${NAMESPACE}
+    IF    ${result.rc} == 0
+        # Image CR exists — check if built
+        ${state}=    Run Process    kubectl    get    microvmimage    ${SHARED_IMAGE}    -n    ${NAMESPACE}    -o    jsonpath\={.status.imageState}
+        IF    "${state.stdout}" == "CREATED"
+            Log    Shared image ${SHARED_IMAGE} already built
+            RETURN
+        END
+        # Still building — wait
+        Wait For Image Ready    ${SHARED_IMAGE}
+    ELSE
+        # Image doesn't exist — create it
+        Log    Creating shared image ${SHARED_IMAGE}...
+        ${yaml}=    Catenate    SEPARATOR=\n
+        ...    apiVersion: lambda.aws.amazon.com/v1alpha1
+        ...    kind: MicroVMImage
+        ...    metadata:
+        ...    ${SPACE}${SPACE}name: ${SHARED_IMAGE}
+        ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
+        ...    spec:
+        ...    ${SPACE}${SPACE}source:
+        ...    ${SPACE}${SPACE}${SPACE}${SPACE}s3Bucket: ${S3_BUCKET}
+        ...    ${SPACE}${SPACE}${SPACE}${SPACE}s3Key: ${S3_KEY}
+        ...    ${SPACE}${SPACE}baseImageArn: "${BASE_IMAGE_ARN}"
+        ...    ${SPACE}${SPACE}buildRoleArn: "${BUILD_ROLE_ARN}"
+        Kubectl Apply    ${yaml}
+        Wait For Image Ready    ${SHARED_IMAGE}
+    END

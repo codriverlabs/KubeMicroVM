@@ -13,3 +13,5 @@ ${CHART_VERSION}    1.0.0
 ${CODEBASE_PATH}    /home/ubuntu/projects/pl-cloud/KubeMicroVM
 ${TIMEOUT}          300s
 ${POLL_INTERVAL}    10s
+# Shared image — built once by Quick Start, reused by all suites
+${SHARED_IMAGE}     uat-shared-app
