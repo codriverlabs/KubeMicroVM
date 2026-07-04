@@ -7,17 +7,21 @@ Suite Setup      Run Keywords    Verify Cluster Ready    AND    Create RBAC Reso
 Suite Teardown   Cleanup RBAC Resources
 Force Tags       rbac
 
+*** Variables ***
+${RBAC_VM}       rbac-vm-${RUN_ID}
+${RUN_ID}        ${EMPTY}
+
 *** Test Cases ***
 RBAC-01 ServiceAccount Created
     ${result}=    Run Process    kubectl    get    sa    rbac-app-sa    -n    ${NAMESPACE}
     Should Be Equal As Integers    ${result.rc}    0
 
 RBAC-02 Role With ResourceNames Created
-    ${result}=    Run Process    kubectl    get    role    rbac-token-role    -n    ${NAMESPACE}
+    ${result}=    Run Process    kubectl    get    role    rbac-token-role-${RUN_ID}    -n    ${NAMESPACE}
     Should Be Equal As Integers    ${result.rc}    0
 
 RBAC-03 RoleBinding Created
-    ${result}=    Run Process    kubectl    get    rolebinding    rbac-token-binding    -n    ${NAMESPACE}
+    ${result}=    Run Process    kubectl    get    rolebinding    rbac-token-binding-${RUN_ID}    -n    ${NAMESPACE}
     Should Be Equal As Integers    ${result.rc}    0
 
 RBAC-04 Auth Can-I With Subresource
@@ -27,43 +31,129 @@ RBAC-04 Auth Can-I With Subresource
 
 RBAC-05 Authorized SA Gets Token Via Operator
     [Tags]    smoke
-    Wait For VM Running    rbac-vm
-    ${endpoint}=    Get MicroVM Endpoint    rbac-vm
+    Wait For VM Running    ${RBAC_VM}
+    ${endpoint}=    Get MicroVM Endpoint    ${RBAC_VM}
     # Create test pod and call operator token endpoint
-    Kubectl Apply    apiVersion: v1\nkind: Pod\nmetadata:\n  name: rbac-auth-pod\n  namespace: ${NAMESPACE}\nspec:\n  serviceAccountName: rbac-app-sa\n  containers:\n  - name: curl\n    image: public.ecr.aws/amazonlinux/amazonlinux:2023\n    command: ["sleep", "300"]\n  restartPolicy: Never
-    ${result}=    Run Process    kubectl    wait    --for\=condition\=Ready    pod/rbac-auth-pod    -n    ${NAMESPACE}    --timeout\=60s
-    ${result}=    Run Process    kubectl    exec    rbac-auth-pod    -n    ${NAMESPACE}    --    bash    -c    SA_TOKEN\=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token); curl -sk -X POST -H "Authorization: Bearer $SA_TOKEN" "https://kube-microvm-operator.${OPERATOR_NS}.svc:443/apis/lambda.aws.amazon.com/v1alpha1/namespaces/${NAMESPACE}/microvms/rbac-vm/token"
+    ${pod_yaml}=    Catenate    SEPARATOR=\n
+    ...    apiVersion: v1
+    ...    kind: Pod
+    ...    metadata:
+    ...    ${SPACE}${SPACE}name: rbac-auth-pod-${RUN_ID}
+    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
+    ...    spec:
+    ...    ${SPACE}${SPACE}serviceAccountName: rbac-app-sa
+    ...    ${SPACE}${SPACE}containers:
+    ...    ${SPACE}${SPACE}- name: curl
+    ...    ${SPACE}${SPACE}${SPACE}${SPACE}image: public.ecr.aws/amazonlinux/amazonlinux:2023
+    ...    ${SPACE}${SPACE}${SPACE}${SPACE}command: ["sleep", "300"]
+    ...    ${SPACE}${SPACE}restartPolicy: Never
+    Kubectl Apply    ${pod_yaml}
+    ${result}=    Run Process    kubectl    wait    --for\=condition\=Ready    pod/rbac-auth-pod-${RUN_ID}    -n    ${NAMESPACE}    --timeout\=60s
+    ${result}=    Run Process    kubectl    exec    rbac-auth-pod-${RUN_ID}    -n    ${NAMESPACE}    --    bash    -c    SA_TOKEN\=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token); curl -sk -X POST -H "Authorization: Bearer $SA_TOKEN" "https://kube-microvm-operator.${OPERATOR_NS}.svc:443/apis/lambda.aws.amazon.com/v1alpha1/namespaces/${NAMESPACE}/microvms/${RBAC_VM}/token"
     Should Contain    ${result.stdout}    authToken
     Should Contain    ${result.stdout}    endpoint
 
 RBAC-06 Authorized SA Rejected For Different VM
-    ${result}=    Run Process    kubectl    exec    rbac-auth-pod    -n    ${NAMESPACE}    --    bash    -c    SA_TOKEN\=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token); curl -sk -w "\\nHTTP_%{http_code}" -X POST -H "Authorization: Bearer $SA_TOKEN" "https://kube-microvm-operator.${OPERATOR_NS}.svc:443/apis/lambda.aws.amazon.com/v1alpha1/namespaces/${NAMESPACE}/microvms/other-vm/token"
+    ${result}=    Run Process    kubectl    exec    rbac-auth-pod-${RUN_ID}    -n    ${NAMESPACE}    --    bash    -c    SA_TOKEN\=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token); curl -sk -w "\\nHTTP_%{http_code}" -X POST -H "Authorization: Bearer $SA_TOKEN" "https://kube-microvm-operator.${OPERATOR_NS}.svc:443/apis/lambda.aws.amazon.com/v1alpha1/namespaces/${NAMESPACE}/microvms/other-vm/token"
     Should Contain    ${result.stdout}    HTTP_403
 
 RBAC-07 Unauthorized SA Rejected
-    Kubectl Apply    apiVersion: v1\nkind: ServiceAccount\nmetadata:\n  name: rbac-norole-sa\n  namespace: ${NAMESPACE}\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: rbac-norole-pod\n  namespace: ${NAMESPACE}\nspec:\n  serviceAccountName: rbac-norole-sa\n  containers:\n  - name: curl\n    image: public.ecr.aws/amazonlinux/amazonlinux:2023\n    command: ["sleep", "300"]\n  restartPolicy: Never
-    Run Process    kubectl    wait    --for\=condition\=Ready    pod/rbac-norole-pod    -n    ${NAMESPACE}    --timeout\=60s
-    ${result}=    Run Process    kubectl    exec    rbac-norole-pod    -n    ${NAMESPACE}    --    bash    -c    SA_TOKEN\=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token); curl -sk -w "\\nHTTP_%{http_code}" -X POST -H "Authorization: Bearer $SA_TOKEN" "https://kube-microvm-operator.${OPERATOR_NS}.svc:443/apis/lambda.aws.amazon.com/v1alpha1/namespaces/${NAMESPACE}/microvms/rbac-vm/token"
+    ${sa_yaml}=    Catenate    SEPARATOR=\n
+    ...    apiVersion: v1
+    ...    kind: ServiceAccount
+    ...    metadata:
+    ...    ${SPACE}${SPACE}name: rbac-norole-sa
+    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
+    ...    ---
+    ...    apiVersion: v1
+    ...    kind: Pod
+    ...    metadata:
+    ...    ${SPACE}${SPACE}name: rbac-norole-pod-${RUN_ID}
+    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
+    ...    spec:
+    ...    ${SPACE}${SPACE}serviceAccountName: rbac-norole-sa
+    ...    ${SPACE}${SPACE}containers:
+    ...    ${SPACE}${SPACE}- name: curl
+    ...    ${SPACE}${SPACE}${SPACE}${SPACE}image: public.ecr.aws/amazonlinux/amazonlinux:2023
+    ...    ${SPACE}${SPACE}${SPACE}${SPACE}command: ["sleep", "300"]
+    ...    ${SPACE}${SPACE}restartPolicy: Never
+    Kubectl Apply    ${sa_yaml}
+    Run Process    kubectl    wait    --for\=condition\=Ready    pod/rbac-norole-pod-${RUN_ID}    -n    ${NAMESPACE}    --timeout\=60s
+    ${result}=    Run Process    kubectl    exec    rbac-norole-pod-${RUN_ID}    -n    ${NAMESPACE}    --    bash    -c    SA_TOKEN\=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token); curl -sk -w "\\nHTTP_%{http_code}" -X POST -H "Authorization: Bearer $SA_TOKEN" "https://kube-microvm-operator.${OPERATOR_NS}.svc:443/apis/lambda.aws.amazon.com/v1alpha1/namespaces/${NAMESPACE}/microvms/${RBAC_VM}/token"
     Should Contain    ${result.stdout}    HTTP_403
 
 RBAC-08 Unlabelled Namespace Rejects MicroVM
     Run Process    kubectl    create    namespace    rbac-unlabelled    --dry-run\=client    -o    yaml    stdout=${CURDIR}/ns.yaml
     Run Process    kubectl    apply    -f    ${CURDIR}/ns.yaml
-    ${output}=    Kubectl Apply Expect Failure    apiVersion: lambda.aws.amazon.com/v1alpha1\nkind: MicroVM\nmetadata:\n  name: should-fail\n  namespace: rbac-unlabelled\nspec:\n  imageRef: rbac-test-app\n  desiredState: Running
+    ${vm_yaml}=    Catenate    SEPARATOR=\n
+    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
+    ...    kind: MicroVM
+    ...    metadata:
+    ...    ${SPACE}${SPACE}name: should-fail
+    ...    ${SPACE}${SPACE}namespace: rbac-unlabelled
+    ...    spec:
+    ...    ${SPACE}${SPACE}imageRef: ${SHARED_IMAGE}
+    ...    ${SPACE}${SPACE}desiredState: Running
+    ${output}=    Kubectl Apply Expect Failure    ${vm_yaml}
     Should Contain    ${output}    is not managed
     [Teardown]    Run Process    kubectl    delete    namespace    rbac-unlabelled    --timeout\=30s
 
 *** Keywords ***
 Create RBAC Resources
-    Kubectl Apply    apiVersion: lambda.aws.amazon.com/v1alpha1\nkind: MicroVMImage\nmetadata:\n  name: rbac-test-app\n  namespace: ${NAMESPACE}\nspec:\n  source:\n    s3Bucket: ${S3_BUCKET}\n    s3Key: ${S3_KEY}\n  baseImageArn: ${BASE_IMAGE_ARN}\n  buildRoleArn: ${BUILD_ROLE_ARN}
-    Kubectl Apply    apiVersion: v1\nkind: ServiceAccount\nmetadata:\n  name: rbac-app-sa\n  namespace: ${NAMESPACE}\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: Role\nmetadata:\n  name: rbac-token-role\n  namespace: ${NAMESPACE}\nrules:\n- apiGroups: ["lambda.aws.amazon.com"]\n  resources: ["microvms/token"]\n  verbs: ["create"]\n  resourceNames: ["rbac-vm"]\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: RoleBinding\nmetadata:\n  name: rbac-token-binding\n  namespace: ${NAMESPACE}\nsubjects:\n- kind: ServiceAccount\n  name: rbac-app-sa\n  namespace: ${NAMESPACE}\nroleRef:\n  kind: Role\n  name: rbac-token-role\n  apiGroup: rbac.authorization.k8s.io
-    Wait For Image Ready    rbac-test-app
-    Kubectl Apply    apiVersion: lambda.aws.amazon.com/v1alpha1\nkind: MicroVM\nmetadata:\n  name: rbac-vm\n  namespace: ${NAMESPACE}\nspec:\n  imageRef: rbac-test-app\n  desiredState: Running\n  maxIdleDurationSeconds: 900\n  suspendedDurationSeconds: 1800
+    ${id}=    Evaluate    __import__('time').strftime('%H%M%S')
+    Set Suite Variable    ${RUN_ID}    ${id}
+    Set Suite Variable    ${RBAC_VM}    rbac-vm-${id}
+    Ensure Shared Image Ready
+    # RBAC resources
+    ${rbac_yaml}=    Catenate    SEPARATOR=\n
+    ...    apiVersion: v1
+    ...    kind: ServiceAccount
+    ...    metadata:
+    ...    ${SPACE}${SPACE}name: rbac-app-sa
+    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
+    ...    ---
+    ...    apiVersion: rbac.authorization.k8s.io/v1
+    ...    kind: Role
+    ...    metadata:
+    ...    ${SPACE}${SPACE}name: rbac-token-role-${RUN_ID}
+    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
+    ...    rules:
+    ...    - apiGroups: ["lambda.aws.amazon.com"]
+    ...    ${SPACE}${SPACE}resources: ["microvms/token"]
+    ...    ${SPACE}${SPACE}verbs: ["create"]
+    ...    ${SPACE}${SPACE}resourceNames: ["${RBAC_VM}"]
+    ...    ---
+    ...    apiVersion: rbac.authorization.k8s.io/v1
+    ...    kind: RoleBinding
+    ...    metadata:
+    ...    ${SPACE}${SPACE}name: rbac-token-binding-${RUN_ID}
+    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
+    ...    subjects:
+    ...    - kind: ServiceAccount
+    ...    ${SPACE}${SPACE}name: rbac-app-sa
+    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
+    ...    roleRef:
+    ...    ${SPACE}${SPACE}kind: Role
+    ...    ${SPACE}${SPACE}name: rbac-token-role-${RUN_ID}
+    ...    ${SPACE}${SPACE}apiGroup: rbac.authorization.k8s.io
+    Kubectl Apply    ${rbac_yaml}
+    # VM
+    ${vm_yaml}=    Catenate    SEPARATOR=\n
+    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
+    ...    kind: MicroVM
+    ...    metadata:
+    ...    ${SPACE}${SPACE}name: ${RBAC_VM}
+    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
+    ...    spec:
+    ...    ${SPACE}${SPACE}imageRef: ${SHARED_IMAGE}
+    ...    ${SPACE}${SPACE}desiredState: Running
+    ...    ${SPACE}${SPACE}maxIdleDurationSeconds: 900
+    ...    ${SPACE}${SPACE}suspendedDurationSeconds: 1800
+    Kubectl Apply    ${vm_yaml}
 
 Cleanup RBAC Resources
-    Run Keyword And Ignore Error    Run Process    kubectl    delete    pod    rbac-auth-pod    rbac-norole-pod    -n    ${NAMESPACE}    --force    --grace-period\=0    --timeout\=30s
+    Run Keyword And Ignore Error    Run Process    kubectl    delete    pod    rbac-auth-pod-${RUN_ID}    rbac-norole-pod-${RUN_ID}    -n    ${NAMESPACE}    --force    --grace-period\=0    --timeout\=30s
     Run Keyword And Ignore Error    Run Process    kubectl    delete    sa    rbac-app-sa    rbac-norole-sa    -n    ${NAMESPACE}
-    Run Keyword And Ignore Error    Run Process    kubectl    delete    role    rbac-token-role    -n    ${NAMESPACE}
-    Run Keyword And Ignore Error    Run Process    kubectl    delete    rolebinding    rbac-token-binding    -n    ${NAMESPACE}
-    Run Keyword And Ignore Error    Kubectl Delete Force    microvm    rbac-vm
-    Run Keyword And Ignore Error    Kubectl Delete Force    microvmimage    rbac-test-app
+    Run Keyword And Ignore Error    Run Process    kubectl    delete    role    rbac-token-role-${RUN_ID}    -n    ${NAMESPACE}
+    Run Keyword And Ignore Error    Run Process    kubectl    delete    rolebinding    rbac-token-binding-${RUN_ID}    -n    ${NAMESPACE}
+    Run Keyword And Ignore Error    Kubectl Delete Force    microvm    ${RBAC_VM}
