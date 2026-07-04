@@ -2,7 +2,8 @@
 Documentation    UAT: RBAC Guide
 Resource         ../resources/common.resource
 Resource         ../resources/variables.robot
-Suite Setup      Create RBAC Resources
+Resource         ../resources/cluster_setup.resource
+Suite Setup      Run Keywords    Verify Cluster Ready    AND    Create RBAC Resources
 Suite Teardown   Cleanup RBAC Resources
 Force Tags       rbac
 

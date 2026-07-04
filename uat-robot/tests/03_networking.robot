@@ -2,7 +2,8 @@
 Documentation    UAT: Networking Guide
 Resource         ../resources/common.resource
 Resource         ../resources/variables.robot
-Suite Setup      Create Networking Resources
+Resource         ../resources/cluster_setup.resource
+Suite Setup      Run Keywords    Verify Cluster Ready    AND    Create Networking Resources
 Suite Teardown   Cleanup Networking Resources
 Force Tags       networking
 

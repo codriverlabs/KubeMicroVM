@@ -2,7 +2,8 @@
 Documentation    UAT: ReplicaSet Guide
 Resource         ../resources/common.resource
 Resource         ../resources/variables.robot
-Suite Setup      Create ReplicaSet Resources
+Resource         ../resources/cluster_setup.resource
+Suite Setup      Run Keywords    Verify Cluster Ready    AND    Create ReplicaSet Resources
 Suite Teardown   Cleanup ReplicaSet Resources
 Force Tags       replicaset
 

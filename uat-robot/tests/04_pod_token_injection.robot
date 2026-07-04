@@ -2,7 +2,8 @@
 Documentation    UAT: Pod Token Injection Guide
 Resource         ../resources/common.resource
 Resource         ../resources/variables.robot
-Suite Setup      Create Injection Resources
+Resource         ../resources/cluster_setup.resource
+Suite Setup      Run Keywords    Verify Cluster Ready    AND    Create Injection Resources
 Suite Teardown   Cleanup Injection Resources
 Force Tags       injection
 

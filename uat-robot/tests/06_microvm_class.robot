@@ -2,7 +2,8 @@
 Documentation    UAT: MicroVMClass Guide
 Resource         ../resources/common.resource
 Resource         ../resources/variables.robot
-Suite Setup      Create Class Resources
+Resource         ../resources/cluster_setup.resource
+Suite Setup      Run Keywords    Verify Cluster Ready    AND    Create Class Resources
 Suite Teardown   Cleanup Class Resources
 Force Tags       class
 

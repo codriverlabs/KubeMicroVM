@@ -2,7 +2,8 @@
 Documentation    UAT: Drift Detection & Auto-Suspend Guide
 Resource         ../resources/common.resource
 Resource         ../resources/variables.robot
-Suite Setup      Create Drift Resources
+Resource         ../resources/cluster_setup.resource
+Suite Setup      Run Keywords    Verify Cluster Ready    AND    Create Drift Resources
 Suite Teardown   Cleanup Drift Resources
 Force Tags       drift
 

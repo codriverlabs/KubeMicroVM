@@ -2,7 +2,8 @@
 Documentation    UAT: Memory Sizing Guide
 Resource         ../resources/common.resource
 Resource         ../resources/variables.robot
-Suite Setup      Create Memory Resources
+Resource         ../resources/cluster_setup.resource
+Suite Setup      Run Keywords    Verify Cluster Ready    AND    Create Memory Resources
 Suite Teardown   Cleanup Memory Resources
 Force Tags       memory
 

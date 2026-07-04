@@ -2,7 +2,8 @@
 Documentation    UAT: Quick Start Guide
 Resource         ../resources/common.resource
 Resource         ../resources/variables.robot
-Suite Setup      Create Quick Start Resources
+Resource         ../resources/cluster_setup.resource
+Suite Setup      Run Keywords    Verify Cluster Ready    AND    Create Quick Start Resources
 Suite Teardown   Cleanup Quick Start Resources
 Force Tags       quick-start
 
