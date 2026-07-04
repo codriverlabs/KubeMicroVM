@@ -14,7 +14,7 @@ ${RUN_ID}      ${EMPTY}
 
 *** Test Cases ***
 QS-00 Installer Download And Checksum Verification
-    [Documentation]    Validates Step 1: download installer from release + verify SHA256
+    [Documentation]    Validates Step 1: download installer from release, verify SHA256, confirm executable
     [Tags]    smoke
     ${dl}=    Run Process    curl    -fsSL    https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh    -o    /tmp/install_kube_microvm.sh
     Should Be Equal As Integers    ${dl.rc}    0    Failed to download installer script
@@ -22,6 +22,12 @@ QS-00 Installer Download And Checksum Verification
     Should Be Equal As Integers    ${sha.rc}    0    Failed to download checksum
     ${verify}=    Run Process    sha256sum    -c    /tmp/install_kube_microvm.sh.sha256    cwd=/tmp
     Should Be Equal As Integers    ${verify.rc}    0    Checksum verification failed: ${verify.stdout}
+    # Confirm script is parseable and shows help
+    Run Process    chmod    +x    /tmp/install_kube_microvm.sh
+    ${help}=    Run Process    /tmp/install_kube_microvm.sh    --help
+    Should Be Equal As Integers    ${help.rc}    0    Script failed to run --help
+    Should Contain    ${help.stdout}    --cluster
+    Should Contain    ${help.stdout}    --region
 
 QS-01 Operator Running
     [Tags]    smoke
