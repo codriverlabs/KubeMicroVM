@@ -48,9 +48,17 @@ QS-07 Curl Endpoint Returns OK
     Should Contain    ${response}    "status":"ok"
 
 QS-08 Teardown Delete VM And Image
-    Kubectl Delete Force    microvm    ${QS_VM}
-    ${result}=    Run Process    kubectl    get    microvm    ${QS_VM}    -n    ${NAMESPACE}
-    Should Not Be Equal As Integers    ${result.rc}    0
+    [Documentation]    Follows the guide's teardown: terminate → delete VM → delete image
+    # Terminate (as documented in guide)
+    ${result}=    Run Process    kubectl    patch    microvm    ${QS_VM}    -n    ${NAMESPACE}    --type\=merge    -p    {"spec":{"desiredState":"Terminated"}}
+    Should Be Equal As Integers    ${result.rc}    0
+    Sleep    10s    Wait for termination
+    # Delete VM
+    ${result}=    Run Process    kubectl    delete    microvm    ${QS_VM}    -n    ${NAMESPACE}    --timeout\=60s
+    Should Be Equal As Integers    ${result.rc}    0
+    # Delete image
+    ${result}=    Run Process    kubectl    delete    microvmimage    ${QS_IMAGE}    -n    ${NAMESPACE}    --timeout\=60s
+    Should Be Equal As Integers    ${result.rc}    0
 
 *** Keywords ***
 Create Quick Start Resources
