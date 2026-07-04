@@ -24,13 +24,25 @@ Get a MicroVM running in about 5 minutes.
 ## Step 1: Install the operator
 
 ```bash
-./install_kube_microvm.sh \
+curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh | bash -s -- \
   --cluster my-cluster \
   --region us-east-1 \
   --iam
 ```
 
 This creates the IAM role, deploys the Helm chart, and installs the `microvm` CLI.
+
+Or download and run separately:
+
+```bash
+curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh \
+  -o install_kube_microvm.sh && chmod +x install_kube_microvm.sh
+
+./install_kube_microvm.sh \
+  --cluster my-cluster \
+  --region us-east-1 \
+  --iam
+```
 
 Or manually with Helm:
 
