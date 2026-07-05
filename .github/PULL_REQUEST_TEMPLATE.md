@@ -14,7 +14,9 @@
 
 <!-- How did you verify your changes? -->
 
-- [ ] `./mvnw -B install -DskipTests && ./mvnw -B -pl operator-tests verify` passes
+- [ ] `./build-local.sh` passes (JVM build)
+- [ ] `./build-local.sh --native` passes (native image build)
+- [ ] `./mvnw -B install -DskipTests && ./mvnw -B -pl operator-tests verify` passes (integration tests)
 - [ ] Added/updated tests covering the change
 - [ ] Tested on a live EKS cluster (if applicable)
 
