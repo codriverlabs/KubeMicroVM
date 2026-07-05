@@ -52,4 +52,4 @@ The **licensor** is the entity offering these terms, and the **software** is the
 
 ---
 
-Copyright (c) 2026 Plasticity.Cloud & Codriverlabs — KubeMicroVM
+Copyright (c) 2026 Plasticity.Cloud Limited & CoDriverLabs Limited — KubeMicroVM

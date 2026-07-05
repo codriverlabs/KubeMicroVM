@@ -351,6 +351,6 @@ transparently.
 
 ## License
 
-Copyright (c) 2026 Plasticity.Cloud & Codriverlabs
+Copyright (c) 2026 Plasticity.Cloud Limited & CoDriverLabs Limited
 
 Licensed under the [Elastic License 2.0 (ELv2)](LICENSE.md).
