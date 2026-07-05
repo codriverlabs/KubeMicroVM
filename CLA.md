@@ -48,9 +48,10 @@ You represent that:
 - You have the legal authority to enter into this Agreement.
 - Your Contribution does not violate any third-party rights (copyright, patent, trade
   secret, or other intellectual property rights).
-- If Your employer has rights to intellectual property that You create, You have received
-  permission to make Contributions on behalf of that employer, or Your employer has waived
-  such rights for Your Contributions to KubeMicroVM.
+- If Your employer has rights to intellectual property that You create, You represent
+  that You have received explicit permission to make Contributions on behalf of that
+  employer, or that Your employer has waived such rights for Your Contributions to
+  KubeMicroVM.
 
 ## 6. No Obligation
 
