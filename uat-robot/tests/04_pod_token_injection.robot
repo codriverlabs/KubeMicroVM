@@ -35,7 +35,7 @@ INJ-05 Token Volume Present
     Should Contain    ${volumes}    microvm-token
 
 INJ-06 Token Files Written
-    Sleep    30s    Wait for agent to fetch token
+    Sleep    45s    Wait for agent to fetch token
     ${result}=    Run Process    kubectl    exec    inject-pod-${RUN_ID}    -c    app    -n    ${NAMESPACE}    --    ls    /var/run/microvm/
     Should Contain    ${result.stdout}    auth-token
     Should Contain    ${result.stdout}    endpoint

@@ -81,7 +81,7 @@ Create Networking Resources
 
 Wait For Network Active
     [Arguments]    ${name}    ${namespace}=${NAMESPACE}    ${timeout}=300
-    FOR    ${i}    IN RANGE    ${timeout // 10}
+    FOR    ${i}    IN RANGE    ${{int($timeout) // 10}}
         ${state}=    Kubectl Get JsonPath    microvmnetwork    ${name}    {.status.connectorState}    ${namespace}
         IF    "${state}" == "ACTIVE"
             RETURN
