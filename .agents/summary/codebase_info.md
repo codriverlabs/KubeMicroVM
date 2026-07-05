@@ -6,8 +6,8 @@
 - **Type**: Kubernetes Operator + CLI
 - **Language**: Java 25 (Quarkus 3, GraalVM native)
 - **Framework**: JOSDK (Java Operator SDK) via Quarkus Operator SDK extension
-- **License**: Express-Compute Community License
-- **Current Version**: v1.0.0-rc8
+- **License**: Elastic License 2.0 (ELv2)
+- **Latest stable release**: v1.0.1 (dev branch: 1.1.0-SNAPSHOT)
 - **Repository**: github.com/plasticity-of-cloud/KubeMicroVM
 
 ## Technology Stack

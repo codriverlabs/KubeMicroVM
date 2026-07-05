@@ -56,3 +56,10 @@ These files in `.kiro/steering/` contain MUST-follow rules for development:
 | `feature-branch-workflow.md` | Feature branch → develop → test → deploy → E2E → merge flow |
 | `external-dependencies.md` | Use AWS endpoints (checkip.amazonaws.com), public.ecr.aws images |
 | `release-versioning.md` | Tag format: `v<M>.<m>.<p>-rc<N>`, GA drops suffix |
+
+## Contributing & CLA
+
+- `CONTRIBUTING.md` — development setup, coding standards, contribution workflow
+- `CLA.md` — Contributor License Agreement (ELv2, must sign before PR merge)
+- `signatures/cla.json` — CLA signatures (auto-updated by bot on `main`)
+- Branch protection on `main`: requires `CLA Assistant` status check (strict)

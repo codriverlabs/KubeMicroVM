@@ -55,6 +55,7 @@
 | `build-local.sh` | Build script (--push, --helm, --native, --skip-tests, --registry) |
 | `deploy-local.sh` | EKS deploy script (cleanup + install) |
 | `install_kube_microvm.sh` | Customer-facing installer (IAM + Helm + CLI + registry import) |
+| `.github/workflows/cla.yml` | CLA Assistant workflow (signs `signatures/cla.json` on `main`) |
 
 ## Testing Strategy
 
