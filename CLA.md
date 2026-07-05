@@ -1,6 +1,6 @@
 # Individual Contributor License Agreement
 
-**KubeMicroVM — Plasticity.Cloud & Codriverlabs**
+**KubeMicroVM — Plasticity.Cloud Limited & CoDriverLabs Limited**
 
 Thank you for your interest in contributing to KubeMicroVM. This Contributor License
 Agreement ("Agreement") documents the rights granted by contributors to us.
@@ -17,7 +17,7 @@ submitted to KubeMicroVM.
 - **"Contribution"** means any original work of authorship, including modifications or
   additions to existing work, that is submitted by You to the KubeMicroVM project via
   Pull Request, issue, email, or any other form of communication.
-- **"Us"** means Plasticity.Cloud and Codriverlabs, the maintainers of KubeMicroVM.
+- **"Us"** means Plasticity.Cloud Limited and CoDriverLabs Limited, the maintainers of KubeMicroVM.
 
 ## 2. Grant of Copyright License
 

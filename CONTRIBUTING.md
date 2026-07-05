@@ -15,7 +15,7 @@ This is a one-time, frictionless process:
 3. Click the link, sign in with GitHub, and accept the agreement.
 4. The bot marks your PR as ready — takes about 5 seconds.
 
-The CLA grants Plasticity.Cloud and Codriverlabs a non-exclusive, perpetual, worldwide,
+The CLA grants Plasticity.Cloud Limited and CoDriverLabs Limited a non-exclusive, perpetual, worldwide,
 royalty-free license to use, modify, and distribute your contribution in all versions of
 KubeMicroVM (Community and PRO). You retain full copyright ownership of your code.
 
