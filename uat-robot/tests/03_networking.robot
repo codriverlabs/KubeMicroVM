@@ -59,83 +59,25 @@ Create Networking Resources
     Set Suite Variable    ${NET_VPC_VM}    net-vpc-${id}
     Set Suite Variable    ${NET_VPC_NET}    net-vpc-${id}
     # Build networking test image (uses net-test app with /fetch endpoint)
-    ${img_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVMImage
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${NET_IMG}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}source:
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}s3Bucket: ${S3_BUCKET}
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}s3Key: ${S3_KEY_NET}
-    ...    ${SPACE}${SPACE}baseImageArn: ${BASE_IMAGE_ARN}
-    ...    ${SPACE}${SPACE}buildRoleArn: ${BUILD_ROLE_ARN}
-    Kubectl Apply    ${img_yaml}
+    Set Local Variable    ${NAME}    ${NET_IMG}
+    Apply Template    networking/net-image.yaml
     Wait For Image Ready    ${NET_IMG}
     # Internet egress VM
-    ${internet_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVM
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${NET_INTERNET}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}imageRef: ${NET_IMG}
-    ...    ${SPACE}${SPACE}desiredState: Running
-    ...    ${SPACE}${SPACE}maxIdleDurationSeconds: 900
-    ...    ${SPACE}${SPACE}suspendedDurationSeconds: 1800
-    ...    ${SPACE}${SPACE}ingressNetworkConnectors:
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}- "arn:aws:lambda:${REGION}:aws:network-connector:aws-network-connector:ALL_INGRESS"
-    ...    ${SPACE}${SPACE}egressNetworkConnectors:
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}- "arn:aws:lambda:${REGION}:aws:network-connector:aws-network-connector:INTERNET_EGRESS"
-    Kubectl Apply    ${internet_yaml}
+    Set Local Variable    ${NAME}    ${NET_INTERNET}
+    Set Local Variable    ${IMAGE_REF}    ${NET_IMG}
+    Apply Template    networking/vm-internet-egress.yaml
     # Default egress VM (no explicit egress connectors)
-    ${default_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVM
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${NET_DEFAULT}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}imageRef: ${NET_IMG}
-    ...    ${SPACE}${SPACE}desiredState: Running
-    ...    ${SPACE}${SPACE}maxIdleDurationSeconds: 900
-    ...    ${SPACE}${SPACE}suspendedDurationSeconds: 1800
-    ...    ${SPACE}${SPACE}ingressNetworkConnectors:
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}- "arn:aws:lambda:${REGION}:aws:network-connector:aws-network-connector:ALL_INGRESS"
-    Kubectl Apply    ${default_yaml}
+    Set Local Variable    ${NAME}    ${NET_DEFAULT}
+    Set Local Variable    ${IMAGE_REF}    ${NET_IMG}
+    Apply Template    networking/vm-default-egress.yaml
     # VPC network connector
-    ${network_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVMNetwork
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${NET_VPC_NET}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}subnetIds:
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}- ${SUBNET_1}
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}- ${SUBNET_2}
-    ...    ${SPACE}${SPACE}securityGroupIds:
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}- ${SG_ID}
-    ...    ${SPACE}${SPACE}operatorRoleArn: ${OPERATOR_ROLE}
-    Kubectl Apply    ${network_yaml}
+    Set Local Variable    ${NAME}    ${NET_VPC_NET}
+    Apply Template    networking/microvm-network.yaml
     # VPC egress VM
-    ${vpc_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVM
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${NET_VPC_VM}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}imageRef: ${NET_IMG}
-    ...    ${SPACE}${SPACE}desiredState: Running
-    ...    ${SPACE}${SPACE}maxIdleDurationSeconds: 900
-    ...    ${SPACE}${SPACE}suspendedDurationSeconds: 1800
-    ...    ${SPACE}${SPACE}networkRef: ${NET_VPC_NET}
-    ...    ${SPACE}${SPACE}ingressNetworkConnectors:
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}- "arn:aws:lambda:${REGION}:aws:network-connector:aws-network-connector:ALL_INGRESS"
-    Kubectl Apply    ${vpc_yaml}
+    Set Local Variable    ${NAME}    ${NET_VPC_VM}
+    Set Local Variable    ${IMAGE_REF}    ${NET_IMG}
+    Set Local Variable    ${NETWORK_REF}    ${NET_VPC_NET}
+    Apply Template    networking/vm-vpc-egress.yaml
 
 Wait For Network Active
     [Arguments]    ${name}    ${namespace}=${NAMESPACE}    ${timeout}=300

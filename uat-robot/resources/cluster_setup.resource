@@ -5,6 +5,7 @@ Documentation    Shared cluster setup — ensures operator, CRDs, namespace, and
 Library    Process
 Library    OperatingSystem
 Resource   variables.robot
+Resource   common.resource
 
 *** Keywords ***
 Verify Cluster Ready
@@ -91,18 +92,7 @@ Ensure Shared Image Ready
     ELSE
         # Image doesn't exist — create it
         Log    Creating shared image ${SHARED_IMAGE}...
-        ${yaml}=    Catenate    SEPARATOR=\n
-        ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-        ...    kind: MicroVMImage
-        ...    metadata:
-        ...    ${SPACE}${SPACE}name: ${SHARED_IMAGE}
-        ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-        ...    spec:
-        ...    ${SPACE}${SPACE}source:
-        ...    ${SPACE}${SPACE}${SPACE}${SPACE}s3Bucket: ${S3_BUCKET}
-        ...    ${SPACE}${SPACE}${SPACE}${SPACE}s3Key: ${S3_KEY}
-        ...    ${SPACE}${SPACE}baseImageArn: "${BASE_IMAGE_ARN}"
-        ...    ${SPACE}${SPACE}buildRoleArn: "${BUILD_ROLE_ARN}"
-        Kubectl Apply    ${yaml}
+        Set Local Variable    ${NAME}    ${SHARED_IMAGE}
+        Apply Template    shared/microvm-image.yaml
         Wait For Image Ready    ${SHARED_IMAGE}
     END

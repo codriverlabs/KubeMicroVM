@@ -29,20 +29,8 @@ MEM-02 Image Without MemorySizeMiB Defaults To 2048
     Should Be Equal    ${memory}    2048
 
 MEM-03 Invalid MemorySizeMiB Rejected
-    ${invalid_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVMImage
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: mem-invalid-${RUN_ID}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}source:
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}s3Bucket: ${S3_BUCKET}
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}s3Key: ${S3_KEY}
-    ...    ${SPACE}${SPACE}baseImageArn: ${BASE_IMAGE_ARN}
-    ...    ${SPACE}${SPACE}buildRoleArn: ${BUILD_ROLE_ARN}
-    ...    ${SPACE}${SPACE}memorySizeMiB: 999
-    ${output}=    Kubectl Apply Expect Failure    ${invalid_yaml}
+    Set Local Variable    ${NAME}    mem-invalid-${RUN_ID}
+    ${output}=    Apply Template Expect Failure    memory-sizing/image-invalid-memory.yaml
     Should Contain    ${output}    must be one of
 
 MEM-04 MemorySizeMiB Immutable On Update
@@ -59,18 +47,11 @@ MEM-05 CLI Describe Shows Memory
 MEM-07 Run VM From 4096 MiB Image
     [Tags]    smoke
     Wait For Image Ready    ${MEM_4096}
-    ${vm_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVM
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${MEM_VM}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}imageRef: ${MEM_4096}
-    ...    ${SPACE}${SPACE}desiredState: Running
-    ...    ${SPACE}${SPACE}maxIdleDurationSeconds: 900
-    ...    ${SPACE}${SPACE}suspendedDurationSeconds: 1800
-    Kubectl Apply    ${vm_yaml}
+    Set Local Variable    ${NAME}    ${MEM_VM}
+    Set Local Variable    ${IMAGE_REF}    ${MEM_4096}
+    Set Local Variable    ${MAX_IDLE}    900
+    Set Local Variable    ${SUSPENDED_DURATION}    1800
+    Apply Template    shared/microvm.yaml
     Wait For VM Running    ${MEM_VM}
     ${endpoint}=    Get MicroVM Endpoint    ${MEM_VM}
     ${token}=    Get MicroVM Token    ${MEM_VM}
@@ -85,34 +66,12 @@ Create Memory Resources
     Set Suite Variable    ${MEM_DEFAULT}    mem-default-${id}
     Set Suite Variable    ${MEM_VM}    mem-vm-${id}
     # Image with explicit memorySizeMiB: 4096
-    ${img_4096_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVMImage
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${MEM_4096}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}source:
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}s3Bucket: ${S3_BUCKET}
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}s3Key: ${S3_KEY}
-    ...    ${SPACE}${SPACE}baseImageArn: ${BASE_IMAGE_ARN}
-    ...    ${SPACE}${SPACE}buildRoleArn: ${BUILD_ROLE_ARN}
-    ...    ${SPACE}${SPACE}memorySizeMiB: 4096
-    Kubectl Apply    ${img_4096_yaml}
+    Set Local Variable    ${NAME}    ${MEM_4096}
+    Set Local Variable    ${MEMORY_SIZE_MIB}    4096
+    Apply Template    memory-sizing/image-with-memory.yaml
     # Image without memorySizeMiB (defaults to 2048)
-    ${img_default_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVMImage
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${MEM_DEFAULT}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}source:
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}s3Bucket: ${S3_BUCKET}
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}s3Key: ${S3_KEY}
-    ...    ${SPACE}${SPACE}baseImageArn: ${BASE_IMAGE_ARN}
-    ...    ${SPACE}${SPACE}buildRoleArn: ${BUILD_ROLE_ARN}
-    Kubectl Apply    ${img_default_yaml}
+    Set Local Variable    ${NAME}    ${MEM_DEFAULT}
+    Apply Template    shared/microvm-image.yaml
 
 Cleanup Memory Resources
     Run Keyword And Ignore Error    Kubectl Delete Force    microvm    ${MEM_VM}

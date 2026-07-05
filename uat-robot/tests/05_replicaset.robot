@@ -49,19 +49,10 @@ Create ReplicaSet Resources
     Set Suite Variable    ${RUN_ID}    ${id}
     Set Suite Variable    ${RS_NAME}    rs-pool-${id}
     Ensure Shared Image Ready
-    ${yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVMReplicaSet
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${RS_NAME}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}replicas: 3
-    ...    ${SPACE}${SPACE}template:
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}imageRef: ${SHARED_IMAGE}
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}maxIdleDurationSeconds: 900
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}suspendedDurationSeconds: 1800
-    Kubectl Apply    ${yaml}
+    Set Local Variable    ${NAME}    ${RS_NAME}
+    Set Local Variable    ${REPLICAS}    3
+    Set Local Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
+    Apply Template    replicaset/replicaset.yaml
 
 Cleanup ReplicaSet Resources
     Run Keyword And Ignore Error    Run Process    kubectl    delete    microvmreplicaset    ${RS_NAME}    -n    ${NAMESPACE}    --timeout\=60s

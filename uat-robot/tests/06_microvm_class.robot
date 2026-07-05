@@ -42,17 +42,10 @@ CLASS-05 Kubectl Get Lists Class
     Should Contain    ${result.stdout}    ${CLASS_NAME}
 
 CLASS-06 Non-Existent Class Rejected
-    ${vm_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVM
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: bad-class-vm
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}imageRef: ${SHARED_IMAGE}
-    ...    ${SPACE}${SPACE}className: does-not-exist
-    ...    ${SPACE}${SPACE}desiredState: Running
-    ${output}=    Kubectl Apply Expect Failure    ${vm_yaml}
+    Set Local Variable    ${NAME}    bad-class-vm
+    Set Local Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
+    Set Local Variable    ${CLASS_NAME}    does-not-exist
+    ${output}=    Apply Template Expect Failure    microvm-class/vm-bad-class.yaml
     Should Contain    ${output}    not found
 
 *** Keywords ***
@@ -64,44 +57,24 @@ Create Class Resources
     Set Suite Variable    ${CLASS_NAME}    uat-class-${id}
     Ensure Shared Image Ready
     # Class
-    ${class_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVMClass
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${CLASS_NAME}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}maxIdleDurationSeconds: 60
-    ...    ${SPACE}${SPACE}suspendedDurationSeconds: 300
-    ...    ${SPACE}${SPACE}autoResumeEnabled: true
-    ...    ${SPACE}${SPACE}maximumDurationSeconds: 3600
-    ...    ${SPACE}${SPACE}description: "UAT test class"
-    Kubectl Apply    ${class_yaml}
+    Set Local Variable    ${NAME}    ${CLASS_NAME}
+    Set Local Variable    ${MAX_IDLE}    60
+    Set Local Variable    ${SUSPENDED_DURATION}    300
+    Set Local Variable    ${AUTO_RESUME}    true
+    Set Local Variable    ${MAX_DURATION}    3600
+    Set Local Variable    ${DESCRIPTION}    UAT test class
+    Apply Template    microvm-class/class.yaml
     # VM with class
-    ${vm_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVM
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${CLASS_VM}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}imageRef: ${SHARED_IMAGE}
-    ...    ${SPACE}${SPACE}className: ${CLASS_NAME}
-    ...    ${SPACE}${SPACE}desiredState: Running
-    Kubectl Apply    ${vm_yaml}
+    Set Local Variable    ${NAME}    ${CLASS_VM}
+    Set Local Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
+    Set Local Variable    ${CLASS_NAME}    ${CLASS_NAME}
+    Apply Template    microvm-class/vm-with-class.yaml
     # VM with override
-    ${override_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVM
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${CLASS_VM_OVERRIDE}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}imageRef: ${SHARED_IMAGE}
-    ...    ${SPACE}${SPACE}className: ${CLASS_NAME}
-    ...    ${SPACE}${SPACE}maxIdleDurationSeconds: 900
-    ...    ${SPACE}${SPACE}desiredState: Running
-    Kubectl Apply    ${override_yaml}
+    Set Local Variable    ${NAME}    ${CLASS_VM_OVERRIDE}
+    Set Local Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
+    Set Local Variable    ${CLASS_NAME}    ${CLASS_NAME}
+    Set Local Variable    ${MAX_IDLE}    900
+    Apply Template    microvm-class/vm-with-class-override.yaml
 
 Cleanup Class Resources
     Run Keyword And Ignore Error    Kubectl Delete Force    microvm    ${CLASS_VM}

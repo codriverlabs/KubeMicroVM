@@ -65,92 +65,28 @@ Create Injection Resources
     Set Suite Variable    ${INJ_VM}    inject-vm-${id}
     Ensure Shared Image Ready
     # VM
-    ${vm_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVM
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${INJ_VM}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}imageRef: ${SHARED_IMAGE}
-    ...    ${SPACE}${SPACE}desiredState: Running
-    ...    ${SPACE}${SPACE}maxIdleDurationSeconds: 900
-    ...    ${SPACE}${SPACE}suspendedDurationSeconds: 1800
-    Kubectl Apply    ${vm_yaml}
+    Set Local Variable    ${NAME}    ${INJ_VM}
+    Set Local Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
+    Set Local Variable    ${MAX_IDLE}    900
+    Set Local Variable    ${SUSPENDED_DURATION}    1800
+    Apply Template    shared/microvm.yaml
     Wait For VM Running    ${INJ_VM}
     # RBAC
-    ${rbac_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: v1
-    ...    kind: ServiceAccount
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: inject-sa-${RUN_ID}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    ---
-    ...    apiVersion: rbac.authorization.k8s.io/v1
-    ...    kind: Role
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: inject-role-${RUN_ID}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    rules:
-    ...    - apiGroups: ["lambda.aws.amazon.com"]
-    ...    ${SPACE}${SPACE}resources: ["microvms/token"]
-    ...    ${SPACE}${SPACE}verbs: ["create"]
-    ...    ${SPACE}${SPACE}resourceNames: ["${INJ_VM}"]
-    ...    ---
-    ...    apiVersion: rbac.authorization.k8s.io/v1
-    ...    kind: RoleBinding
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: inject-binding-${RUN_ID}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    subjects:
-    ...    - kind: ServiceAccount
-    ...    ${SPACE}${SPACE}name: inject-sa-${RUN_ID}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    roleRef:
-    ...    ${SPACE}${SPACE}kind: Role
-    ...    ${SPACE}${SPACE}name: inject-role-${RUN_ID}
-    ...    ${SPACE}${SPACE}apiGroup: rbac.authorization.k8s.io
-    Kubectl Apply    ${rbac_yaml}
+    Set Local Variable    ${SA_NAME}    inject-sa-${RUN_ID}
+    Set Local Variable    ${ROLE_NAME}    inject-role-${RUN_ID}
+    Set Local Variable    ${BINDING_NAME}    inject-binding-${RUN_ID}
+    Set Local Variable    ${VM_NAME}    ${INJ_VM}
+    Apply Template    rbac/sa-role-binding.yaml
     # Annotated pod (authorized)
-    ${pod_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: v1
-    ...    kind: Pod
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: inject-pod-${RUN_ID}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    ${SPACE}${SPACE}annotations:
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}lambda.microvm.auth: ${INJ_VM}
-    ...    spec:
-    ...    ${SPACE}${SPACE}serviceAccountName: inject-sa-${RUN_ID}
-    ...    ${SPACE}${SPACE}containers:
-    ...    ${SPACE}${SPACE}- name: app
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}image: public.ecr.aws/amazonlinux/amazonlinux:2023
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}command: ["sleep", "3600"]
-    ...    ${SPACE}${SPACE}restartPolicy: Never
-    Kubectl Apply    ${pod_yaml}
+    Set Local Variable    ${POD_NAME}    inject-pod-${RUN_ID}
+    Set Local Variable    ${SA_NAME}    inject-sa-${RUN_ID}
+    Set Local Variable    ${VM_NAME}    ${INJ_VM}
+    Apply Template    pod-injection/annotated-pod.yaml
     # No-RBAC pod
-    ${norole_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: v1
-    ...    kind: ServiceAccount
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: inject-norole-sa-${RUN_ID}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    ---
-    ...    apiVersion: v1
-    ...    kind: Pod
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: inject-norole-pod-${RUN_ID}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    ${SPACE}${SPACE}annotations:
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}lambda.microvm.auth: ${INJ_VM}
-    ...    spec:
-    ...    ${SPACE}${SPACE}serviceAccountName: inject-norole-sa-${RUN_ID}
-    ...    ${SPACE}${SPACE}containers:
-    ...    ${SPACE}${SPACE}- name: app
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}image: public.ecr.aws/amazonlinux/amazonlinux:2023
-    ...    ${SPACE}${SPACE}${SPACE}${SPACE}command: ["sleep", "3600"]
-    ...    ${SPACE}${SPACE}restartPolicy: Never
-    Kubectl Apply    ${norole_yaml}
+    Set Local Variable    ${SA_NAME}    inject-norole-sa-${RUN_ID}
+    Set Local Variable    ${POD_NAME}    inject-norole-pod-${RUN_ID}
+    Set Local Variable    ${VM_NAME}    ${INJ_VM}
+    Apply Template    pod-injection/norole-sa-pod.yaml
     Run Process    kubectl    wait    --for\=condition\=Ready    pod/inject-pod-${RUN_ID}    pod/inject-norole-pod-${RUN_ID}    -n    ${NAMESPACE}    --timeout\=90s
 
 Cleanup Injection Resources

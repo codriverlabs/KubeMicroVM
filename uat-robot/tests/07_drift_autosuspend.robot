@@ -56,19 +56,12 @@ Create Drift Resources
     Set Suite Variable    ${RUN_ID}    ${id}
     Set Suite Variable    ${DRIFT_VM}    drift-vm-${id}
     Ensure Shared Image Ready
-    ${yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVM
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${DRIFT_VM}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}imageRef: ${SHARED_IMAGE}
-    ...    ${SPACE}${SPACE}desiredState: Running
-    ...    ${SPACE}${SPACE}maxIdleDurationSeconds: 60
-    ...    ${SPACE}${SPACE}suspendedDurationSeconds: 300
-    ...    ${SPACE}${SPACE}autoResumeEnabled: true
-    Kubectl Apply    ${yaml}
+    Set Local Variable    ${NAME}    ${DRIFT_VM}
+    Set Local Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
+    Set Local Variable    ${MAX_IDLE}    60
+    Set Local Variable    ${SUSPENDED_DURATION}    300
+    Set Local Variable    ${AUTO_RESUME}    true
+    Apply Template    drift/vm-with-idle-policy.yaml
     Wait For VM Running    ${DRIFT_VM}
 
 Cleanup Drift Resources

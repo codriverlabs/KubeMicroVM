@@ -82,18 +82,11 @@ Create Quick Start Resources
 
 Create MicroVM
     [Arguments]    ${name}    ${image_ref}
-    ${yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVM
-    ...    metadata:
-    ...    ${SPACE}${SPACE}name: ${name}
-    ...    ${SPACE}${SPACE}namespace: ${NAMESPACE}
-    ...    spec:
-    ...    ${SPACE}${SPACE}imageRef: ${image_ref}
-    ...    ${SPACE}${SPACE}desiredState: Running
-    ...    ${SPACE}${SPACE}maxIdleDurationSeconds: 900
-    ...    ${SPACE}${SPACE}suspendedDurationSeconds: 1800
-    Kubectl Apply    ${yaml}
+    Set Local Variable    ${NAME}    ${name}
+    Set Local Variable    ${IMAGE_REF}    ${image_ref}
+    Set Local Variable    ${MAX_IDLE}    900
+    Set Local Variable    ${SUSPENDED_DURATION}    1800
+    Apply Template    shared/microvm.yaml
 
 Cleanup Quick Start Resources
     # Only delete the VM — shared image is kept for other suites
