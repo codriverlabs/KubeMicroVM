@@ -61,7 +61,7 @@
 
 - **49 integration tests** (`operator-tests`): mocked AWS, real reconciler logic, Fabric8 MockServer
 - **Property-based tests** (jqwik): state machine, serialization, scaling invariants, quota enforcement
-- **Robot Framework UAT** (`uat-robot/`): 52 E2E tests on live EKS cluster, per-guide suites
+- **Robot Framework UAT** (`uat-robot/`): 62 E2E tests on live EKS cluster, per-guide suites
 - **Test before push rule**: `./mvnw install -DskipTests && ./mvnw -pl operator-tests verify`
 
 ## Custom Instructions
