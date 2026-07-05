@@ -27,7 +27,7 @@ graph TB
 
 ## Reconciliation Pattern
 
-Each reconciler follows the ACK (AWS Controllers for Kubernetes) pattern:
+Each reconciler follows the Kubernetes operator reconciliation pattern:
 
 ```mermaid
 sequenceDiagram
