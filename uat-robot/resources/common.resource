@@ -4,7 +4,25 @@ Library    String
 Library    OperatingSystem
 Library    Collections
 
+*** Variables ***
+${TEMPLATES}    ${CURDIR}/../templates
+
 *** Keywords ***
+Apply Template
+    [Documentation]    Reads a YAML template file, resolves Robot Framework variables, and applies via kubectl.
+    [Arguments]    ${template_path}
+    ${content}=    Get File    ${TEMPLATES}/${template_path}
+    ${resolved}=    Replace Variables    ${content}
+    Kubectl Apply    ${resolved}
+
+Apply Template Expect Failure
+    [Documentation]    Reads a YAML template, resolves variables, applies and expects rejection.
+    [Arguments]    ${template_path}
+    ${content}=    Get File    ${TEMPLATES}/${template_path}
+    ${resolved}=    Replace Variables    ${content}
+    ${output}=    Kubectl Apply Expect Failure    ${resolved}
+    RETURN    ${output}
+
 Kubectl Apply
     [Arguments]    ${yaml}
     ${tmpfile}=    Set Variable    /tmp/robot-kubectl-apply.yaml
