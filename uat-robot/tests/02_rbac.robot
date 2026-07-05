@@ -38,21 +38,21 @@ RBAC-05 Authorized SA Gets Token Via Operator
     Set Suite Variable    ${SA_NAME}    rbac-app-sa
     Apply Template    rbac/test-pod.yaml
     ${result}=    Run Process    kubectl    wait    --for\=condition\=Ready    pod/rbac-auth-pod-${RUN_ID}    -n    ${NAMESPACE}    --timeout\=60s
-    ${result}=    Run Process    kubectl    exec    rbac-auth-pod-${RUN_ID}    -n    ${NAMESPACE}    --    bash    -c    SA_TOKEN\=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token); curl -sk -X POST -H "Authorization: Bearer $SA_TOKEN" "https://kube-microvm-operator.${OPERATOR_NS}.svc:443/apis/lambda.aws.amazon.com/v1alpha1/namespaces/${NAMESPACE}/microvms/${RBAC_VM}/token"
+    ${result}=    Get Token From Pod    rbac-auth-pod-${RUN_ID}    ${RBAC_VM}
     Should Contain    ${result.stdout}    authToken
     Should Contain    ${result.stdout}    endpoint
 
 RBAC-06 Authorized SA Rejected For Different VM
-    ${result}=    Run Process    kubectl    exec    rbac-auth-pod-${RUN_ID}    -n    ${NAMESPACE}    --    bash    -c    SA_TOKEN\=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token); curl -sk -w "\\nHTTP_%{http_code}" -X POST -H "Authorization: Bearer $SA_TOKEN" "https://kube-microvm-operator.${OPERATOR_NS}.svc:443/apis/lambda.aws.amazon.com/v1alpha1/namespaces/${NAMESPACE}/microvms/other-vm/token"
-    Should Contain    ${result.stdout}    HTTP_403
+    ${result}=    Get Token From Pod    rbac-auth-pod-${RUN_ID}    other-vm
+    Should Contain    ${result.stdout}    not authorized
 
 RBAC-07 Unauthorized SA Rejected
     Set Suite Variable    ${SA_NAME}    rbac-norole-sa
     Set Suite Variable    ${POD_NAME}    rbac-norole-pod-${RUN_ID}
     Apply Template    rbac/norole-sa-pod.yaml
     Run Process    kubectl    wait    --for\=condition\=Ready    pod/rbac-norole-pod-${RUN_ID}    -n    ${NAMESPACE}    --timeout\=60s
-    ${result}=    Run Process    kubectl    exec    rbac-norole-pod-${RUN_ID}    -n    ${NAMESPACE}    --    bash    -c    SA_TOKEN\=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token); curl -sk -w "\\nHTTP_%{http_code}" -X POST -H "Authorization: Bearer $SA_TOKEN" "https://kube-microvm-operator.${OPERATOR_NS}.svc:443/apis/lambda.aws.amazon.com/v1alpha1/namespaces/${NAMESPACE}/microvms/${RBAC_VM}/token"
-    Should Contain    ${result.stdout}    HTTP_403
+    ${result}=    Get Token From Pod    rbac-norole-pod-${RUN_ID}    ${RBAC_VM}
+    Should Contain    ${result.stdout}    not authorized
 
 RBAC-08 Unlabelled Namespace Rejects MicroVM
     Run Process    kubectl    create    namespace    rbac-unlabelled    --dry-run\=client    -o    yaml    stdout=${CURDIR}/ns.yaml

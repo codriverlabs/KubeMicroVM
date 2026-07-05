@@ -125,3 +125,17 @@ Microvm CLI
     [Arguments]    @{args}
     ${result}=    Run Process    microvm    @{args}
     RETURN    ${result}
+
+Exec In Pod
+    [Documentation]    Execute a bash command inside a pod and return the result.
+    [Arguments]    ${pod_name}    ${command}    ${namespace}=${NAMESPACE}
+    ${result}=    Run Process    kubectl    exec    ${pod_name}    -n    ${namespace}    --    bash    -c    ${command}
+    RETURN    ${result}
+
+Get Token From Pod
+    [Documentation]    Call operator token endpoint from inside a pod using its SA token.
+    [Arguments]    ${pod_name}    ${vm_name}    ${namespace}=${NAMESPACE}
+    ${operator_url}=    Set Variable    https://kube-microvm-operator.${OPERATOR_NS}.svc:443
+    ${token_path}=    Set Variable    /apis/lambda.aws.amazon.com/v1alpha1/namespaces/${namespace}/microvms/${vm_name}/token
+    ${result}=    Run Process    bash    -c    kubectl exec ${pod_name} -n ${namespace} -- bash -c 'curl -sk -X POST -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "${operator_url}${token_path}"'
+    RETURN    ${result}
