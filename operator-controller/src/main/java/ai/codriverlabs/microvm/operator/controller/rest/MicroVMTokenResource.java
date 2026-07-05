@@ -128,12 +128,14 @@ public class MicroVMTokenResource {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @io.quarkus.runtime.annotations.RegisterForReflection
     public static class TokenRequest {
         public Integer expirationInMinutes;
         public List<Map<String, Object>> allowedPorts;
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @io.quarkus.runtime.annotations.RegisterForReflection
     public static class TokenResponse {
         public final String authToken;
         public final String endpoint;
