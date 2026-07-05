@@ -59,24 +59,24 @@ Create Networking Resources
     Set Suite Variable    ${NET_VPC_VM}    net-vpc-${id}
     Set Suite Variable    ${NET_VPC_NET}    net-vpc-${id}
     # Build networking test image (uses net-test app with /fetch endpoint)
-    Set Local Variable    ${NAME}    ${NET_IMG}
+    Set Suite Variable    ${NAME}    ${NET_IMG}
     Apply Template    networking/net-image.yaml
     Wait For Image Ready    ${NET_IMG}
     # Internet egress VM
-    Set Local Variable    ${NAME}    ${NET_INTERNET}
-    Set Local Variable    ${IMAGE_REF}    ${NET_IMG}
+    Set Suite Variable    ${NAME}    ${NET_INTERNET}
+    Set Suite Variable    ${IMAGE_REF}    ${NET_IMG}
     Apply Template    networking/vm-internet-egress.yaml
     # Default egress VM (no explicit egress connectors)
-    Set Local Variable    ${NAME}    ${NET_DEFAULT}
-    Set Local Variable    ${IMAGE_REF}    ${NET_IMG}
+    Set Suite Variable    ${NAME}    ${NET_DEFAULT}
+    Set Suite Variable    ${IMAGE_REF}    ${NET_IMG}
     Apply Template    networking/vm-default-egress.yaml
     # VPC network connector
-    Set Local Variable    ${NAME}    ${NET_VPC_NET}
+    Set Suite Variable    ${NAME}    ${NET_VPC_NET}
     Apply Template    networking/microvm-network.yaml
     # VPC egress VM
-    Set Local Variable    ${NAME}    ${NET_VPC_VM}
-    Set Local Variable    ${IMAGE_REF}    ${NET_IMG}
-    Set Local Variable    ${NETWORK_REF}    ${NET_VPC_NET}
+    Set Suite Variable    ${NAME}    ${NET_VPC_VM}
+    Set Suite Variable    ${IMAGE_REF}    ${NET_IMG}
+    Set Suite Variable    ${NETWORK_REF}    ${NET_VPC_NET}
     Apply Template    networking/vm-vpc-egress.yaml
 
 Wait For Network Active

@@ -49,9 +49,9 @@ Create ReplicaSet Resources
     Set Suite Variable    ${RUN_ID}    ${id}
     Set Suite Variable    ${RS_NAME}    rs-pool-${id}
     Ensure Shared Image Ready
-    Set Local Variable    ${NAME}    ${RS_NAME}
-    Set Local Variable    ${REPLICAS}    3
-    Set Local Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
+    Set Suite Variable    ${NAME}    ${RS_NAME}
+    Set Suite Variable    ${REPLICAS}    3
+    Set Suite Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
     Apply Template    replicaset/replicaset.yaml
 
 Cleanup ReplicaSet Resources

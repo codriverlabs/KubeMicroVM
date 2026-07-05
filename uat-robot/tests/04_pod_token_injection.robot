@@ -65,27 +65,27 @@ Create Injection Resources
     Set Suite Variable    ${INJ_VM}    inject-vm-${id}
     Ensure Shared Image Ready
     # VM
-    Set Local Variable    ${NAME}    ${INJ_VM}
-    Set Local Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
-    Set Local Variable    ${MAX_IDLE}    900
-    Set Local Variable    ${SUSPENDED_DURATION}    1800
+    Set Suite Variable    ${NAME}    ${INJ_VM}
+    Set Suite Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
+    Set Suite Variable    ${MAX_IDLE}    900
+    Set Suite Variable    ${SUSPENDED_DURATION}    1800
     Apply Template    shared/microvm.yaml
     Wait For VM Running    ${INJ_VM}
     # RBAC
-    Set Local Variable    ${SA_NAME}    inject-sa-${RUN_ID}
-    Set Local Variable    ${ROLE_NAME}    inject-role-${RUN_ID}
-    Set Local Variable    ${BINDING_NAME}    inject-binding-${RUN_ID}
-    Set Local Variable    ${VM_NAME}    ${INJ_VM}
+    Set Suite Variable    ${SA_NAME}    inject-sa-${RUN_ID}
+    Set Suite Variable    ${ROLE_NAME}    inject-role-${RUN_ID}
+    Set Suite Variable    ${BINDING_NAME}    inject-binding-${RUN_ID}
+    Set Suite Variable    ${VM_NAME}    ${INJ_VM}
     Apply Template    rbac/sa-role-binding.yaml
     # Annotated pod (authorized)
-    Set Local Variable    ${POD_NAME}    inject-pod-${RUN_ID}
-    Set Local Variable    ${SA_NAME}    inject-sa-${RUN_ID}
-    Set Local Variable    ${VM_NAME}    ${INJ_VM}
+    Set Suite Variable    ${POD_NAME}    inject-pod-${RUN_ID}
+    Set Suite Variable    ${SA_NAME}    inject-sa-${RUN_ID}
+    Set Suite Variable    ${VM_NAME}    ${INJ_VM}
     Apply Template    pod-injection/annotated-pod.yaml
     # No-RBAC pod
-    Set Local Variable    ${SA_NAME}    inject-norole-sa-${RUN_ID}
-    Set Local Variable    ${POD_NAME}    inject-norole-pod-${RUN_ID}
-    Set Local Variable    ${VM_NAME}    ${INJ_VM}
+    Set Suite Variable    ${SA_NAME}    inject-norole-sa-${RUN_ID}
+    Set Suite Variable    ${POD_NAME}    inject-norole-pod-${RUN_ID}
+    Set Suite Variable    ${VM_NAME}    ${INJ_VM}
     Apply Template    pod-injection/norole-sa-pod.yaml
     Run Process    kubectl    wait    --for\=condition\=Ready    pod/inject-pod-${RUN_ID}    pod/inject-norole-pod-${RUN_ID}    -n    ${NAMESPACE}    --timeout\=90s
 

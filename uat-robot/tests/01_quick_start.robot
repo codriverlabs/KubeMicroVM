@@ -82,10 +82,10 @@ Create Quick Start Resources
 
 Create MicroVM
     [Arguments]    ${name}    ${image_ref}
-    Set Local Variable    ${NAME}    ${name}
-    Set Local Variable    ${IMAGE_REF}    ${image_ref}
-    Set Local Variable    ${MAX_IDLE}    900
-    Set Local Variable    ${SUSPENDED_DURATION}    1800
+    Set Suite Variable    ${NAME}    ${name}
+    Set Suite Variable    ${IMAGE_REF}    ${image_ref}
+    Set Suite Variable    ${MAX_IDLE}    900
+    Set Suite Variable    ${SUSPENDED_DURATION}    1800
     Apply Template    shared/microvm.yaml
 
 Cleanup Quick Start Resources

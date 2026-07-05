@@ -42,9 +42,9 @@ CLASS-05 Kubectl Get Lists Class
     Should Contain    ${result.stdout}    ${CLASS_NAME}
 
 CLASS-06 Non-Existent Class Rejected
-    Set Local Variable    ${NAME}    bad-class-vm
-    Set Local Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
-    Set Local Variable    ${CLASS_NAME}    does-not-exist
+    Set Suite Variable    ${NAME}    bad-class-vm
+    Set Suite Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
+    Set Suite Variable    ${CLASS_NAME}    does-not-exist
     ${output}=    Apply Template Expect Failure    microvm-class/vm-bad-class.yaml
     Should Contain    ${output}    not found
 
@@ -57,23 +57,23 @@ Create Class Resources
     Set Suite Variable    ${CLASS_NAME}    uat-class-${id}
     Ensure Shared Image Ready
     # Class
-    Set Local Variable    ${NAME}    ${CLASS_NAME}
-    Set Local Variable    ${MAX_IDLE}    60
-    Set Local Variable    ${SUSPENDED_DURATION}    300
-    Set Local Variable    ${AUTO_RESUME}    true
-    Set Local Variable    ${MAX_DURATION}    3600
-    Set Local Variable    ${DESCRIPTION}    UAT test class
+    Set Suite Variable    ${NAME}    ${CLASS_NAME}
+    Set Suite Variable    ${MAX_IDLE}    60
+    Set Suite Variable    ${SUSPENDED_DURATION}    300
+    Set Suite Variable    ${AUTO_RESUME}    true
+    Set Suite Variable    ${MAX_DURATION}    3600
+    Set Suite Variable    ${DESCRIPTION}    UAT test class
     Apply Template    microvm-class/class.yaml
     # VM with class
-    Set Local Variable    ${NAME}    ${CLASS_VM}
-    Set Local Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
-    Set Local Variable    ${CLASS_NAME}    ${CLASS_NAME}
+    Set Suite Variable    ${NAME}    ${CLASS_VM}
+    Set Suite Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
+    Set Suite Variable    ${CLASS_NAME}    ${CLASS_NAME}
     Apply Template    microvm-class/vm-with-class.yaml
     # VM with override
-    Set Local Variable    ${NAME}    ${CLASS_VM_OVERRIDE}
-    Set Local Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
-    Set Local Variable    ${CLASS_NAME}    ${CLASS_NAME}
-    Set Local Variable    ${MAX_IDLE}    900
+    Set Suite Variable    ${NAME}    ${CLASS_VM_OVERRIDE}
+    Set Suite Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
+    Set Suite Variable    ${CLASS_NAME}    ${CLASS_NAME}
+    Set Suite Variable    ${MAX_IDLE}    900
     Apply Template    microvm-class/vm-with-class-override.yaml
 
 Cleanup Class Resources

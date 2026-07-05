@@ -10,6 +10,7 @@ ${TEMPLATES}    ${CURDIR}/../templates
 *** Keywords ***
 Apply Template
     [Documentation]    Reads a YAML template file, resolves Robot Framework variables, and applies via kubectl.
+    ...    Variables must be set via Set Suite Variable or Set Test Variable before calling.
     [Arguments]    ${template_path}
     ${content}=    Get File    ${TEMPLATES}/${template_path}
     ${resolved}=    Replace Variables    ${content}

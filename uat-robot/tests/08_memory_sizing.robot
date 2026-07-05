@@ -29,7 +29,7 @@ MEM-02 Image Without MemorySizeMiB Defaults To 2048
     Should Be Equal    ${memory}    2048
 
 MEM-03 Invalid MemorySizeMiB Rejected
-    Set Local Variable    ${NAME}    mem-invalid-${RUN_ID}
+    Set Suite Variable    ${NAME}    mem-invalid-${RUN_ID}
     ${output}=    Apply Template Expect Failure    memory-sizing/image-invalid-memory.yaml
     Should Contain    ${output}    must be one of
 
@@ -47,10 +47,10 @@ MEM-05 CLI Describe Shows Memory
 MEM-07 Run VM From 4096 MiB Image
     [Tags]    smoke
     Wait For Image Ready    ${MEM_4096}
-    Set Local Variable    ${NAME}    ${MEM_VM}
-    Set Local Variable    ${IMAGE_REF}    ${MEM_4096}
-    Set Local Variable    ${MAX_IDLE}    900
-    Set Local Variable    ${SUSPENDED_DURATION}    1800
+    Set Suite Variable    ${NAME}    ${MEM_VM}
+    Set Suite Variable    ${IMAGE_REF}    ${MEM_4096}
+    Set Suite Variable    ${MAX_IDLE}    900
+    Set Suite Variable    ${SUSPENDED_DURATION}    1800
     Apply Template    shared/microvm.yaml
     Wait For VM Running    ${MEM_VM}
     ${endpoint}=    Get MicroVM Endpoint    ${MEM_VM}
@@ -66,11 +66,11 @@ Create Memory Resources
     Set Suite Variable    ${MEM_DEFAULT}    mem-default-${id}
     Set Suite Variable    ${MEM_VM}    mem-vm-${id}
     # Image with explicit memorySizeMiB: 4096
-    Set Local Variable    ${NAME}    ${MEM_4096}
-    Set Local Variable    ${MEMORY_SIZE_MIB}    4096
+    Set Suite Variable    ${NAME}    ${MEM_4096}
+    Set Suite Variable    ${MEMORY_SIZE_MIB}    4096
     Apply Template    memory-sizing/image-with-memory.yaml
     # Image without memorySizeMiB (defaults to 2048)
-    Set Local Variable    ${NAME}    ${MEM_DEFAULT}
+    Set Suite Variable    ${NAME}    ${MEM_DEFAULT}
     Apply Template    shared/microvm-image.yaml
 
 Cleanup Memory Resources

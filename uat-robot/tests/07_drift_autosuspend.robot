@@ -56,11 +56,11 @@ Create Drift Resources
     Set Suite Variable    ${RUN_ID}    ${id}
     Set Suite Variable    ${DRIFT_VM}    drift-vm-${id}
     Ensure Shared Image Ready
-    Set Local Variable    ${NAME}    ${DRIFT_VM}
-    Set Local Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
-    Set Local Variable    ${MAX_IDLE}    60
-    Set Local Variable    ${SUSPENDED_DURATION}    300
-    Set Local Variable    ${AUTO_RESUME}    true
+    Set Suite Variable    ${NAME}    ${DRIFT_VM}
+    Set Suite Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
+    Set Suite Variable    ${MAX_IDLE}    60
+    Set Suite Variable    ${SUSPENDED_DURATION}    300
+    Set Suite Variable    ${AUTO_RESUME}    true
     Apply Template    drift/vm-with-idle-policy.yaml
     Wait For VM Running    ${DRIFT_VM}
 

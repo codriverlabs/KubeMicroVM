@@ -92,7 +92,7 @@ Ensure Shared Image Ready
     ELSE
         # Image doesn't exist — create it
         Log    Creating shared image ${SHARED_IMAGE}...
-        Set Local Variable    ${NAME}    ${SHARED_IMAGE}
+        Set Suite Variable    ${NAME}    ${SHARED_IMAGE}
         Apply Template    shared/microvm-image.yaml
         Wait For Image Ready    ${SHARED_IMAGE}
     END
