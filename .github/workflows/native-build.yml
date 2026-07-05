@@ -258,12 +258,14 @@ jobs:
           # Combined checksums.sha256
           sha256sum microvm-linux-amd64 microvm-linux-arm64 kube-microvm-operator-*.tar.gz > checksums.sha256
       - uses: actions/checkout@v4
+        with:
+          path: repo
       - name: Checksum installer and IAM template
         run: |
-          sha256sum install_kube_microvm.sh > install_kube_microvm.sh.sha256
-          sha256sum iam/kube-microvm-operator-role.yaml > kube-microvm-operator-role.yaml.sha256
-          # Append to combined checksums in dist/
-          sha256sum install_kube_microvm.sh iam/kube-microvm-operator-role.yaml >> dist/checksums.sha256
+          sha256sum repo/install_kube_microvm.sh > install_kube_microvm.sh.sha256
+          sha256sum repo/iam/kube-microvm-operator-role.yaml > kube-microvm-operator-role.yaml.sha256
+          # Append to combined checksums
+          sha256sum repo/install_kube_microvm.sh repo/iam/kube-microvm-operator-role.yaml >> dist/checksums.sha256
       - name: Determine if pre-release
         id: prerelease
         run: echo "value=${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}" >> $GITHUB_OUTPUT
@@ -281,5 +283,5 @@ jobs:
             dist/checksums.sha256
             install_kube_microvm.sh.sha256
             kube-microvm-operator-role.yaml.sha256
-            install_kube_microvm.sh
-            iam/kube-microvm-operator-role.yaml
+            repo/install_kube_microvm.sh
+            repo/iam/kube-microvm-operator-role.yaml
