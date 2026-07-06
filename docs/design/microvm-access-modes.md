@@ -158,7 +158,41 @@ No startup burst from client pods.
 
 ---
 
-## CRD Changes
+## How VM Names Are Resolved
+
+The pod annotation `lambda.microvm.auth: <vm-name>` takes the **Kubernetes CR name**
+(`metadata.name`) of the target `MicroVM`. The sidecar passes this to the operator
+token endpoint:
+
+```
+POST /apis/lambda.aws.amazon.com/v1alpha1/namespaces/{ns}/microvms/{name}/token
+```
+
+The operator looks up the MicroVM CR by that name to get `status.microVmId` before
+calling AWS.
+
+**For manually created MicroVMs** (`kubectl apply -f vm.yaml`), the user sets the name
+explicitly — the annotation is straightforward:
+
+```yaml
+# User creates:
+kind: MicroVM
+metadata:
+  name: my-agent-session   # ← user picks this name
+
+# User annotates their pod with:
+annotations:
+  lambda.microvm.auth: my-agent-session   # ← same name
+```
+
+**For ReplicaSet-generated VMs**, names are auto-generated with a random suffix
+(`generateName: agent-pool-`  →  `agent-pool-xkj87`, `agent-pool-z9rvf`, ...).
+The user cannot know these names ahead of time, which is why `Dedicated` mode
+requires the operator to assign a VM and patch the pod annotation automatically.
+
+---
+
+
 
 ### MicroVMSpec additions
 
