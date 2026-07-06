@@ -301,6 +301,23 @@ transparently.
 
 ---
 
+## Service Quotas (us-east-1, verified 2026-07-06)
+
+Observed limits from load testing with MicroVMReplicaSet at 1000 replicas:
+
+| Limit | Observed value | Notes |
+|-------|---------------|-------|
+| Concurrent Running MicroVMs | ~161 | Hard account limit in us-east-1; additional RunMicrovm calls succeed at API level but VMs remain Pending |
+| VM creation throughput | ~3–4 VMs/second | Sustained rate before plateau |
+| `CreateMicrovmAuthToken` burst | Low | 50 concurrent token requests returned 0% success; serial or low-concurrency calls (≤10) work reliably |
+| Termination throughput | ~6 CRs/second | 199 VMs fully drained in 35s after ReplicaSet delete |
+
+> **Note**: These are observed soft/hard limits for account `864899852480` in `us-east-1` as of 2026-07-06.
+> Limits may differ by account tier and region. To request a quota increase, open an AWS Support case
+> referencing the Lambda MicroVMs service.
+
+---
+
 ## Security
 
 - **TLS**: Operator webhook endpoint uses cert-manager-issued certificate (port 8443)
