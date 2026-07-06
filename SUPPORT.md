@@ -19,7 +19,7 @@ KubeMicroVM is available under the [Elastic License 2.0 (ELv2)](LICENSE.md) for 
 
 For enterprise support, custom SLAs, or licensing inquiries (e.g., managed service rights), contact:
 
-- **Email**: support@plasticity.cloud
+- **Email**: support@codriverlabs.ai
 - **Subject line**: `[Enterprise]` for priority routing
 
 ### What's included in Pro
@@ -31,6 +31,6 @@ For enterprise support, custom SLAs, or licensing inquiries (e.g., managed servi
 
 ## Security
 
-To report a security vulnerability, please email support@plasticity.cloud with subject `[Security]`. Do not open a public issue for security vulnerabilities.
+To report a security vulnerability, please email support@codriverlabs.ai with subject `[Security]`. Do not open a public issue for security vulnerabilities.
 
 We aim to acknowledge security reports within 48 hours.
