@@ -2,7 +2,9 @@ package ai.codriverlabs.microvm.operator.controller.reconciler;
 
 import ai.codriverlabs.microvm.aws.lambdamicrovms.model.MicrovmImageState;
 import ai.codriverlabs.microvm.aws.lambdamicrovms.model.MicrovmImageVersionState;
+import ai.codriverlabs.microvm.operator.controller.aws.AwsApiException;
 import ai.codriverlabs.microvm.operator.controller.aws.MicroVMImageClient;
+import ai.codriverlabs.microvm.operator.controller.health.AwsIdentity;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMImage;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMImageSpec;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMImageStatus;
@@ -26,10 +28,12 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
     private static final Duration RESYNC = Duration.ofMinutes(5);
 
     private final MicroVMImageClient imageClient;
+    private final AwsIdentity awsIdentity;
 
     @Inject
-    public MicroVMImageReconciler(MicroVMImageClient imageClient) {
+    public MicroVMImageReconciler(MicroVMImageClient imageClient, AwsIdentity awsIdentity) {
         this.imageClient = imageClient;
+        this.awsIdentity = awsIdentity;
     }
 
     @Override
@@ -42,8 +46,33 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
         LOG.infof("Reconciling MicroVMImage %s/%s  imageArn=%s", namespace, name, status.getImageArn());
 
         try {
-            // --- CREATE ---
+            // --- CREATE (or ADOPT if already exists in AWS) ---
             if (status.getImageArn() == null) {
+                // Try to discover an existing image by the same name before attempting creation.
+                // This handles re-install after cluster wipe and images created outside Kubernetes.
+                String expectedArn = awsIdentity.constructImageArn(name);
+                if (expectedArn != null) {
+                    try {
+                        var existing = imageClient.getImage(expectedArn).get(TIMEOUT_S, TimeUnit.SECONDS);
+                        LOG.infof("Adopting existing image %s  arn=%s state=%s",
+                                name, existing.imageArn(), existing.stateAsString());
+                        status.setImageArn(existing.imageArn());
+                        status.setImageState(existing.stateAsString());
+                        if (existing.latestActiveImageVersion() != null) {
+                            status.setActiveVersion(existing.latestActiveImageVersion());
+                        }
+                        updateMemoryStatus(status, spec.getMemorySizeMiB());
+                        status.setObservedGeneration(resource.getMetadata().getGeneration());
+                        return UpdateControl.patchStatus(resource).rescheduleAfter(POLL_INTERVAL);
+                    } catch (Exception e) {
+                        // Not found or other error — fall through to create
+                        if (!isNotFound(e)) {
+                            throw e;
+                        }
+                        LOG.debugf("Image %s not found in AWS, will create", name);
+                    }
+                }
+
                 String s3Uri = "s3://" + spec.getSource().getS3Bucket() + "/" + spec.getSource().getS3Key();
                 LOG.infof("Creating image %s from %s", name, s3Uri);
                 var response = imageClient.createImage(
@@ -114,6 +143,14 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
 
             // Settled — sync full version list then periodic resync
             try {
+                var imageResp = imageClient.getImage(status.getImageArn()).get(TIMEOUT_S, TimeUnit.SECONDS);
+                if (imageResp.latestActiveImageVersion() != null) {
+                    status.setActiveVersion(imageResp.latestActiveImageVersion());
+                }
+            } catch (Exception e) {
+                LOG.warnf("Failed to sync active version for %s: %s", name, e.getMessage());
+            }
+            try {
                 var versions = imageClient.listVersions(status.getImageArn()).get(TIMEOUT_S, TimeUnit.SECONDS);
                 status.setVersions(versions.stream().map(v -> {
                     var info = new ai.codriverlabs.microvm.operator.core.model.MicroVMImageVersionInfo();
@@ -147,6 +184,13 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
             return DeleteControl.noFinalizerRemoval().rescheduleAfter(Duration.ofSeconds(15));
         }
         return DeleteControl.defaultDelete();
+    }
+
+    private boolean isNotFound(Throwable t) {
+        // Unwrap ExecutionException from CompletableFuture.get()
+        Throwable cause = t.getCause() != null ? t.getCause() : t;
+        return cause.getClass().getSimpleName().contains("ResourceNotFoundException")
+                || (cause.getMessage() != null && cause.getMessage().contains("ResourceNotFoundException"));
     }
 
     // Build is settled when image state is final AND version has reached a terminal state

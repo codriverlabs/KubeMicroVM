@@ -35,7 +35,9 @@ class MicroVMImageReconcilerIT {
     @BeforeEach
     void setUp() {
         mockImageClient = mock(MicroVMImageClient.class);
-        reconciler = new MicroVMImageReconciler(mockImageClient);
+        var awsIdentity = new ai.codriverlabs.microvm.operator.controller.health.AwsIdentity();
+        awsIdentity.set("123456789012", "us-east-1");
+        reconciler = new MicroVMImageReconciler(mockImageClient, awsIdentity);
     }
 
     @Test
@@ -49,6 +51,11 @@ class MicroVMImageReconcilerIT {
                 .imageVersion("1.0")
                 .state(MicrovmImageState.CREATING)
                 .build();
+        // Adopt-if-exists: getImage returns ResourceNotFoundException → fall through to create
+        when(mockImageClient.getImage(anyString()))
+                .thenReturn(CompletableFuture.failedFuture(
+                        ai.codriverlabs.microvm.aws.lambdamicrovms.model.ResourceNotFoundException
+                                .builder().message("Image not found").build()));
         when(mockImageClient.createImage(eq("hello-node"), anyString(), anyString(), anyString(), any()))
                 .thenReturn(CompletableFuture.completedFuture(createResp));
 
@@ -101,7 +108,7 @@ class MicroVMImageReconcilerIT {
     }
 
     @Test
-    @DisplayName("SETTLED: no polling when image CREATED and version SUCCESSFUL")
+    @DisplayName("SETTLED: syncs activeVersion from getImage and lists versions, no version polling")
     void settled_noMorePolling() throws Exception {
         var image = testImage("hello-node");
         var status = new ai.codriverlabs.microvm.operator.core.model.MicroVMImageStatus();
@@ -112,11 +119,22 @@ class MicroVMImageReconcilerIT {
         status.setObservedGeneration(1L);
         image.setStatus(status);
 
+        var imageResp = GetMicrovmImageResponse.builder()
+                .imageArn("arn:aws:lambda:us-east-1:123456789012:microvm-image:hello-node")
+                .state(MicrovmImageState.CREATED)
+                .latestActiveImageVersion("1.0")
+                .build();
+        when(mockImageClient.getImage(anyString()))
+                .thenReturn(CompletableFuture.completedFuture(imageResp));
+        when(mockImageClient.listVersions(anyString()))
+                .thenReturn(CompletableFuture.completedFuture(java.util.List.of()));
+
         reconciler.reconcile(image, mockContext());
 
-        // No AWS calls when settled
-        verify(mockImageClient, never()).getImage(any());
+        // getImage called once for activeVersion sync, no version polling
+        verify(mockImageClient).getImage(anyString());
         verify(mockImageClient, never()).getImageVersion(any(), any());
+        assertEquals("1.0", image.getStatus().getActiveVersion());
     }
 
     @Test
@@ -178,6 +196,31 @@ class MicroVMImageReconcilerIT {
 
         assertTrue(deleteControl.isRemoveFinalizer());
         verify(mockImageClient, never()).deleteImage(any());
+    }
+
+    @Test
+    @DisplayName("ADOPT: existing image in AWS is adopted instead of re-created")
+    void adopt_existingImageIsAdoptedNotCreated() throws Exception {
+        var image = testImage("qs-test-app");
+        client.resource(image).create();
+
+        var imageResp = GetMicrovmImageResponse.builder()
+                .imageArn("arn:aws:lambda:us-east-1:123456789012:microvm-image:qs-test-app")
+                .state(MicrovmImageState.CREATED)
+                .latestActiveImageVersion("1.0")
+                .build();
+        when(mockImageClient.getImage(eq("arn:aws:lambda:us-east-1:123456789012:microvm-image:qs-test-app")))
+                .thenReturn(CompletableFuture.completedFuture(imageResp));
+
+        var result = reconciler.reconcile(image, mockContext());
+
+        assertTrue(result.isPatchStatus());
+        assertEquals("arn:aws:lambda:us-east-1:123456789012:microvm-image:qs-test-app",
+                image.getStatus().getImageArn());
+        assertEquals("CREATED", image.getStatus().getImageState());
+        assertEquals("1.0", image.getStatus().getActiveVersion());
+        // createImage must NOT be called — we adopted, not created
+        verify(mockImageClient, never()).createImage(any(), any(), any(), any(), any());
     }
 
     // --- helpers ---
