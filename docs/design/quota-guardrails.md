@@ -233,5 +233,5 @@ microvm_token_queue_size                                     # current in-flight
 ## What This Does NOT Cover
 
 - **GetMicrovm (100/s)**: Safe at current scale; add guard if operator manages >50 VMs in active polling
-- **Multi-operator deployments**: Rate limiters are in-process; if operator ever runs with >1 replica, a shared counter (e.g. Redis or CRD-based) would be needed
-- **Cross-namespace quota**: All quotas are account-level — a multi-namespace operator shares the same budget
+- **Multi-replica single operator**: In-process rate limiters are sufficient — a single operator pod per cluster is the correct deployment model. Multiple replicas of the same operator would compete with themselves and are not a supported configuration.
+- **Cross-tenant quota coordination (PRO)**: In a multi-tenant deployment where each namespace runs its own isolated operator instance (one operator per tenant, namespace-scoped roles/bindings, no ClusterRole), all operator processes share the same AWS account-level quotas but each has an independent in-process limiter. This is a PRO-tier concern and requires a shared quota arbiter — either a lightweight coordinator CRD that operators update with their current token consumption, or a dedicated quota service that all tenant operators call before issuing AWS requests. This is out of scope for Community edition where a single operator manages the cluster.
