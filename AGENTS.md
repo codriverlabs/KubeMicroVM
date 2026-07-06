@@ -6,13 +6,14 @@
 
 ```
 ├── operator-core/          # CRD models, enums, state machine (no deps on k8s client)
+├── operator-spi/           # Extension SPI — pure Java interfaces for Community/PRO parity
 ├── operator-aws-client/    # Code-generated async Lambda MicroVMs SDK
 ├── operator-controller/    # Reconcilers, AWS clients, token endpoint, health, metrics
 ├── operator-webhook/       # Validating + mutating admission webhooks
 ├── operator-auth-agent/    # Sidecar: auto-refresh MicroVM auth tokens in pods
 ├── operator-cli/           # `microvm` CLI (PicoCLI, native binary)
-├── operator-tests/         # Integration tests (49 tests, Fabric8 MockServer)
-├── uat-robot/              # Robot Framework E2E test suites (8 guides, 52 tests)
+├── operator-tests/         # Integration tests (50 tests, Fabric8 MockServer)
+├── uat-robot/              # Robot Framework E2E test suites (10 suites, 62 tests)
 ├── docs/design/            # Design documents (feature specs before implementation)
 ├── docs/user-guides/       # User-facing guides (8 guides, UAT-validated)
 ├── docs/testing/           # UAT results and test plans
@@ -32,6 +33,7 @@
 | Add CLI command | `operator-cli/.../commands/` (extend appropriate parent command) |
 | Add AWS API call | `operator-controller/.../aws/` (client classes wrap the SDK) |
 | Fix reconciler logic | `operator-controller/.../reconciler/MicroVMReconciler.java` (520 LOC, main logic) |
+| Add/modify SPI extension point | `operator-spi/src/main/java/.../spi/` (interfaces) + `operator-controller/.../spi/Default*.java` (Community defaults) |
 | Run tests | `./mvnw -B install -DskipTests -q && ./mvnw -B -pl operator-tests verify` |
 | Deploy to EKS | See `.kiro/steering/eks-deployment.md` |
 
@@ -43,6 +45,7 @@
 - **Custom SDK** — `operator-aws-client` is code-generated from an AWS service model, not a standard AWS SDK module
 - **`additionalProperties` on MicroVMSpec** — uses `@JsonAnySetter`/`@JsonAnyGetter` for forward-compat with new AWS fields
 - **`treeToValue(valueToTree(...))` pattern** — required for webhook deserialization; `convertValue()` breaks with admission request objects
+- **SPI extension points** — `operator-spi` defines interfaces; `operator-controller/spi/Default*.java` provides Community defaults; PRO overrides via `@Alternative @Priority(100)` CDI beans
 
 ## Config & CI Artifacts
 

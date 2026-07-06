@@ -27,6 +27,7 @@ KubeMicroVM brings them into the Kubernetes resource model:
 | Module | Description |
 |--------|-------------|
 | `operator-core` | CRD models, state machine, enums |
+| `operator-spi` | Extension SPI — pure Java interfaces for Community/PRO parity |
 | `operator-controller` | JOSDK reconcilers, AWS SDK integration, drift detection |
 | `operator-webhook` | Validating + mutating admission webhooks (co-located in operator pod) |
 | `operator-auth-agent` | Sidecar that auto-refreshes MicroVM auth tokens in pods |
