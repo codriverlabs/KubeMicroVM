@@ -309,7 +309,7 @@ Observed limits from load testing with MicroVMReplicaSet at 1000 replicas:
 |-------|---------------|-------|
 | Concurrent Running MicroVMs | ~161 | Hard account limit in us-east-1; additional RunMicrovm calls succeed at API level but VMs remain Pending |
 | VM creation throughput | ~3–4 VMs/second | Sustained rate before plateau |
-| `CreateMicrovmAuthToken` burst | Low | 50 concurrent token requests returned 0% success; serial or low-concurrency calls (≤10) work reliably |
+| `CreateMicrovmAuthToken` burst | Under investigation | 50 concurrent token requests returned 0% success; single requests work reliably; root cause (rate limit vs CLI subprocess vs stale VM status) not yet determined |
 | Termination throughput | ~6 CRs/second | 199 VMs fully drained in 35s after ReplicaSet delete |
 
 > **Note**: These are observed soft/hard limits in `us-east-1` as of 2026-07-06.
