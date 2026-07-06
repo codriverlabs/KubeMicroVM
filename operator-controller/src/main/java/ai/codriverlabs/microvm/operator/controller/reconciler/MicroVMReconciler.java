@@ -2,6 +2,7 @@ package ai.codriverlabs.microvm.operator.controller.reconciler;
 
 import ai.codriverlabs.microvm.operator.controller.aws.*;
 import ai.codriverlabs.microvm.operator.controller.metrics.OperatorMetrics;
+import ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard;
 import ai.codriverlabs.microvm.operator.core.enums.DesiredState;
 import ai.codriverlabs.microvm.operator.core.enums.MicroVMState;
 import ai.codriverlabs.microvm.operator.core.model.Condition;
@@ -55,18 +56,21 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
     private final DriftDetector driftDetector;
     private final OperatorMetrics metrics;
     private final KubernetesClient kubernetesClient;
+    private final QuotaGuard quotaGuard;
 
     @Inject
     public MicroVMReconciler(MicroVMClient microVMClient,
                              MicroVMStateMachine stateMachine,
                              DriftDetector driftDetector,
                              OperatorMetrics metrics,
-                             KubernetesClient kubernetesClient) {
+                             KubernetesClient kubernetesClient,
+                             QuotaGuard quotaGuard) {
         this.microVMClient = microVMClient;
         this.stateMachine = stateMachine;
         this.driftDetector = driftDetector;
         this.metrics = metrics;
         this.kubernetesClient = kubernetesClient;
+        this.quotaGuard = quotaGuard;
     }
 
     @Override
@@ -163,7 +167,8 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
             try {
                 String vmId = status.getMicroVmId();
                 if (vmId != null) {
-                    microVMClient.terminateMicroVM(vmId).get(AWS_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                    quotaGuard.terminateMicrovm(() -> microVMClient.terminateMicroVM(vmId))
+                        .get(AWS_TIMEOUT_SECONDS, TimeUnit.SECONDS);
                 }
                 status.setState(MicroVMState.TERMINATED);
                 status.setLastTransitionTime(Instant.now());
@@ -181,7 +186,8 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
             try {
                 String vmId = status.getMicroVmId();
                 if (vmId != null) {
-                    microVMClient.terminateMicroVM(vmId).get(AWS_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                    quotaGuard.terminateMicrovm(() -> microVMClient.terminateMicroVM(vmId))
+                        .get(AWS_TIMEOUT_SECONDS, TimeUnit.SECONDS);
                 }
                 status.setState(MicroVMState.TERMINATED);
                 return DeleteControl.defaultDelete();
@@ -246,7 +252,8 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
         );
 
         try {
-            RunMicroVMResponse response = microVMClient.runMicroVM(request)
+            RunMicroVMResponse response = quotaGuard.runMicrovm(
+                    () -> microVMClient.runMicroVM(request))
                 .get(AWS_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
             resource.getStatus().setMicroVmId(response.microvmId());
@@ -374,10 +381,10 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
         try {
             CompletableFuture<Void> future = switch (action.action()) {
                 case RECREATE -> CompletableFuture.completedFuture(null);
-                case SUSPEND -> microVMClient.suspendMicroVM(microvmId);
-                case RESUME -> microVMClient.resumeMicroVM(microvmId);
-                case TERMINATE -> microVMClient.terminateMicroVM(microvmId);
-                case NO_OP -> CompletableFuture.completedFuture(null);
+                case SUSPEND   -> quotaGuard.suspendMicrovm(() -> microVMClient.suspendMicroVM(microvmId));
+                case RESUME    -> quotaGuard.resumeMicrovm(() -> microVMClient.resumeMicroVM(microvmId));
+                case TERMINATE -> quotaGuard.terminateMicrovm(() -> microVMClient.terminateMicroVM(microvmId));
+                case NO_OP     -> CompletableFuture.completedFuture(null);
             };
 
             if (action.action() == DriftDetector.DriftAction.RECREATE) {
@@ -466,7 +473,8 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
     private DescribeMicroVMResponse describeFromAws(String vmId) {
         if (vmId == null) return null;
         try {
-            return microVMClient.getMicroVM(vmId).get(AWS_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            return quotaGuard.getMicrovm(() -> microVMClient.getMicroVM(vmId))
+                    .get(AWS_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (Exception e) {
             if (e.getCause() instanceof AwsApiException awsEx && awsEx.isNotFound()) {
                 return null;

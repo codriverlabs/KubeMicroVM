@@ -5,6 +5,8 @@ import ai.codriverlabs.microvm.aws.lambdamicrovms.model.MicrovmImageVersionState
 import ai.codriverlabs.microvm.operator.controller.aws.AwsApiException;
 import ai.codriverlabs.microvm.operator.controller.aws.MicroVMImageClient;
 import ai.codriverlabs.microvm.operator.controller.health.AwsIdentity;
+import ai.codriverlabs.microvm.operator.controller.quota.QuotaExceededException;
+import ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMImage;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMImageSpec;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMImageStatus;
@@ -29,11 +31,14 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
 
     private final MicroVMImageClient imageClient;
     private final AwsIdentity awsIdentity;
+    private final QuotaGuard quotaGuard;
 
     @Inject
-    public MicroVMImageReconciler(MicroVMImageClient imageClient, AwsIdentity awsIdentity) {
+    public MicroVMImageReconciler(MicroVMImageClient imageClient, AwsIdentity awsIdentity,
+                                  QuotaGuard quotaGuard) {
         this.imageClient = imageClient;
         this.awsIdentity = awsIdentity;
+        this.quotaGuard = quotaGuard;
     }
 
     @Override
@@ -75,6 +80,7 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
 
                 String s3Uri = "s3://" + spec.getSource().getS3Bucket() + "/" + spec.getSource().getS3Key();
                 LOG.infof("Creating image %s from %s", name, s3Uri);
+                quotaGuard.acquireImageBuildPermit();
                 var response = imageClient.createImage(
                         name, s3Uri, spec.getBaseImageArn(), spec.getBuildRoleArn(),
                         spec.getMemorySizeMiB())
@@ -150,6 +156,8 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
             } catch (Exception e) {
                 LOG.warnf("Failed to sync active version for %s: %s", name, e.getMessage());
             }
+            // Release build permit once settled (idempotent — no-op if already released)
+            quotaGuard.releaseImageBuildPermit();
             try {
                 var versions = imageClient.listVersions(status.getImageArn()).get(TIMEOUT_S, TimeUnit.SECONDS);
                 status.setVersions(versions.stream().map(v -> {

@@ -1,6 +1,8 @@
 package ai.codriverlabs.microvm.operator.controller.rest;
 
 import ai.codriverlabs.microvm.operator.controller.aws.MicroVMClient;
+import ai.codriverlabs.microvm.operator.controller.quota.QuotaExceededException;
+import ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard;
 import ai.codriverlabs.microvm.operator.core.model.MicroVM;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.fabric8.kubernetes.api.model.authentication.TokenReviewBuilder;
@@ -47,15 +49,20 @@ public class MicroVMTokenResource {
     @Inject
     MicroVMClient microVMClient;
 
+    @Inject
+    QuotaGuard quotaGuard;
+
     @ConfigProperty(name = "microvm.token.max-expiry-minutes", defaultValue = "60")
     int maxExpiryMinutes;
 
     // Package-visible for testing
     MicroVMTokenResource() {}
 
-    public MicroVMTokenResource(KubernetesClient k8s, MicroVMClient microVMClient, int maxExpiryMinutes) {
+    public MicroVMTokenResource(KubernetesClient k8s, MicroVMClient microVMClient,
+                                QuotaGuard quotaGuard, int maxExpiryMinutes) {
         this.k8s = k8s;
         this.microVMClient = microVMClient;
+        this.quotaGuard = quotaGuard;
         this.maxExpiryMinutes = maxExpiryMinutes;
     }
 
@@ -105,15 +112,20 @@ public class MicroVMTokenResource {
         boolean allPorts = request == null || request.allowedPorts == null
                 || request.allowedPorts.stream().anyMatch(p -> p.containsKey("allPorts"));
 
-        // 6. Call AWS CreateMicrovmAuthToken
+        // 6. Call AWS CreateMicrovmAuthToken with quota guard
         try {
-            Map<String, String> tokenMap = microVMClient
-                    .createAuthToken(microvmId, expiryMinutes, allPorts)
+            Map<String, String> tokenMap = quotaGuard.createAuthToken(
+                    () -> microVMClient.createAuthToken(microvmId, expiryMinutes, allPorts))
                     .get(30, TimeUnit.SECONDS);
             String authToken = tokenMap.getOrDefault("X-aws-proxy-auth",
                     tokenMap.values().iterator().next());
             Instant expiresAt = Instant.now().plus(expiryMinutes, ChronoUnit.MINUTES);
             return Response.ok(new TokenResponse(authToken, endpoint, expiresAt.toString())).build();
+        } catch (QuotaExceededException e) {
+            LOG.warnf("Token request queue full for MicroVM %s/%s — returning 429", namespace, vmName);
+            return Response.status(429)
+                    .header("Retry-After", "1")
+                    .entity(Map.of("error", "rate limit — retry after 1s")).build();
         } catch (Exception e) {
             LOG.errorf(e, "Failed to create auth token for MicroVM %s/%s", namespace, vmName);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)

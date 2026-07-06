@@ -42,6 +42,17 @@ INSTALL_DIR="${HOME}/bin"
 CONFIG_DIR="${HOME}/.kube-microvm"
 CONFIG_FILE="${CONFIG_DIR}/config"
 
+# Quota overrides — defaults match AWS account-level defaults
+# Populated automatically at install time via aws service-quotas get-service-quota
+# Override with --quota-* flags if your account has received a quota increase
+QUOTA_RUN_MICROVM_RATE=""
+QUOTA_TERMINATE_MICROVM_RATE=""
+QUOTA_SUSPEND_MICROVM_RATE=""
+QUOTA_RESUME_MICROVM_RATE=""
+QUOTA_AUTH_TOKEN_RATE=""
+QUOTA_CONCURRENT_IMAGE_BUILDS=""
+QUOTA_DISCOVERY_RUNTIME=false   # --quota-discovery=runtime: operator queries quotas on startup
+
 # Resolved at runtime from GitHub Release or bundled in installer image
 VERSION="${KUBE_MICROVM_VERSION:-}"
 GHCR_OPERATOR="ghcr.io/plasticity-of-cloud/kube-microvm-operator"
@@ -90,6 +101,15 @@ while [[ $# -gt 0 ]]; do
         --role-arn)  ROLE_ARN="$2";  shift 2 ;;
         --iam)       DO_IAM=true;    shift ;;
 
+        --quota-run-microvm-rate)         QUOTA_RUN_MICROVM_RATE="$2";         shift 2 ;;
+        --quota-terminate-microvm-rate)   QUOTA_TERMINATE_MICROVM_RATE="$2";   shift 2 ;;
+        --quota-suspend-microvm-rate)     QUOTA_SUSPEND_MICROVM_RATE="$2";     shift 2 ;;
+        --quota-resume-microvm-rate)      QUOTA_RESUME_MICROVM_RATE="$2";      shift 2 ;;
+        --quota-auth-token-rate)          QUOTA_AUTH_TOKEN_RATE="$2";          shift 2 ;;
+        --quota-concurrent-image-builds)  QUOTA_CONCURRENT_IMAGE_BUILDS="$2";  shift 2 ;;
+        --no-quota-discovery)             QUOTA_RUN_MICROVM_RATE="${QUOTA_RUN_MICROVM_RATE:-skip}"; shift ;;
+        --quota-discovery=runtime)        QUOTA_DISCOVERY_RUNTIME=true;        shift ;;
+
         --cli-only)  CLI_ONLY=true;  shift ;;
         --dry-run)   DRY_RUN=true;   shift ;;
         --help|-h)
@@ -105,6 +125,16 @@ Options:
   --registry   <url>    Private registry URL (e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com)
   --iam                 Create IAM role + Pod Identity association via CloudFormation
   --role-arn   <arn>    Use existing IAM role ARN (skips --iam)
+
+  # Quota — auto-discovered by default via aws service-quotas get-service-quota
+  --no-quota-discovery              Skip quota discovery, use AWS defaults
+  --quota-discovery=runtime         Operator queries quotas on startup (requires additional IAM permission)
+  --quota-run-microvm-rate    <N>   Override RunMicrovm rate/s (auto-discovered if omitted)
+  --quota-terminate-microvm-rate <N> Override TerminateMicrovm rate/s
+  --quota-suspend-microvm-rate <N>  Override SuspendMicrovm rate/s
+  --quota-resume-microvm-rate  <N>  Override ResumeMicrovm rate/s
+  --quota-auth-token-rate      <N>  Override CreateMicrovmAuthToken rate/s
+  --quota-concurrent-image-builds <N> Override concurrent image build limit
 
   --cli-only            Only install the microvm CLI (skip Helm installs)
   --dry-run             Print what would be done without executing
@@ -303,6 +333,74 @@ setup_iam() {
     success "IAM role: $ROLE_ARN"
 }
 
+# ─── b2. Quota discovery ──────────────────────────────────────────────────────
+discover_quotas() {
+    step "b2. Discovering AWS Lambda MicroVMs service quotas"
+
+    # Skip if all quotas explicitly overridden via flags
+    local all_set=true
+    for v in "$QUOTA_RUN_MICROVM_RATE" "$QUOTA_TERMINATE_MICROVM_RATE" \
+              "$QUOTA_SUSPEND_MICROVM_RATE" "$QUOTA_RESUME_MICROVM_RATE" \
+              "$QUOTA_AUTH_TOKEN_RATE" "$QUOTA_CONCURRENT_IMAGE_BUILDS"; do
+        [[ -z "$v" ]] && all_set=false && break
+    done
+    if $all_set; then
+        info "All quota values explicitly set — skipping discovery"
+        return 0
+    fi
+
+    # Quota codes for Lambda MicroVMs API
+    local SQ_RUN="L-91B95582"        # Burst rate of RunMicrovm
+    local SQ_TERMINATE="L-2CCA0501"  # Burst rate of TerminateMicrovm
+    local SQ_SUSPEND="L-139F9A48"    # Burst rate of SuspendMicrovm
+    local SQ_RESUME="L-25EEC0A4"     # Burst rate of ResumeMicrovm
+    local SQ_AUTH_TOKEN="L-D65D9F16" # Burst rate of CreateMicrovmAuthToken
+    local SQ_IMAGE_BUILDS="L-72E0D058" # Concurrent image builds
+
+    get_quota() {
+        local code="$1" fallback="$2"
+        local val
+        val=$(aws service-quotas get-service-quota \
+            --service-code lambda \
+            --quota-code "$code" \
+            --region "${REGION}" \
+            --query "Quota.Value" \
+            --output text 2>/dev/null | cut -d. -f1)
+        if [[ -n "$val" && "$val" =~ ^[0-9]+$ ]]; then
+            echo "$val"
+        else
+            echo "$fallback"
+        fi
+    }
+
+    if aws service-quotas get-service-quota \
+           --service-code lambda \
+           --quota-code "$SQ_RUN" \
+           --region "${REGION}" \
+           --query "Quota.Value" \
+           --output text &>/dev/null; then
+
+        [[ -z "$QUOTA_RUN_MICROVM_RATE" ]]        && QUOTA_RUN_MICROVM_RATE=$(get_quota "$SQ_RUN" 5)
+        [[ -z "$QUOTA_TERMINATE_MICROVM_RATE" ]]  && QUOTA_TERMINATE_MICROVM_RATE=$(get_quota "$SQ_TERMINATE" 10)
+        [[ -z "$QUOTA_SUSPEND_MICROVM_RATE" ]]    && QUOTA_SUSPEND_MICROVM_RATE=$(get_quota "$SQ_SUSPEND" 2)
+        [[ -z "$QUOTA_RESUME_MICROVM_RATE" ]]     && QUOTA_RESUME_MICROVM_RATE=$(get_quota "$SQ_RESUME" 5)
+        [[ -z "$QUOTA_AUTH_TOKEN_RATE" ]]         && QUOTA_AUTH_TOKEN_RATE=$(get_quota "$SQ_AUTH_TOKEN" 50)
+        [[ -z "$QUOTA_CONCURRENT_IMAGE_BUILDS" ]] && QUOTA_CONCURRENT_IMAGE_BUILDS=$(get_quota "$SQ_IMAGE_BUILDS" 10)
+
+        success "Quotas discovered: run=${QUOTA_RUN_MICROVM_RATE}/s terminate=${QUOTA_TERMINATE_MICROVM_RATE}/s" \
+                "suspend=${QUOTA_SUSPEND_MICROVM_RATE}/s authToken=${QUOTA_AUTH_TOKEN_RATE}/s" \
+                "imageBuilds=${QUOTA_CONCURRENT_IMAGE_BUILDS}"
+    else
+        warn "Cannot query service quotas (requires service-quotas:GetServiceQuota) — using AWS defaults"
+        QUOTA_RUN_MICROVM_RATE="${QUOTA_RUN_MICROVM_RATE:-5}"
+        QUOTA_TERMINATE_MICROVM_RATE="${QUOTA_TERMINATE_MICROVM_RATE:-10}"
+        QUOTA_SUSPEND_MICROVM_RATE="${QUOTA_SUSPEND_MICROVM_RATE:-2}"
+        QUOTA_RESUME_MICROVM_RATE="${QUOTA_RESUME_MICROVM_RATE:-5}"
+        QUOTA_AUTH_TOKEN_RATE="${QUOTA_AUTH_TOKEN_RATE:-50}"
+        QUOTA_CONCURRENT_IMAGE_BUILDS="${QUOTA_CONCURRENT_IMAGE_BUILDS:-10}"
+    fi
+}
+
 # ─── c. helm install kube-microvm-operator ────────────────────────────────────
 install_operator() {
     step "c. Installing kube-microvm-operator Helm chart"
@@ -335,6 +433,15 @@ install_operator() {
         --timeout 4m --wait"
 
     [[ -n "$ROLE_ARN" ]] && HELM_ARGS="$HELM_ARGS --set serviceAccount.roleArn=${ROLE_ARN}"
+
+    # Quota overrides — only set if explicitly provided (populated by discover_quotas())
+    [[ -n "$QUOTA_RUN_MICROVM_RATE" ]]        && HELM_ARGS="$HELM_ARGS --set quotas.runMicrovmRate=${QUOTA_RUN_MICROVM_RATE}"
+    [[ -n "$QUOTA_TERMINATE_MICROVM_RATE" ]]  && HELM_ARGS="$HELM_ARGS --set quotas.terminateMicrovmRate=${QUOTA_TERMINATE_MICROVM_RATE}"
+    [[ -n "$QUOTA_SUSPEND_MICROVM_RATE" ]]    && HELM_ARGS="$HELM_ARGS --set quotas.suspendMicrovmRate=${QUOTA_SUSPEND_MICROVM_RATE}"
+    [[ -n "$QUOTA_RESUME_MICROVM_RATE" ]]     && HELM_ARGS="$HELM_ARGS --set quotas.resumeMicrovmRate=${QUOTA_RESUME_MICROVM_RATE}"
+    [[ -n "$QUOTA_AUTH_TOKEN_RATE" ]]         && HELM_ARGS="$HELM_ARGS --set quotas.authTokenRate=${QUOTA_AUTH_TOKEN_RATE}"
+    [[ -n "$QUOTA_CONCURRENT_IMAGE_BUILDS" ]] && HELM_ARGS="$HELM_ARGS --set quotas.concurrentImageBuilds=${QUOTA_CONCURRENT_IMAGE_BUILDS}"
+    $QUOTA_DISCOVERY_RUNTIME                  && HELM_ARGS="$HELM_ARGS --set quotas.discoveryEnabled=true"
 
     run "helm upgrade --install kube-microvm-operator $CHART $HELM_ARGS"
     success "kube-microvm-operator installed"
@@ -454,6 +561,7 @@ main() {
     if ! $CLI_ONLY; then
         import_images
         setup_iam
+        discover_quotas
         install_operator
         install_auth_agent
     fi
