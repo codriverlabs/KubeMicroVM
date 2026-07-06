@@ -54,7 +54,7 @@
 
 **Scale-up rate**: ~3–4 VMs/second steady state until plateau at 161 Running VMs (~500s in).
 
-**Token notes**: 256 VMs queried via `microvm token --name <name> --direct` in 50 parallel processes. All returned FAIL. Most likely cause: AWS `CreateMicrovmAuthToken` rate-limit hit when 50 concurrent token requests were issued (the regression test with a single token confirmed the mechanism works correctly). Needs retry logic or serial batching for reliable 1000-token collection.
+**Token notes**: 256 VMs queried via `microvm token --name <name> --direct` in 50 parallel processes. All returned FAIL. Root cause confirmed: `CreateMicrovmAuthToken` has an official burst rate of **50 req/s** (account level). Sending 50 concurrent requests simultaneously exhausts the entire burst allowance — with no backoff in the CLI, all fail. Fix: add exponential backoff + jitter in `TokenCommand.java`, limit concurrency to ≤10.
 
 **Termination**: All 199 VM CRs deleted in **35s** after RS delete — fast, clean cascade.
 

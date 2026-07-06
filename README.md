@@ -303,13 +303,41 @@ transparently.
 
 ## Service Quotas (us-east-1, verified 2026-07-06)
 
-Observed limits from load testing with MicroVMReplicaSet at 1000 replicas:
+### API Burst Rate Limits (account level)
+
+| API | Burst rate |
+|-----|-----------|
+| `RunMicrovm` | 5 req/s |
+| `TerminateMicrovm` | 10 req/s |
+| `SuspendMicrovm` | 2 req/s |
+| `ResumeMicrovm` | 5 req/s |
+| `GetMicrovm` | 100 req/s |
+| `CreateMicrovmAuthToken` | 50 req/s |
+| `CreateMicrovmShellAuthToken` | 5 req/s |
+
+> `RunMicrovm` burst of 5/s explains the observed ~3–4 Running VMs/second scale-up rate.
+> `CreateMicrovmAuthToken` burst of 50/s explains why 50 concurrent token requests all
+> failed — they hit the burst limit simultaneously with zero backoff.
+
+### Concurrency Limits (not adjustable)
+
+| Limit | Value |
+|-------|-------|
+| Concurrent connections per 1 vCPU MicroVM | 8 |
+| Concurrent connections per 2 vCPU MicroVM | 16 |
+| Concurrent connections per 4 vCPU MicroVM | 32 |
+| Concurrent connections per 8 vCPU MicroVM | 64 |
+| Concurrent connections per 16 vCPU MicroVM | 128 |
+| Concurrency scaling rate | 1,000 |
+| Capacity providers | 1,000 |
+
+### Observed Load Test Results (2026-07-06)
 
 | Limit | Observed value | Notes |
 |-------|---------------|-------|
 | Concurrent Running MicroVMs | ~161 | Hard account limit in us-east-1; additional RunMicrovm calls succeed at API level but VMs remain Pending |
-| VM creation throughput | ~3–4 VMs/second | Sustained rate before plateau |
-| `CreateMicrovmAuthToken` burst | Under investigation | 50 concurrent token requests returned 0% success; single requests work reliably; root cause (rate limit vs CLI subprocess vs stale VM status) not yet determined |
+| VM creation throughput | ~3–4 VMs/second | Consistent with RunMicrovm burst rate of 5/s |
+| `CreateMicrovmAuthToken` burst | 50 req/s | 50 concurrent token requests returned 0% success — no backoff/retry in CLI; investigation ongoing |
 | Termination throughput | ~6 CRs/second | 199 VMs fully drained in 35s after ReplicaSet delete |
 
 > **Note**: These are observed soft/hard limits in `us-east-1` as of 2026-07-06.
