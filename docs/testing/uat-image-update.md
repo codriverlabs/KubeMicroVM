@@ -18,9 +18,9 @@
 
 ## Test Data
 
-- v1.0: `s3://kube-microvm-test-864899852480-us-east-1/test-fixtures/microvm-hello-node.zip`
+- v1.0: `s3://kube-microvm-test-<ACCOUNT_ID>-us-east-1/test-fixtures/microvm-hello-node.zip`
   - Returns: `{"status":"ok","path":"/","ts":"..."}`
-- v2.0: `s3://kube-microvm-test-864899852480-us-east-1/test-fixtures/microvm-net-test.zip`
+- v2.0: `s3://kube-microvm-test-<ACCOUNT_ID>-us-east-1/test-fixtures/microvm-net-test.zip`
   - Returns: `{"status":"ok","path":"/","ts":"..."}` on `/` but also has `/fetch`, `/dns`, `/env`
 
 ## Acceptance Criteria

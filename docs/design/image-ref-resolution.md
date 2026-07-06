@@ -57,7 +57,7 @@ spec:
 
 ```yaml
 status:
-  resolvedImageArn: arn:aws:lambda:us-east-1:864899852480:microvm-image:my-app-image
+  resolvedImageArn: arn:aws:lambda:us-east-1:<ACCOUNT_ID>:microvm-image:my-app-image
   resolvedImageVersion: "1.0"
   state: Running
   microVmId: microvm-abc123

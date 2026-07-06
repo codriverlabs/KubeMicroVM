@@ -1,6 +1,6 @@
 *** Variables ***
 ${REGION}           us-east-1
-${ACCOUNT_ID}       864899852480
+${ACCOUNT_ID}       <ACCOUNT_ID>
 ${S3_BUCKET}        kube-microvm-test-${ACCOUNT_ID}-${REGION}
 ${S3_KEY}           test-fixtures/microvm-hello-node.zip
 ${S3_KEY_NET}       test-fixtures/microvm-net-test.zip

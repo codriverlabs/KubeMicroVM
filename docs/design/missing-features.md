@@ -38,7 +38,7 @@ spec:
     - subnet-def456
   securityGroupIds:
     - sg-xyz789
-  operatorRoleArn: arn:aws:iam::864899852480:role/MicroVMNetworkConnectorRole
+  operatorRoleArn: arn:aws:iam::<ACCOUNT_ID>:role/MicroVMNetworkConnectorRole
   networkProtocol: IPv4          # IPv4 | DualStack (default: IPv4)
   region: us-east-1
   tags:

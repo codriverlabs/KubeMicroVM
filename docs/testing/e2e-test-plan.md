@@ -107,5 +107,5 @@ export VPC_ID="vpc-0e40b0159e24f935e"
 export SUBNET_1="subnet-0fdc8b729163e12a7"
 export SUBNET_2="subnet-0bde13101743f4751"
 export SECURITY_GROUP="sg-01032cc226cb1615d"
-export IMAGE_ARN="arn:aws:lambda:us-east-1:864899852480:microvm-image:hello-node-e2e"
+export IMAGE_ARN="arn:aws:lambda:us-east-1:<ACCOUNT_ID>:microvm-image:hello-node-e2e"
 ```

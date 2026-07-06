@@ -1,7 +1,7 @@
 # Load Test Results — 2026-07-06
 
 **Branch**: `feature/image-reconciler-adoption`  
-**Operator version**: `1.1.0-SNAPSHOT` (native image, ECR `864899852480.dkr.ecr.us-east-1.amazonaws.com/plasticity-of-cloud/kube-microvm-operator:1.0.1`)  
+**Operator version**: `1.1.0-SNAPSHOT` (native image, ECR `<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/plasticity-of-cloud/kube-microvm-operator:1.0.1`)  
 **Cluster**: `ecp-us1` (EKS Auto Mode, `us-east-1`)  
 **Image under test**: `qs-test-app` (2048 MiB / 1 vCPU)
 
