@@ -17,17 +17,15 @@ import java.util.function.Supplier;
  * Helm values / install script flags) so customers who receive quota increases
  * can tune without rebuilding the operator.
  *
- * Default values match AWS account-level defaults.
- *
- * Rate limiting uses a simple token bucket: permits are replenished at the
- * configured rate and callers block until a permit is available.
+ * Default values match AWS account-level defaults exactly.
+ * Quota values are discovered at install time by the install script via
+ * `aws service-quotas get-service-quota` and passed as Helm values.
+ * Runtime discovery can be enabled via aws.quota.discovery.enabled=true.
  */
 @ApplicationScoped
 public class QuotaGuard {
 
     private static final Logger LOG = Logger.getLogger(QuotaGuard.class);
-
-    // ── Rate limiters (tokens per second) ─────────────────────────────────────
 
     private final TokenBucket runMicrovmBucket;
     private final TokenBucket terminateBucket;
@@ -37,27 +35,25 @@ public class QuotaGuard {
     private final TokenBucket authTokenBucket;
     private final TokenBucket shellAuthTokenBucket;
 
-    // ── Count limiters ────────────────────────────────────────────────────────
-
     private final Semaphore imageBuildSemaphore;
     private final Semaphore tokenQueueSemaphore;
 
     public QuotaGuard(
-            @ConfigProperty(name = "aws.quota.run-microvm-rate", defaultValue = "4")
+            @ConfigProperty(name = "aws.quota.run-microvm-rate", defaultValue = "5")
             int runMicrovmRate,
-            @ConfigProperty(name = "aws.quota.terminate-microvm-rate", defaultValue = "9")
+            @ConfigProperty(name = "aws.quota.terminate-microvm-rate", defaultValue = "10")
             int terminateRate,
-            @ConfigProperty(name = "aws.quota.suspend-microvm-rate", defaultValue = "1")
+            @ConfigProperty(name = "aws.quota.suspend-microvm-rate", defaultValue = "2")
             int suspendRate,
-            @ConfigProperty(name = "aws.quota.resume-microvm-rate", defaultValue = "4")
+            @ConfigProperty(name = "aws.quota.resume-microvm-rate", defaultValue = "5")
             int resumeRate,
-            @ConfigProperty(name = "aws.quota.get-microvm-rate", defaultValue = "90")
+            @ConfigProperty(name = "aws.quota.get-microvm-rate", defaultValue = "100")
             int getMicrovmRate,
-            @ConfigProperty(name = "aws.quota.auth-token-rate", defaultValue = "45")
+            @ConfigProperty(name = "aws.quota.auth-token-rate", defaultValue = "50")
             int authTokenRate,
-            @ConfigProperty(name = "aws.quota.shell-auth-token-rate", defaultValue = "4")
+            @ConfigProperty(name = "aws.quota.shell-auth-token-rate", defaultValue = "5")
             int shellAuthTokenRate,
-            @ConfigProperty(name = "aws.quota.concurrent-image-builds", defaultValue = "9")
+            @ConfigProperty(name = "aws.quota.concurrent-image-builds", defaultValue = "10")
             int maxImageBuilds,
             @ConfigProperty(name = "aws.quota.token-queue-size", defaultValue = "200")
             int tokenQueueSize
@@ -107,7 +103,7 @@ public class QuotaGuard {
 
     /**
      * Rate-limited auth token call with bounded queue backpressure.
-     * Returns false if the queue is full — callers should return HTTP 429.
+     * Throws QuotaExceededException if the queue is full — callers return HTTP 429.
      */
     public <T> CompletableFuture<T> createAuthToken(Supplier<CompletableFuture<T>> call)
             throws QuotaExceededException {
@@ -136,7 +132,7 @@ public class QuotaGuard {
     }
 
     /**
-     * Acquire an image build permit. Blocks up to 60s waiting for a slot.
+     * Acquire an image build permit. Blocks up to 60s.
      * Throws QuotaExceededException if no slot becomes available.
      */
     public void acquireImageBuildPermit() throws QuotaExceededException {
@@ -169,11 +165,6 @@ public class QuotaGuard {
 
     // ── Token bucket implementation ───────────────────────────────────────────
 
-    /**
-     * Simple token bucket rate limiter.
-     * Replenishes tokens at the configured rate and blocks callers until
-     * a token is available.
-     */
     static class TokenBucket {
         private final String name;
         private final long intervalNanos;
@@ -188,13 +179,12 @@ public class QuotaGuard {
         }
 
         void acquire() {
-            if (intervalNanos == 0) return; // unlimited
+            if (intervalNanos == 0) return;
             while (true) {
                 long now = System.nanoTime();
                 long next = nextPermitNanos.get();
                 long wait = next - now;
                 if (wait <= 0) {
-                    // Try to claim this slot
                     if (nextPermitNanos.compareAndSet(next, now + intervalNanos)) {
                         return;
                     }
