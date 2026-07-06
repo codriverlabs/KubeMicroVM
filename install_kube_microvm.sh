@@ -42,6 +42,15 @@ INSTALL_DIR="${HOME}/bin"
 CONFIG_DIR="${HOME}/.kube-microvm"
 CONFIG_FILE="${CONFIG_DIR}/config"
 
+# Quota overrides — defaults match AWS account-level defaults (90% of limit)
+# Override if you have received a quota increase from AWS Support
+QUOTA_RUN_MICROVM_RATE=""
+QUOTA_TERMINATE_MICROVM_RATE=""
+QUOTA_SUSPEND_MICROVM_RATE=""
+QUOTA_RESUME_MICROVM_RATE=""
+QUOTA_AUTH_TOKEN_RATE=""
+QUOTA_CONCURRENT_IMAGE_BUILDS=""
+
 # Resolved at runtime from GitHub Release or bundled in installer image
 VERSION="${KUBE_MICROVM_VERSION:-}"
 GHCR_OPERATOR="ghcr.io/plasticity-of-cloud/kube-microvm-operator"
@@ -90,6 +99,13 @@ while [[ $# -gt 0 ]]; do
         --role-arn)  ROLE_ARN="$2";  shift 2 ;;
         --iam)       DO_IAM=true;    shift ;;
 
+        --quota-run-microvm-rate)         QUOTA_RUN_MICROVM_RATE="$2";         shift 2 ;;
+        --quota-terminate-microvm-rate)   QUOTA_TERMINATE_MICROVM_RATE="$2";   shift 2 ;;
+        --quota-suspend-microvm-rate)     QUOTA_SUSPEND_MICROVM_RATE="$2";     shift 2 ;;
+        --quota-resume-microvm-rate)      QUOTA_RESUME_MICROVM_RATE="$2";      shift 2 ;;
+        --quota-auth-token-rate)          QUOTA_AUTH_TOKEN_RATE="$2";          shift 2 ;;
+        --quota-concurrent-image-builds)  QUOTA_CONCURRENT_IMAGE_BUILDS="$2";  shift 2 ;;
+
         --cli-only)  CLI_ONLY=true;  shift ;;
         --dry-run)   DRY_RUN=true;   shift ;;
         --help|-h)
@@ -105,6 +121,14 @@ Options:
   --registry   <url>    Private registry URL (e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com)
   --iam                 Create IAM role + Pod Identity association via CloudFormation
   --role-arn   <arn>    Use existing IAM role ARN (skips --iam)
+
+  # Quota overrides — set if you have received an AWS quota increase
+  --quota-run-microvm-rate         <N>   RunMicrovm rate/s (default: 4, AWS limit: 5)
+  --quota-terminate-microvm-rate   <N>   TerminateMicrovm rate/s (default: 9, AWS limit: 10)
+  --quota-suspend-microvm-rate     <N>   SuspendMicrovm rate/s (default: 1, AWS limit: 2)
+  --quota-resume-microvm-rate      <N>   ResumeMicrovm rate/s (default: 4, AWS limit: 5)
+  --quota-auth-token-rate          <N>   CreateMicrovmAuthToken rate/s (default: 45, AWS limit: 50)
+  --quota-concurrent-image-builds  <N>   Concurrent image builds (default: 9, AWS limit: 10)
 
   --cli-only            Only install the microvm CLI (skip Helm installs)
   --dry-run             Print what would be done without executing
@@ -335,6 +359,14 @@ install_operator() {
         --timeout 4m --wait"
 
     [[ -n "$ROLE_ARN" ]] && HELM_ARGS="$HELM_ARGS --set serviceAccount.roleArn=${ROLE_ARN}"
+
+    # Quota overrides — only set if explicitly provided
+    [[ -n "$QUOTA_RUN_MICROVM_RATE" ]]        && HELM_ARGS="$HELM_ARGS --set quotas.runMicrovmRate=${QUOTA_RUN_MICROVM_RATE}"
+    [[ -n "$QUOTA_TERMINATE_MICROVM_RATE" ]]  && HELM_ARGS="$HELM_ARGS --set quotas.terminateMicrovmRate=${QUOTA_TERMINATE_MICROVM_RATE}"
+    [[ -n "$QUOTA_SUSPEND_MICROVM_RATE" ]]    && HELM_ARGS="$HELM_ARGS --set quotas.suspendMicrovmRate=${QUOTA_SUSPEND_MICROVM_RATE}"
+    [[ -n "$QUOTA_RESUME_MICROVM_RATE" ]]     && HELM_ARGS="$HELM_ARGS --set quotas.resumeMicrovmRate=${QUOTA_RESUME_MICROVM_RATE}"
+    [[ -n "$QUOTA_AUTH_TOKEN_RATE" ]]         && HELM_ARGS="$HELM_ARGS --set quotas.authTokenRate=${QUOTA_AUTH_TOKEN_RATE}"
+    [[ -n "$QUOTA_CONCURRENT_IMAGE_BUILDS" ]] && HELM_ARGS="$HELM_ARGS --set quotas.concurrentImageBuilds=${QUOTA_CONCURRENT_IMAGE_BUILDS}"
 
     run "helm upgrade --install kube-microvm-operator $CHART $HELM_ARGS"
     success "kube-microvm-operator installed"

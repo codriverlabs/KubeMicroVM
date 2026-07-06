@@ -39,12 +39,15 @@ class MicroVMReconcilerIT {
     void setUp() {
         mockClient = mock(MicroVMClient.class);
         OperatorMetrics metrics = new OperatorMetrics(new SimpleMeterRegistry());
+        var quotaGuard = new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(
+                100, 100, 100, 100, 100, 100, 100, 10, 200); // unlimited for tests
         reconciler = new MicroVMReconciler(
                 mockClient,
                 new MicroVMStateMachine(),
                 new DriftDetector(),
                 metrics,
-                client);
+                client,
+                quotaGuard);
     }
 
     @Test

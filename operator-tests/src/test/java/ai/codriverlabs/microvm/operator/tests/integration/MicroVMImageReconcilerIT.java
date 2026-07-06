@@ -37,7 +37,9 @@ class MicroVMImageReconcilerIT {
         mockImageClient = mock(MicroVMImageClient.class);
         var awsIdentity = new ai.codriverlabs.microvm.operator.controller.health.AwsIdentity();
         awsIdentity.set("123456789012", "us-east-1");
-        reconciler = new MicroVMImageReconciler(mockImageClient, awsIdentity);
+        var quotaGuard = new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(
+                100, 100, 100, 100, 100, 100, 100, 10, 200); // unlimited for tests
+        reconciler = new MicroVMImageReconciler(mockImageClient, awsIdentity, quotaGuard);
     }
 
     @Test
