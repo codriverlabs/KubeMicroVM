@@ -305,7 +305,53 @@ needs to change.
 
 ---
 
-## Versioning & Binary Compatibility
+## GraalVM Native Image Compatibility
+
+CDI `@Alternative` resolution happens **at Quarkus build time**, not runtime.
+This makes the SPI fully compatible with GraalVM native image — no reflection,
+no dynamic class loading.
+
+When building the Community native image, Quarkus resolves all CDI beans during
+the `quarkus:build` phase and bakes the winners into the binary. `DefaultQuotaPolicy`
+wins because no `@Alternative` with higher priority exists. If PRO jars are on the
+classpath at build time, `ProQuotaPolicy` wins instead and `DefaultQuotaPolicy` is
+compiled away entirely.
+
+### PRO JAR must be indexed by Jandex
+
+For Quarkus to discover `@Alternative` beans in the PRO module, the PRO JAR must
+either contain a Jandex index (`META-INF/jandex.idx`) or declare CDI bean discovery
+via `META-INF/beans.xml`.
+
+Add to the PRO module's `pom.xml`:
+
+```xml
+<plugin>
+    <groupId>io.smallrye</groupId>
+    <artifactId>jandex-maven-plugin</artifactId>
+    <executions>
+        <execution>
+            <id>make-index</id>
+            <goals><goal>jandex</goal></goals>
+        </execution>
+    </executions>
+</plugin>
+```
+
+Or add `src/main/resources/META-INF/beans.xml` (empty file is sufficient):
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="https://jakarta.ee/xml/ns/jakartaee"
+       version="4.0" bean-discovery-mode="annotated"/>
+```
+
+### operator-spi itself requires no special handling
+
+`operator-spi` contains only interfaces and value objects — no CDI beans, no
+annotations. Quarkus does not need to scan it. It is a plain dependency JAR.
+
+
 
 `operator-spi` follows semantic versioning independently of the operator:
 
