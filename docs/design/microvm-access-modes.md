@@ -158,6 +158,98 @@ No startup burst from client pods.
 
 ---
 
+## Visual Comparison
+
+### Dedicated Mode (1 pod : 1 VM, operator-managed assignment)
+
+```
+MicroVMReplicaSet (replicas=3, mode=Dedicated)
+│
+├── VM: agent-pool-xkj87  (Running) ──────────────────────────────┐
+├── VM: agent-pool-z9rvf  (Running) ───────────────────────────┐  │
+└── VM: agent-pool-zjxh6  (Running) ────────────────────────┐  │  │
+                                                             │  │  │
+         Operator assignment controller                      │  │  │
+         watches pods with label: lambda.microvm.pool=agent-pool
+         assigns one VM per pod, patches annotation         │  │  │
+                                                             │  │  │
+┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐
+│ Pod A               │  │ Pod B               │  │ Pod C               │
+│ annotation:         │  │ annotation:         │  │ annotation:         │
+│   microvm.auth:     │  │   microvm.auth:     │  │   microvm.auth:     │
+│   agent-pool-zjxh6  │  │   agent-pool-z9rvf  │  │   agent-pool-xkj87  │
+│                     │  │                     │  │                     │
+│ [app container]     │  │ [app container]     │  │ [app container]     │
+│ [auth-agent sidecar]│  │ [auth-agent sidecar]│  │ [auth-agent sidecar]│
+└─────────────────────┘  └─────────────────────┘  └─────────────────────┘
+         │                        │                        │
+         │ token for zjxh6        │ token for z9rvf        │ token for xkj87
+         ▼                        ▼                        ▼
+    VM: zjxh6               VM: z9rvf               VM: xkj87
+    (owned by Pod A)        (owned by Pod B)        (owned by Pod C)
+```
+
+Each pod talks to exactly one VM. The operator assigns the VM and manages
+the binding. Pod A cannot access Pod B's VM.
+
+---
+
+### Pooled Mode (N clients : M VMs via gateway)
+
+```
+MicroVMReplicaSet (replicas=1000, mode=Pooled)
+│
+├── VM: agent-pool-xkj87  (Running)  <─────────────────────────────────┐
+├── VM: agent-pool-z9rvf  (Running)  <──────────────────────────────┐  │
+├── VM: agent-pool-zjxh6  (Suspended — skipped)                     │  │
+├── VM: agent-pool-abc12  (Running)  <───────────────────────────┐  │  │
+└── ...                                                           │  │  │
+                                                                  │  │  │
+┌───────────────────────────────────────────────────────────┐    │  │  │
+│ MicroVMGateway Deployment (2 replicas for HA)             │    │  │  │
+│                                                           │    │  │  │
+│  token cache:                                             │    │  │  │
+│    agent-pool-xkj87 -> token (refreshed every 25min) ────┼────┘  │  │
+│    agent-pool-z9rvf -> token (refreshed every 25min) ────┼───────┘  │
+│    agent-pool-abc12 -> token (refreshed every 25min) ────┼──────────┘
+│    ...                                                    │
+│  load balancer: RoundRobin over Running VMs               │
+└───────────────────────────────────────────────────────────┘
+               ^
+               │  ClusterIP Service
+               │  agent-pool-gateway.default.svc:80
+               │
+    ┌──────────┴──────────────────────┐
+    │          │                      │
+  Pod A      Pod B      Pod C    ...Pod N
+  (any pod)  (any pod)  (any pod)
+  no annotation needed
+  no sidecar needed
+```
+
+Any pod in the namespace calls `http://agent-pool-gateway.default.svc/` and
+the gateway selects a VM, injects the token, and proxies the request.
+
+---
+
+### Comparison Table
+
+| | **Dedicated** | **Pooled** |
+|---|---|---|
+| VM assignment | 1 pod : 1 VM (operator-managed) | N pods : any available VM |
+| VM name in pod | Set by operator via annotation patch | Not required — hidden by gateway |
+| Sidecar injected | Yes, per pod | No — gateway handles tokens |
+| Token isolation | Each pod gets token for its own VM | Gateway holds token cache for all VMs |
+| RBAC | 1 Role + 1 RoleBinding per pod | 1 wildcard Role for gateway SA |
+| Startup token burst | Yes — N sidecars start simultaneously | No — gateway pre-warms cache |
+| Client complexity | Zero — reads `/var/run/microvm/token` | Zero — plain HTTP to ClusterIP |
+| VM state awareness | Sidecar retries if VM suspends | Gateway skips suspended/failed VMs |
+| Session stickiness | Yes — pod always uses the same VM | No — any VM per request (stateless) |
+| Scale overhead | 1 extra sidecar container per pod | 2 gateway pods total (HA) |
+| Good for | Stateful sessions, long-lived agents | Stateless request handling, LLM pools |
+
+---
+
 ## How VM Names Are Resolved
 
 The pod annotation `lambda.microvm.auth: <vm-name>` takes the **Kubernetes CR name**
