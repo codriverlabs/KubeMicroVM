@@ -1,6 +1,8 @@
 package ai.codriverlabs.microvm.operator.controller.quota;
 
+import ai.codriverlabs.microvm.operator.spi.quota.QuotaPolicy;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
@@ -13,14 +15,13 @@ import java.util.function.Supplier;
 /**
  * Operator-level quota guard — enforces AWS Lambda MicroVMs API rate limits.
  *
- * All limits are configurable via application properties (and therefore via
- * Helm values / install script flags) so customers who receive quota increases
- * can tune without rebuilding the operator.
+ * Configured values (from application properties / Helm values / install-time
+ * discovery) are passed through {@link QuotaPolicy#effectiveRate} before being
+ * applied to the internal token buckets. This allows PRO to inject a safety
+ * margin or per-tenant adjustment without changing any reconciler code.
  *
- * Default values match AWS account-level defaults exactly.
- * Quota values are discovered at install time by the install script via
- * `aws service-quotas get-service-quota` and passed as Helm values.
- * Runtime discovery can be enabled via aws.quota.discovery.enabled=true.
+ * Community default: {@link ai.codriverlabs.microvm.operator.controller.spi.DefaultQuotaPolicy}
+ * returns the configured value unchanged.
  */
 @ApplicationScoped
 public class QuotaGuard {
@@ -38,40 +39,45 @@ public class QuotaGuard {
     private final Semaphore imageBuildSemaphore;
     private final Semaphore tokenQueueSemaphore;
 
+    @Inject
     public QuotaGuard(
-            @ConfigProperty(name = "aws.quota.run-microvm-rate", defaultValue = "5")
-            int runMicrovmRate,
-            @ConfigProperty(name = "aws.quota.terminate-microvm-rate", defaultValue = "10")
-            int terminateRate,
-            @ConfigProperty(name = "aws.quota.suspend-microvm-rate", defaultValue = "2")
-            int suspendRate,
-            @ConfigProperty(name = "aws.quota.resume-microvm-rate", defaultValue = "5")
-            int resumeRate,
-            @ConfigProperty(name = "aws.quota.get-microvm-rate", defaultValue = "100")
-            int getMicrovmRate,
-            @ConfigProperty(name = "aws.quota.auth-token-rate", defaultValue = "50")
-            int authTokenRate,
-            @ConfigProperty(name = "aws.quota.shell-auth-token-rate", defaultValue = "5")
-            int shellAuthTokenRate,
-            @ConfigProperty(name = "aws.quota.concurrent-image-builds", defaultValue = "10")
-            int maxImageBuilds,
-            @ConfigProperty(name = "aws.quota.token-queue-size", defaultValue = "200")
-            int tokenQueueSize
+            QuotaPolicy quotaPolicy,
+            @ConfigProperty(name = "aws.quota.run-microvm-rate",        defaultValue = "5")  int runRate,
+            @ConfigProperty(name = "aws.quota.terminate-microvm-rate",  defaultValue = "10") int terminateRate,
+            @ConfigProperty(name = "aws.quota.suspend-microvm-rate",    defaultValue = "2")  int suspendRate,
+            @ConfigProperty(name = "aws.quota.resume-microvm-rate",     defaultValue = "5")  int resumeRate,
+            @ConfigProperty(name = "aws.quota.get-microvm-rate",        defaultValue = "100") int getRate,
+            @ConfigProperty(name = "aws.quota.auth-token-rate",         defaultValue = "50") int authTokenRate,
+            @ConfigProperty(name = "aws.quota.shell-auth-token-rate",   defaultValue = "5")  int shellAuthTokenRate,
+            @ConfigProperty(name = "aws.quota.concurrent-image-builds", defaultValue = "10") int maxImageBuilds,
+            @ConfigProperty(name = "aws.quota.token-queue-size",        defaultValue = "200") int tokenQueueSize
     ) {
-        this.runMicrovmBucket      = new TokenBucket(runMicrovmRate,      "run-microvm");
-        this.terminateBucket       = new TokenBucket(terminateRate,        "terminate-microvm");
-        this.suspendBucket         = new TokenBucket(suspendRate,          "suspend-microvm");
-        this.resumeBucket          = new TokenBucket(resumeRate,           "resume-microvm");
-        this.getMicrovmBucket      = new TokenBucket(getMicrovmRate,       "get-microvm");
-        this.authTokenBucket       = new TokenBucket(authTokenRate,        "auth-token");
-        this.shellAuthTokenBucket  = new TokenBucket(shellAuthTokenRate,   "shell-auth-token");
-        this.imageBuildSemaphore   = new Semaphore(maxImageBuilds);
+        // Pass each configured value through QuotaPolicy — Community returns as-is,
+        // PRO may apply safety margin, per-tenant limits, etc.
+        int effectiveRun        = quotaPolicy.effectiveRate("RunMicrovm",                    runRate);
+        int effectiveTerminate  = quotaPolicy.effectiveRate("TerminateMicrovm",              terminateRate);
+        int effectiveSuspend    = quotaPolicy.effectiveRate("SuspendMicrovm",                suspendRate);
+        int effectiveResume     = quotaPolicy.effectiveRate("ResumeMicrovm",                 resumeRate);
+        int effectiveGet        = quotaPolicy.effectiveRate("GetMicrovm",                    getRate);
+        int effectiveAuthToken  = quotaPolicy.effectiveRate("CreateMicrovmAuthToken",        authTokenRate);
+        int effectiveShellToken = quotaPolicy.effectiveRate("CreateMicrovmShellAuthToken",   shellAuthTokenRate);
+        int effectiveBuilds     = quotaPolicy.effectiveImageBuildLimit(maxImageBuilds);
+
+        this.runMicrovmBucket      = new TokenBucket(effectiveRun,        "run-microvm");
+        this.terminateBucket       = new TokenBucket(effectiveTerminate,   "terminate-microvm");
+        this.suspendBucket         = new TokenBucket(effectiveSuspend,     "suspend-microvm");
+        this.resumeBucket          = new TokenBucket(effectiveResume,      "resume-microvm");
+        this.getMicrovmBucket      = new TokenBucket(effectiveGet,         "get-microvm");
+        this.authTokenBucket       = new TokenBucket(effectiveAuthToken,   "auth-token");
+        this.shellAuthTokenBucket  = new TokenBucket(effectiveShellToken,  "shell-auth-token");
+        this.imageBuildSemaphore   = new Semaphore(effectiveBuilds);
         this.tokenQueueSemaphore   = new Semaphore(tokenQueueSize);
 
-        LOG.infof("QuotaGuard initialised: run=%d/s terminate=%d/s suspend=%d/s " +
+        LOG.infof("QuotaGuard initialised via %s: run=%d/s terminate=%d/s suspend=%d/s " +
                   "resume=%d/s get=%d/s authToken=%d/s imageBuilds=%d tokenQueue=%d",
-                runMicrovmRate, terminateRate, suspendRate, resumeRate,
-                getMicrovmRate, authTokenRate, maxImageBuilds, tokenQueueSize);
+                quotaPolicy.getClass().getSimpleName(),
+                effectiveRun, effectiveTerminate, effectiveSuspend, effectiveResume,
+                effectiveGet, effectiveAuthToken, effectiveBuilds, tokenQueueSize);
     }
 
     // ── Public API ────────────────────────────────────────────────────────────

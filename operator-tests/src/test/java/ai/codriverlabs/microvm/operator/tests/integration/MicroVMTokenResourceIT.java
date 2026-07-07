@@ -38,7 +38,7 @@ class MicroVMTokenResourceIT {
     @BeforeEach
     void setUp() {
         mockAwsClient = mock(MicroVMClient.class);
-        resource = new MicroVMTokenResource(client, mockAwsClient, new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(100,100,100,100,100,100,100,10,200), 60);
+        resource = new MicroVMTokenResource(client, mockAwsClient, new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(new ai.codriverlabs.microvm.operator.controller.spi.DefaultQuotaPolicy(),100,100,100,100,100,100,100,10,200), 60);
     }
 
     @Test
@@ -61,7 +61,7 @@ class MicroVMTokenResourceIT {
         // TokenReview + SAR will fail/deny but we test 404 path via no VM in cluster
         // Simplified: test the NOT_FOUND path by having no VM in the mock server
         // (TokenReview mock would return authenticated=false here, so we test via subclass)
-        Response resp = new MicroVMTokenResource(client, mockAwsClient, new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(100,100,100,100,100,100,100,10,200), 60) {
+        Response resp = new MicroVMTokenResource(client, mockAwsClient, new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(new ai.codriverlabs.microvm.operator.controller.spi.DefaultQuotaPolicy(),100,100,100,100,100,100,100,10,200), 60) {
             @Override
             protected jakarta.ws.rs.core.Response checkAuthorization(String t, String ns, String n) { return null; }
         }.createToken("default", "nonexistent-vm", "Bearer tok", null);
@@ -74,7 +74,7 @@ class MicroVMTokenResourceIT {
         var vm = vmWithNoId("pending-vm");
         client.resource(vm).create();
 
-        Response resp = new MicroVMTokenResource(client, mockAwsClient, new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(100,100,100,100,100,100,100,10,200), 60) {
+        Response resp = new MicroVMTokenResource(client, mockAwsClient, new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(new ai.codriverlabs.microvm.operator.controller.spi.DefaultQuotaPolicy(),100,100,100,100,100,100,100,10,200), 60) {
             @Override
             protected jakarta.ws.rs.core.Response checkAuthorization(String t, String ns, String n) { return null; }
         }.createToken("default", "pending-vm", "Bearer tok", null);
@@ -90,7 +90,7 @@ class MicroVMTokenResourceIT {
         when(mockAwsClient.createAuthToken(eq("mvm-abc123"), eq(30), anyBoolean()))
                 .thenReturn(CompletableFuture.completedFuture(Map.of("X-aws-proxy-auth", "eyJhb...")));
 
-        Response resp = new MicroVMTokenResource(client, mockAwsClient, new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(100,100,100,100,100,100,100,10,200), 60) {
+        Response resp = new MicroVMTokenResource(client, mockAwsClient, new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(new ai.codriverlabs.microvm.operator.controller.spi.DefaultQuotaPolicy(),100,100,100,100,100,100,100,10,200), 60) {
             @Override
             protected jakarta.ws.rs.core.Response checkAuthorization(String t, String ns, String n) { return null; }
         }.createToken("default", "my-vm", "Bearer tok", null);
@@ -114,7 +114,7 @@ class MicroVMTokenResourceIT {
         var req = new MicroVMTokenResource.TokenRequest();
         req.expirationInMinutes = 9999; // above max
 
-        Response resp = new MicroVMTokenResource(client, mockAwsClient, new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(100,100,100,100,100,100,100,10,200), 60) {
+        Response resp = new MicroVMTokenResource(client, mockAwsClient, new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(new ai.codriverlabs.microvm.operator.controller.spi.DefaultQuotaPolicy(),100,100,100,100,100,100,100,10,200), 60) {
             @Override
             protected jakarta.ws.rs.core.Response checkAuthorization(String t, String ns, String n) { return null; }
         }.createToken("default", "my-vm", "Bearer tok", req);
@@ -130,7 +130,7 @@ class MicroVMTokenResourceIT {
         var vm = runningVm("my-vm", "mvm-abc123", "endpoint");
         client.resource(vm).create();
 
-        Response resp = new MicroVMTokenResource(client, mockAwsClient, new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(100,100,100,100,100,100,100,10,200), 60) {
+        Response resp = new MicroVMTokenResource(client, mockAwsClient, new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(new ai.codriverlabs.microvm.operator.controller.spi.DefaultQuotaPolicy(),100,100,100,100,100,100,100,10,200), 60) {
             @Override
             protected jakarta.ws.rs.core.Response checkAuthorization(String t, String ns, String n) { return Response.status(403).entity(java.util.Map.of("error","denied")).build(); }
         }.createToken("default", "my-vm", "Bearer tok", null);
