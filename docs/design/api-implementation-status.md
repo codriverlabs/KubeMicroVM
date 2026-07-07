@@ -55,13 +55,17 @@ Last updated: 2026-07-01 (post v1.0.0-rc1 E2E validation)
 |---------|------|-------------------|------------|-------|
 | imageRef resolution by CR name | ✅ | ✅ | ✅ | RBAC-enforced, validates state |
 | networkRef resolution by CR name | ✅ | ✅ | ✅ | Validates connector ACTIVE |
-| MicroVMReplicaSet reconciler | ✅ | ✅ (5 tests) | ❌ | Scale up/down works in mocks |
+| MicroVMReplicaSet reconciler | ✅ | ✅ (5 tests) | ❌ | Scale up/down works in mocks; QuotaGuard not wired yet (see quota-guardrails-replicaset) |
 | Token REST endpoint (operator) | ✅ | ✅ (7 tests) | ❌ | TokenReview + SubjectAccessReview |
 | Pod mutating webhook (sidecar) | ✅ | ✅ (5 tests) | ❌ | Injects auth-agent container |
 | Validating webhook | ✅ (code) | ❌ | ❌ | Endpoints not working on cluster |
 | Mutating webhook (spec defaulting) | ✅ (code) | ❌ | ❌ | Not tested |
 | Drift detection | ✅ | ✅ (mocked) | ❌ | Detects AWS ≠ desired state |
 | kubectl microvm exec | ✅ (code) | ❌ | ❌ | Uses ShellAuthToken |
+| QuotaGuard (rate limiting + backpressure) | ✅ | ✅ (wired in MicroVMReconciler, ImageReconciler, TokenResource) | ❌ | MicroVMReplicaSetReconciler not wired yet |
+| QuotaPolicy SPI | ✅ | ✅ (SpiDefaultsIT) | ❌ | DefaultQuotaPolicy passes rates through; PRO overrides via @Alternative |
+| Quota discovery (install-time) | ✅ | — | ✅ | install_kube_microvm.sh queries service-quotas; fallback to AWS defaults |
+| Quota discovery (runtime) | ✅ | — | ❌ | --quota-discovery=runtime; requires service-quotas:GetServiceQuota IAM |
 
 ## Not Implemented
 

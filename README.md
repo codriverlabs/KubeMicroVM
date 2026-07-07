@@ -388,6 +388,7 @@ transparently.
 | [ReplicaSet](docs/user-guides/replicaset.md) | Scaling and managing VM pools |
 | [Drift & Auto-Suspend](docs/user-guides/drift-and-autosuspend.md) | Drift detection and idle policy |
 | [Memory Sizing](docs/user-guides/memory-sizing.md) | Configure baseline memory/vCPU for MicroVM images |
+| [Quota Guardrails](docs/user-guides/quota-guardrails.md) | API rate limits, discovery, overrides, ReplicaSet cascade behaviour |
 | [CLI Reference](docs/user-guides/cli-reference.md) | Complete `microvm` CLI reference |
 | [Namespace Watching](docs/design/namespace-watching.md) | Controlling which namespaces the operator manages |
 | [Token Injection Design](docs/design/token-injection.md) | Auth architecture and RBAC design |
