@@ -24,6 +24,27 @@ Last updated: 2026-07-01
 
 ## Remaining — Must Do for GA
 
+### 0. Quota Guardrails E2E Burst Test
+
+**What**: Validate that `QuotaGuard` correctly enforces rate limits on a live cluster.
+Specific scenarios: token burst (50 concurrent), ReplicaSet suspend cascade pacing,
+startup log verification.
+
+**Code status**: Done (67 integration tests pass — `feature/quota-guardrails-replicaset`)
+
+**Test plan**: [`docs/testing/burst-test-plan.md`](burst-test-plan.md)
+
+**What to test on EKS**:
+- T-01: `QuotaGuard initialised` log at startup with correct rates
+- T-02: 50 concurrent token requests — verify `OK > 0` (was 0/256 on 2026-07-06)
+- T-03: Suspend 20-VM ReplicaSet — verify cascade takes ≥ 10s (paced at 2 req/s)
+- T-05: Operator healthy after burst (no crash, no 429s in logs)
+
+**Effort**: ~30 min
+
+**Dependency**: Token endpoint E2E (item #1 below) for T-02 full validation.
+T-03 and T-01 are independent.
+
 ### 1. Token via Operator Endpoint (no --direct flag)
 
 **What**: Pod calls operator REST endpoint → operator calls AWS → returns token.
