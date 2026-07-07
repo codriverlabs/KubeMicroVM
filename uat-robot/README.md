@@ -10,27 +10,50 @@ pip install robotframework
 ```
 
 The cluster must have:
-- KubeMicroVM operator installed (`helm install ...`)
+- KubeMicroVM operator installed and running (`helm install ...` or via install script)
 - Pod Identity association for the operator SA
-- VPC endpoint for `com.amazonaws.<region>.lambda-microvm` (private subnets)
 - `microvm` CLI in PATH
+- AWS credentials with access to Lambda MicroVMs API
 
-## Quick Start
+> **VPC endpoints are not required.** The UAT suites work against any EKS cluster
+> with outbound internet access to the Lambda MicroVMs API. VPC endpoints are only
+> needed for clusters in private subnets with no internet egress — that is a
+> deployment configuration, not a UAT prerequisite.
+
+## Recommended run order
+
+The suites are independent (each creates and cleans up its own resources), but
+running **Quick Start first** (`01_quick_start.robot`) is recommended because:
+
+1. It validates the complete operator install — operator running, webhooks active,
+   namespace labelled, image build works end-to-end
+2. It exercises the baseline that all other guides assume (working operator + image)
+3. If `01_quick_start.robot` fails, the remaining suites will likely also fail
 
 ```bash
 cd uat-robot
 
-# 1. Verify cluster is ready (run first)
+# 1. Validate cluster prerequisites
 robot --outputdir results tests/00_cluster_setup.robot
 
-# 2. Run all UAT suites
+# 2. Run Quick Start first (recommended baseline validation)
+robot --outputdir results tests/01_quick_start.robot
+
+# 3. Run remaining suites
+robot --outputdir results tests/02_rbac.robot tests/03_networking.robot \
+      tests/04_pod_token_injection.robot tests/05_replicaset.robot \
+      tests/06_microvm_class.robot tests/07_drift_autosuspend.robot \
+      tests/08_memory_sizing.robot
+
+# OR: run all suites at once (includes setup + cleanup)
 robot --outputdir results tests/
+```
 
-# 3. Run a single suite
-robot --outputdir results tests/02_rbac.robot
+## Quick Start (single command)
 
-# 4. Smoke tests only (~1 test per guide, fast validation)
-robot --outputdir results -i smoke tests/
+```bash
+cd uat-robot
+robot --outputdir results tests/
 ```
 
 ## Structure
@@ -44,7 +67,7 @@ uat-robot/
 ├── tests/
 │   ├── __init__.robot           # Directory-level setup (installs operator if missing)
 │   ├── 00_cluster_setup.robot   # Standalone cluster validation (run first)
-│   ├── 01_quick_start.robot     # Quick Start guide (8 tests)
+│   ├── 01_quick_start.robot     # Quick Start guide (9 tests)
 │   ├── 02_rbac.robot            # RBAC guide (8 tests)
 │   ├── 03_networking.robot      # Networking guide (5 tests)
 │   ├── 04_pod_token_injection.robot  # Pod Token Injection (9 tests)
@@ -61,16 +84,16 @@ Each suite depends on cluster infrastructure being ready:
 
 ```
 __init__.robot (Setup Cluster If Needed)
-    └── 00_cluster_setup.robot (validate)
-    └── 01_quick_start.robot (Verify Cluster Ready → Create Quick Start Resources)
-    └── 02_rbac.robot (Verify Cluster Ready → Create RBAC Resources)
+    └── 00_cluster_setup.robot (validate prerequisites)
+    └── 01_quick_start.robot   (recommended baseline — run first)
+    └── 02_rbac.robot          (independent — creates own resources)
     └── ...
 ```
 
 - `__init__.robot` runs `Setup Cluster If Needed` once when you run the full `tests/` directory
 - Each individual suite also calls `Verify Cluster Ready` to fail fast with a clear message
 - Suites are independent — each creates and cleans up its own test resources
-- Running order doesn't matter (no inter-suite dependencies)
+- `01_quick_start.robot` is the recommended first suite as it validates the complete baseline
 
 ## Customization
 
@@ -78,8 +101,8 @@ Override variables for a different cluster:
 
 ```bash
 robot --variable REGION:eu-west-1 \
-      --variable ACCOUNT_ID:111222333444 \
-      --variable CHART_VERSION:1.0.0 \
+      --variable ACCOUNT_ID:<ACCOUNT_ID> \
+      --variable CHART_VERSION:1.0.2 \
       --variable CODEBASE_PATH:/path/to/KubeMicroVM \
       --outputdir results tests/
 ```
