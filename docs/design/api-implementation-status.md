@@ -62,9 +62,9 @@ Last updated: 2026-07-01 (post v1.0.0-rc1 E2E validation)
 | Mutating webhook (spec defaulting) | ✅ (code) | ❌ | ❌ | Not tested |
 | Drift detection | ✅ | ✅ (mocked) | ❌ | Detects AWS ≠ desired state |
 | kubectl microvm exec | ✅ (code) | ❌ | ❌ | Uses ShellAuthToken |
-| QuotaGuard (rate limiting + backpressure) | ✅ | ✅ (wired in MicroVMReconciler, ImageReconciler, TokenResource) | ❌ | MicroVMReplicaSetReconciler not wired yet |
-| QuotaPolicy SPI | ✅ | ✅ (SpiDefaultsIT) | ❌ | DefaultQuotaPolicy passes rates through; PRO overrides via @Alternative |
-| Quota discovery (install-time) | ✅ | — | ✅ | install_kube_microvm.sh queries service-quotas; fallback to AWS defaults |
+| QuotaGuard (rate limiting + backpressure) | ✅ | ✅ (wired in all 4 reconcilers + TokenResource) | ✅ 2026-07-07 | burst test: 50/50 tokens (was 0/256); cascade pacing verified |
+| QuotaPolicy SPI | ✅ | ✅ (SpiDefaultsIT) | ✅ 2026-07-07 | DefaultQuotaPolicy confirmed in startup log |
+| Quota discovery (install-time) | ✅ | — | ✅ 2026-07-07 | install_kube_microvm.sh queries service-quotas; fallback to AWS defaults |
 | Quota discovery (runtime) | ✅ | — | ❌ | --quota-discovery=runtime; requires service-quotas:GetServiceQuota IAM |
 
 ## Not Implemented
