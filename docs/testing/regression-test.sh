@@ -12,7 +12,7 @@ set -euo pipefail
 
 NAMESPACE="default"
 BUCKET="kube-microvm-test-<ACCOUNT_ID>-us-east-1"
-S3_KEY="test-fixtures/microvm-hello-node.zip"
+S3_KEY="uat/fixtures/microvm-hello-node.zip"
 BASE_IMAGE="arn:aws:lambda:us-east-1:aws:microvm-image:al2023-1"
 BUILD_ROLE="arn:aws:iam::<ACCOUNT_ID>:role/KubeMicroVMBuildRole"
 RESULTS_DIR="$(cd "$(dirname "$0")" && pwd)/docs/testing/load-test-$(date +%Y%m%d)"

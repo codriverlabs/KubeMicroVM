@@ -31,7 +31,7 @@ running **Quick Start first** (`01_quick_start.robot`) is recommended because:
 3. If `01_quick_start.robot` fails, the remaining suites will likely also fail
 
 ```bash
-cd uat-robot
+cd uat
 
 # 1. Validate cluster prerequisites
 robot --outputdir results tests/00_cluster_setup.robot
@@ -52,14 +52,14 @@ robot --outputdir results tests/
 ## Quick Start (single command)
 
 ```bash
-cd uat-robot
+cd uat
 robot --outputdir results tests/
 ```
 
 ## Structure
 
 ```
-uat-robot/
+uat/
 ├── resources/
 │   ├── variables.robot          # Account, region, bucket, versions
 │   ├── common.resource          # Shared keywords (kubectl, wait, token, curl)

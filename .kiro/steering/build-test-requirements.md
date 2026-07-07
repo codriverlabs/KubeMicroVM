@@ -14,7 +14,7 @@ cd /home/ubuntu/projects/pl-cloud/KubeMicroVM
 **Skip tests when pushing:**
 - Documentation-only changes (`.md`, `.kiro/`, `docs/`)
 - CI/workflow-only changes (`.github/`)
-- Test fixture files (`test-fixtures/`)
+- Test fixture files (`uat/fixtures/`)
 - UAT result files
 
 ## What Gets Verified

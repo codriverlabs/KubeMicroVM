@@ -13,14 +13,14 @@
 ├── operator-auth-agent/    # Sidecar: auto-refresh MicroVM auth tokens in pods
 ├── operator-cli/           # `microvm` CLI (PicoCLI, native binary)
 ├── operator-tests/         # Integration tests (50 tests, Fabric8 MockServer)
-├── uat-robot/              # Robot Framework E2E test suites (10 suites, 62 tests)
+├── uat/              # Robot Framework E2E test suites (10 suites, 62 tests)
 ├── docs/design/            # Design documents (feature specs before implementation)
 ├── docs/user-guides/       # User-facing guides (8 guides, UAT-validated)
 ├── docs/testing/           # UAT results and test plans
 ├── .kiro/steering/         # Operational rules (MUST follow)
 ├── .agents/summary/        # AI-generated documentation (this ecosystem)
 ├── iam/                    # CloudFormation templates for IAM roles
-└── test-fixtures/          # S3 app packages for E2E testing
+└── uat/fixtures/          # S3 app packages for E2E testing
 ```
 
 ## Key Entry Points
@@ -64,7 +64,7 @@
 
 - **49 integration tests** (`operator-tests`): mocked AWS, real reconciler logic, Fabric8 MockServer
 - **Property-based tests** (jqwik): state machine, serialization, scaling invariants, quota enforcement
-- **Robot Framework UAT** (`uat-robot/`): 62 E2E tests on live EKS cluster, per-guide suites
+- **Robot Framework UAT** (`uat/`): 62 E2E tests on live EKS cluster, per-guide suites
 - **Test before push rule**: `./mvnw install -DskipTests && ./mvnw -pl operator-tests verify`
 
 ## Custom Instructions

@@ -49,9 +49,9 @@ Verify S3 Fixtures Uploaded
     END
 
 Upload Test Fixtures
-    ${zip_hello}=    Run Process    bash    -c    cd ${CODEBASE_PATH}/test-fixtures/microvm-hello-node && zip -r /tmp/microvm-hello-node.zip .
+    ${zip_hello}=    Run Process    bash    -c    cd ${CODEBASE_PATH}/uat/fixtures/microvm-hello-node && zip -r /tmp/microvm-hello-node.zip .
     Run Process    aws    s3    cp    /tmp/microvm-hello-node.zip    s3://${S3_BUCKET}/test-fixtures/microvm-hello-node.zip
-    ${zip_net}=    Run Process    bash    -c    cd ${CODEBASE_PATH}/test-fixtures/microvm-net-test && zip -r /tmp/microvm-net-test.zip .
+    ${zip_net}=    Run Process    bash    -c    cd ${CODEBASE_PATH}/uat/fixtures/microvm-net-test && zip -r /tmp/microvm-net-test.zip .
     Run Process    aws    s3    cp    /tmp/microvm-net-test.zip    s3://${S3_BUCKET}/test-fixtures/microvm-net-test.zip
 
 Setup Cluster If Needed
