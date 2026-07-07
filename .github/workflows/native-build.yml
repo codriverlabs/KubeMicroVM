@@ -27,7 +27,7 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           ./mvnw versions:set -DnewVersion=${VERSION} -DgenerateBackupPoms=false --batch-mode --no-transfer-progress
-      - run: ./mvnw verify -pl operator-core,operator-controller,operator-webhook,operator-cli,operator-tests -am --batch-mode --no-transfer-progress
+      - run: ./mvnw verify -pl operator-core,operator-spi,operator-controller,operator-webhook,operator-cli,operator-tests -am --batch-mode --no-transfer-progress
 
   # ─── Native CLI binary ────────────────────────────────────────────────────
 
@@ -212,7 +212,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           # Quarkus Helm generates the chart with image tag and version baked in
-          ./mvnw -B -pl operator-core,operator-aws-client,operator-aws-client-core,operator-webhook,operator-controller \
+          ./mvnw -B -pl operator-core,operator-spi,operator-aws-client,operator-aws-client-core,operator-webhook,operator-controller \
             package -DskipTests --no-transfer-progress \
             -Dquarkus.helm.version=${VERSION} \
             -Dquarkus.helm.create-tar-file=true \
