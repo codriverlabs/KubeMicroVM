@@ -39,6 +39,13 @@ public class MicroVMSpec {
     private String templateRef;
     private DesiredState desiredState;
     private String region;
+    /**
+     * Optional: import an existing MicroVM into Kubernetes management.
+     * When set and status.microVmId is null, the reconciler calls GetMicrovm
+     * to adopt the existing VM rather than calling RunMicrovm.
+     * Immutable after creation. Must match pattern: microvm-[a-f0-9-]{36}
+     */
+    private String importMicroVmId;
 
     // Idle policy
     private Integer maxIdleDurationSeconds;
@@ -86,6 +93,9 @@ public class MicroVMSpec {
 
     public String getRegion() { return region; }
     public void setRegion(String region) { this.region = region; }
+
+    public String getImportMicroVmId() { return importMicroVmId; }
+    public void setImportMicroVmId(String importMicroVmId) { this.importMicroVmId = importMicroVmId; }
 
     public Integer getMaxIdleDurationSeconds() { return maxIdleDurationSeconds; }
     public void setMaxIdleDurationSeconds(Integer maxIdleDurationSeconds) { this.maxIdleDurationSeconds = maxIdleDurationSeconds; }

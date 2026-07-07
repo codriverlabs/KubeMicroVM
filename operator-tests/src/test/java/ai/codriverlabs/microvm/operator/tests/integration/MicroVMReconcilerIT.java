@@ -225,4 +225,67 @@ class MicroVMReconcilerIT {
         when(ctx.getClient()).thenReturn(client);
         return ctx;
     }
+
+    // ── Import tests ──────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("IMPORT: importMicroVmId set — GetMicrovm called, RunMicrovm not called, status populated")
+    void import_withValidId_adoptsExistingVm() throws Exception {
+        String importId = "microvm-12345678-abcd-efgh-ijkl-123456789012";
+        var vm = testMicroVM("my-imported-vm", null);
+        vm.getSpec().setImportMicroVmId(importId);
+        client.resource(vm).create();
+
+        // GetMicrovm returns existing running VM
+        when(mockClient.getMicroVM(importId)).thenReturn(CompletableFuture.completedFuture(
+                new DescribeMicroVMResponse(importId, "RUNNING",
+                        "abc.lambda-microvm.us-east-1.on.aws", null, null)));
+
+        reconciler.reconcile(vm, mockContext());
+
+        // RunMicrovm must NOT have been called
+        verify(mockClient, never()).runMicroVM(any());
+        // Status populated from imported VM
+        assertEquals(importId, vm.getStatus().getMicroVmId());
+        assertEquals("abc.lambda-microvm.us-east-1.on.aws", vm.getStatus().getEndpointUrl());
+        assertEquals(MicroVMState.RUNNING, vm.getStatus().getState());
+    }
+
+    @Test
+    @DisplayName("IMPORT: importMicroVmId not found in AWS — CR transitions to FAILED with clear message")
+    void import_notFound_transitionsToFailed() throws Exception {
+        String importId = "microvm-00000000-0000-0000-0000-000000000000";
+        var vm = testMicroVM("missing-import-vm", null);
+        vm.getSpec().setImportMicroVmId(importId);
+        client.resource(vm).create();
+
+        // GetMicrovm returns null (not found)
+        when(mockClient.getMicroVM(importId)).thenReturn(CompletableFuture.completedFuture(null));
+
+        reconciler.reconcile(vm, mockContext());
+
+        verify(mockClient, never()).runMicroVM(any());
+        assertEquals(MicroVMState.FAILED, vm.getStatus().getState());
+        assertNotNull(vm.getStatus().getConditions());
+        assertTrue(vm.getStatus().getConditions().stream()
+                .anyMatch(c -> c.getMessage() != null && c.getMessage().contains("not found in AWS")));
+    }
+
+    @Test
+    @DisplayName("IMPORT: no importMicroVmId — normal RunMicrovm path used")
+    void import_notSet_usesNormalCreatePath() throws Exception {
+        var vm = testMicroVM("normal-vm", null);
+        // importMicroVmId NOT set
+        client.resource(vm).create();
+
+        var runResp = mock(RunMicroVMResponse.class);
+        when(runResp.microvmId()).thenReturn("mvm-new-001");
+        when(runResp.endpoint()).thenReturn("new.lambda-microvm.us-east-1.on.aws");
+        when(mockClient.runMicroVM(any())).thenReturn(CompletableFuture.completedFuture(runResp));
+
+        reconciler.reconcile(vm, mockContext());
+
+        // RunMicrovm must have been called
+        verify(mockClient, times(1)).runMicroVM(any());
+    }
 }

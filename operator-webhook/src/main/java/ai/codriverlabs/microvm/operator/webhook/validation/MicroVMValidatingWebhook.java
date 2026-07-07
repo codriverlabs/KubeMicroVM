@@ -121,6 +121,8 @@ public class MicroVMValidatingWebhook {
                     }
                     validateNetworkRef(spec, request.getNamespace(), errors);
                     validateClassName(spec, request.getNamespace(), errors);
+                    validateImportMicroVmId(spec, request.getOperation(),
+                            request.getOldObject() != null ? request.getOldObject() : null, errors);
                 }
             } else if ("microvmimages".equals(resource)) {
                 Object rawObject = request.getObject();
@@ -259,6 +261,35 @@ public class MicroVMValidatingWebhook {
         Integer newMemory = newSpec.getMemorySizeMiB();
         if (oldMemory != null && newMemory != null && !oldMemory.equals(newMemory)) {
             errors.add("spec.memorySizeMiB is immutable after image creation");
+        }
+    }
+
+    void validateImportMicroVmId(MicroVMSpec spec, String operation, Object oldObject, List<String> errors) {
+        String importId = spec.getImportMicroVmId();
+        if (importId == null || importId.isBlank()) return;
+
+        // Pattern: microvm- followed by a UUID (36 chars: 8-4-4-4-12 hex with dashes)
+        if (!importId.matches("^microvm-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")) {
+            errors.add("spec.importMicroVmId must match pattern microvm-<uuid> " +
+                       "(e.g. microvm-12345678-abcd-efgh-ijkl-123456789012)");
+        }
+
+        // Immutability: importMicroVmId cannot be changed after creation
+        if ("UPDATE".equals(operation) && oldObject != null) {
+            try {
+                MicroVM oldVm = objectMapper.convertValue(oldObject, MicroVM.class);
+                String oldImportId = oldVm.getSpec() != null ? oldVm.getSpec().getImportMicroVmId() : null;
+                if (oldImportId != null && !oldImportId.equals(importId)) {
+                    errors.add("spec.importMicroVmId is immutable after creation");
+                }
+                if (oldImportId == null && !importId.isBlank()) {
+                    errors.add("spec.importMicroVmId cannot be added after creation — " +
+                               "create a new CR with the import field set from the start");
+                }
+            } catch (Exception e) {
+                LOG.warnf("Could not deserialize oldObject for importMicroVmId immutability check: %s",
+                        e.getMessage());
+            }
         }
     }
 }

@@ -33,4 +33,13 @@ public class AwsIdentity {
         if (accountId == null || region == null) return null;
         return String.format("arn:aws:lambda:%s:%s:microvm-image:%s", region, accountId, imageName);
     }
+
+    /**
+     * Constructs a network connector ARN from a short name.
+     * Returns null if account identity has not been resolved yet.
+     */
+    public String constructNetworkConnectorArn(String connectorName) {
+        if (accountId == null || region == null) return null;
+        return String.format("arn:aws:lambda:%s:%s:network-connector:%s", region, accountId, connectorName);
+    }
 }

@@ -3,6 +3,7 @@ package ai.codriverlabs.microvm.operator.controller.reconciler;
 import ai.codriverlabs.microvm.aws.lambdacore.model.GetNetworkConnectorResponse;
 import ai.codriverlabs.microvm.aws.lambdacore.model.NetworkConnectorState;
 import ai.codriverlabs.microvm.operator.controller.aws.MicroVMNetworkClient;
+import ai.codriverlabs.microvm.operator.controller.health.AwsIdentity;
 import ai.codriverlabs.microvm.operator.core.model.*;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.*;
@@ -27,11 +28,14 @@ public class MicroVMNetworkReconciler implements Reconciler<MicroVMNetwork>, Cle
 
     private final MicroVMNetworkClient networkClient;
     private final KubernetesClient k8s;
+    private final AwsIdentity awsIdentity;
 
     @Inject
-    public MicroVMNetworkReconciler(MicroVMNetworkClient networkClient, KubernetesClient k8s) {
+    public MicroVMNetworkReconciler(MicroVMNetworkClient networkClient, KubernetesClient k8s,
+                                    AwsIdentity awsIdentity) {
         this.networkClient = networkClient;
         this.k8s = k8s;
+        this.awsIdentity = awsIdentity;
     }
 
     @Override
@@ -41,9 +45,29 @@ public class MicroVMNetworkReconciler implements Reconciler<MicroVMNetwork>, Cle
         var status = resource.getStatus();
 
         try {
-            // CREATE: connector ARN not yet set
+            // CREATE: connector ARN not yet set — try to adopt existing before creating
             if (status.getConnectorArn() == null) {
                 String name = resource.getMetadata().getNamespace() + "-" + resource.getMetadata().getName();
+
+                // Adopt-if-exists: check whether a connector with the same name already exists in AWS.
+                // This handles re-install after cluster wipe, CLI-created connectors, and disaster recovery.
+                String expectedArn = awsIdentity.constructNetworkConnectorArn(name);
+                if (expectedArn != null) {
+                    try {
+                        var existing = networkClient.getConnector(expectedArn).get(AWS_TIMEOUT_S, TimeUnit.SECONDS);
+                        LOG.infof("Adopting existing network connector %s  arn=%s state=%s",
+                                resource.getMetadata().getName(), existing.arn(), existing.stateAsString());
+                        status.setConnectorArn(existing.arn());
+                        status.setConnectorId(existing.id());
+                        status.setConnectorState(existing.stateAsString());
+                        status.setObservedGeneration(resource.getMetadata().getGeneration());
+                        return UpdateControl.patchStatus(resource).rescheduleAfter(POLL_INTERVAL);
+                    } catch (Exception e) {
+                        if (!isNotFound(e)) throw e;
+                        LOG.debugf("Network connector %s not found in AWS, will create", name);
+                    }
+                }
+
                 var resp = networkClient.createConnector(name, spec).get(AWS_TIMEOUT_S, TimeUnit.SECONDS);
                 status.setConnectorArn(resp.arn());
                 status.setConnectorId(resp.id());
@@ -130,5 +154,11 @@ public class MicroVMNetworkReconciler implements Reconciler<MicroVMNetwork>, Cle
                 r.stateReason(),
                 java.time.Instant.now()
         )));
+    }
+
+    private static boolean isNotFound(Exception e) {
+        Throwable cause = e.getCause() != null ? e.getCause() : e;
+        return cause instanceof ResourceNotFoundException
+                || (cause.getMessage() != null && cause.getMessage().contains("ResourceNotFoundException"));
     }
 }

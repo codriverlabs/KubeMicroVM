@@ -211,6 +211,43 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
     private UpdateControl<MicroVM> handlePendingState(MicroVM resource) {
         MicroVMSpec spec = resource.getSpec();
         String namespace = resource.getMetadata().getNamespace();
+        String name = resource.getMetadata().getName();
+
+        // --- Import path: adopt an existing VM by its microVmId ---
+        if (spec.getImportMicroVmId() != null && !spec.getImportMicroVmId().isBlank()) {
+            String importId = spec.getImportMicroVmId().trim();
+            LOG.infof("Importing MicroVM %s/%s using importMicroVmId=%s", namespace, name, importId);
+            try {
+                DescribeMicroVMResponse existing = quotaGuard.getMicrovm(
+                        () -> microVMClient.getMicroVM(importId))
+                    .get(AWS_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                if (existing == null) {
+                    return transitionState(resource, MicroVMState.FAILED, "ImportNotFound",
+                            "importMicroVmId '" + importId + "' not found in AWS — " +
+                            "check the ID or remove the field to create a new VM");
+                }
+                MicroVMStatus status = resource.getStatus();
+                status.setMicroVmId(existing.microvmId());
+                status.setEndpointUrl(existing.endpoint());
+                MicroVMState importedState = MicroVMState.fromValue(existing.state());
+                LOG.infof("Imported MicroVM %s/%s  microVmId=%s  state=%s",
+                        namespace, name, importId, importedState);
+                return transitionState(resource, importedState, "Imported",
+                        "MicroVM imported, microVmId=" + importId);
+            } catch (Exception e) {
+                Throwable cause = e.getCause() != null ? e.getCause() : e;
+                if (cause.getMessage() != null &&
+                        (cause.getMessage().contains("ResourceNotFoundException") ||
+                         cause.getMessage().contains("not found"))) {
+                    return transitionState(resource, MicroVMState.FAILED, "ImportNotFound",
+                            "importMicroVmId '" + importId + "' not found in AWS — " +
+                            "check the ID or remove the field to create a new VM");
+                }
+                throw e instanceof RuntimeException re ? re : new RuntimeException(e);
+            }
+        }
+
+        // --- Normal create path ---
 
         // --- Image reference resolution ---
         String imageIdentifier;
