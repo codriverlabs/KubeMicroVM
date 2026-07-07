@@ -169,19 +169,33 @@ public class QuotaGuard {
         return tokenQueueSemaphore.availablePermits();
     }
 
+    /**
+     * Returns the effective RunMicrovm rate in req/s.
+     * Used by MicroVMReplicaSetReconciler to derive its max-creates-per-cycle.
+     */
+    public int runMicrovmRatePerSecond() {
+        return runMicrovmBucket.ratePerSecond();
+    }
+
     // ── Token bucket implementation ───────────────────────────────────────────
 
     static class TokenBucket {
         private final String name;
         private final long intervalNanos;
+        private final int ratePerSecond;
         private final AtomicLong nextPermitNanos;
 
         TokenBucket(int ratePerSecond, String name) {
             this.name = name;
+            this.ratePerSecond = ratePerSecond;
             this.intervalNanos = ratePerSecond > 0
                     ? (long) (1_000_000_000.0 / ratePerSecond)
                     : 0;
             this.nextPermitNanos = new AtomicLong(System.nanoTime());
+        }
+
+        int ratePerSecond() {
+            return ratePerSecond;
         }
 
         void acquire() {

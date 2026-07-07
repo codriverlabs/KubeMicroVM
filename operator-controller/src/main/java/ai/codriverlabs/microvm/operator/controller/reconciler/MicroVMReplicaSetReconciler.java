@@ -1,5 +1,6 @@
 package ai.codriverlabs.microvm.operator.controller.reconciler;
 
+import ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard;
 import ai.codriverlabs.microvm.operator.core.enums.DesiredState;
 import ai.codriverlabs.microvm.operator.core.enums.MicroVMState;
 import ai.codriverlabs.microvm.operator.core.model.*;
@@ -13,6 +14,7 @@ import org.jboss.logging.Logger;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -36,16 +38,31 @@ public class MicroVMReplicaSetReconciler
 
     private static final Logger LOG = Logger.getLogger(MicroVMReplicaSetReconciler.class);
     private static final Duration RESYNC = Duration.ofSeconds(30);
-    private static final int MAX_CREATES_PER_RECONCILE = 1;
     private static final long FAILED_EVICTION_THRESHOLD_S = 60;
     private static final long PENDING_STUCK_THRESHOLD_S = 300;
     public static final String OWNER_LABEL = "lambda.aws.amazon.com/replicaset-name";
 
     private final KubernetesClient k8s;
+    private final QuotaGuard quotaGuard;
 
     @Inject
-    public MicroVMReplicaSetReconciler(KubernetesClient k8s) {
+    public MicroVMReplicaSetReconciler(KubernetesClient k8s, QuotaGuard quotaGuard) {
         this.k8s = k8s;
+        this.quotaGuard = quotaGuard;
+    }
+
+    /**
+     * Maximum child MicroVMs to create per reconcile cycle.
+     *
+     * Derived from the RunMicrovm rate limit: at most (rate / 2) creates per cycle.
+     * Each create triggers a child MicroVMReconciler cycle which calls RunMicrovm.
+     * The 3s requeue gives time for the child to make its AWS call before the next
+     * batch, so effective throughput = maxCreatesPerCycle / 3 req/s, well within quota.
+     *
+     * Minimum 1 — always make progress even at the lowest quota.
+     */
+    private int maxCreatesPerCycle() {
+        return Math.max(1, quotaGuard.runMicrovmRatePerSecond() / 2);
     }
 
     @Override
@@ -65,7 +82,9 @@ public class MicroVMReplicaSetReconciler
         List<MicroVM> children = k8s.resources(MicroVM.class).inNamespace(ns)
                 .withLabel(OWNER_LABEL, name).list().getItems();
 
-        // Handle suspend/resume cascade
+        // Handle suspend/resume cascade — paced through QuotaGuard to avoid
+        // flooding SuspendMicrovm (2 req/s) or ResumeMicrovm (5 req/s) when
+        // the ReplicaSet is large. Each patch triggers a child reconcile → AWS call.
         boolean wantSuspended = "Suspended".equalsIgnoreCase(spec.getDesiredReplicaSetState());
         for (MicroVM child : children) {
             String childDesired = child.getSpec() != null
@@ -74,6 +93,18 @@ public class MicroVMReplicaSetReconciler
                     : "Running";
             String targetState = wantSuspended ? "Suspended" : "Running";
             if (!targetState.equalsIgnoreCase(childDesired)) {
+                try {
+                    // Acquire the rate-limit permit before patching — this throttles
+                    // how quickly child reconcilers are triggered to call AWS.
+                    if (wantSuspended) {
+                        quotaGuard.suspendMicrovm(() -> CompletableFuture.completedFuture(null)).get();
+                    } else {
+                        quotaGuard.resumeMicrovm(() -> CompletableFuture.completedFuture(null)).get();
+                    }
+                } catch (Exception e) {
+                    LOG.warnf("QuotaGuard interrupted during cascade for child %s: %s",
+                            child.getMetadata().getName(), e.getMessage());
+                }
                 child.getSpec().setDesiredState(DesiredState.fromValue(targetState));
                 k8s.resource(child).patch();
             }
@@ -100,8 +131,12 @@ public class MicroVMReplicaSetReconciler
                 .count();
 
         if (current < desired) {
-            // Scale-up: create 1 child per reconcile to avoid over-creation race
-            createChild(rs, ns, name, spec);
+            // Scale-up: create up to maxCreatesPerCycle() children per reconcile.
+            // Derived from RunMicrovm quota to avoid flooding child reconcilers.
+            int toCreate = Math.min(desired - current, maxCreatesPerCycle());
+            for (int i = 0; i < toCreate; i++) {
+                createChild(rs, ns, name, spec);
+            }
             updateStatus(rs, children, desired);
             return UpdateControl.patchStatus(rs).rescheduleAfter(Duration.ofSeconds(3));
         } else if (current > desired) {
