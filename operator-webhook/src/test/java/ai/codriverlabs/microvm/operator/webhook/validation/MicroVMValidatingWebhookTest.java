@@ -135,4 +135,59 @@ class MicroVMValidatingWebhookTest {
         webhook.validateMemoryImmutability(oldSpec, newSpec, errors);
         assertTrue(errors.isEmpty(), "Same memorySizeMiB should be allowed");
     }
+
+    // ── importMicroVmId validation ────────────────────────────────────────────
+
+    @Test
+    void validImportMicroVmIdAccepted() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setImportMicroVmId("microvm-12345678-abcd-ef01-2345-6789abcdef01");
+        List<String> errors = webhook.validate(spec, "default");
+        assertTrue(errors.isEmpty(), "Valid importMicroVmId should be accepted");
+    }
+
+    @Test
+    void invalidImportMicroVmIdPatternRejected() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setImportMicroVmId("not-a-valid-id");
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateImportMicroVmId(spec, "CREATE", null, errors);
+        assertFalse(errors.isEmpty(), "Invalid importMicroVmId should be rejected");
+        assertTrue(errors.get(0).contains("pattern"), "Error should mention pattern");
+    }
+
+    @Test
+    void importMicroVmIdImmutableOnUpdate() {
+        MicroVMSpec newSpec = new MicroVMSpec();
+        newSpec.setImageRef("my-image");
+        newSpec.setImportMicroVmId("microvm-12345678-abcd-ef01-2345-6789abcdef01");
+
+        // Simulate old object as a plain map that the objectMapper can deserialize
+        java.util.Map<String, Object> oldObject = java.util.Map.of(
+            "apiVersion", "lambda.aws.amazon.com/v1alpha1",
+            "kind", "MicroVM",
+            "metadata", java.util.Map.of("name", "my-vm", "namespace", "default"),
+            "spec", java.util.Map.of(
+                "imageRef", "my-image",
+                "importMicroVmId", "microvm-99999999-abcd-ef01-2345-6789abcdef01"
+            )
+        );
+
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateImportMicroVmId(newSpec, "UPDATE", oldObject, errors);
+        assertFalse(errors.isEmpty(), "Changing importMicroVmId should be rejected");
+        assertTrue(errors.get(0).contains("immutable"));
+    }
+
+    @Test
+    void nullImportMicroVmIdSkipped() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        // importMicroVmId not set
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateImportMicroVmId(spec, "CREATE", null, errors);
+        assertTrue(errors.isEmpty(), "Null importMicroVmId should be skipped");
+    }
 }
