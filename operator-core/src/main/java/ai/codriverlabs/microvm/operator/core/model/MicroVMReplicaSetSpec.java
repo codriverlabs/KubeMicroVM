@@ -13,6 +13,17 @@ public class MicroVMReplicaSetSpec {
     private ScaleDownSpec scaleDown;
     /** Desired state for all child MicroVMs: Running (default) | Suspended. */
     private String desiredReplicaSetState = "Running";
+    /**
+     * Update strategy type: RollingUpdate (default) | Recreate.
+     * RollingUpdate: creates new VMs one-by-one, terminates old ones after new are Running.
+     * Recreate: terminates all existing VMs then creates new ones.
+     */
+    private String updateStrategyType = "RollingUpdate";
+    /**
+     * Maximum number of VMs that can be unavailable during a rolling update. Default: 1.
+     * Only used when updateStrategyType=RollingUpdate.
+     */
+    private Integer maxUnavailable = 1;
 
     public MicroVMReplicaSetSpec() {}
 
@@ -28,6 +39,10 @@ public class MicroVMReplicaSetSpec {
     public void setScaleDown(ScaleDownSpec scaleDown) { this.scaleDown = scaleDown; }
     public String getDesiredReplicaSetState() { return desiredReplicaSetState; }
     public void setDesiredReplicaSetState(String desiredReplicaSetState) { this.desiredReplicaSetState = desiredReplicaSetState; }
+    public String getUpdateStrategyType() { return updateStrategyType; }
+    public void setUpdateStrategyType(String updateStrategyType) { this.updateStrategyType = updateStrategyType; }
+    public Integer getMaxUnavailable() { return maxUnavailable; }
+    public void setMaxUnavailable(Integer maxUnavailable) { this.maxUnavailable = maxUnavailable; }
 
     @Override
     public boolean equals(Object o) {

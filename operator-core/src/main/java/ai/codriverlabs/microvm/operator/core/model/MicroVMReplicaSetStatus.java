@@ -10,6 +10,8 @@ public class MicroVMReplicaSetStatus {
     private Integer desiredReplicas;     // from spec.replicas
     private Integer suspendedReplicas;   // state == SUSPENDED
     private Integer updatedReplicas;     // matching current template generation
+    /** Hash of spec.template used to detect rolling update triggers. */
+    private String currentTemplateHash;
     private Long observedGeneration;
     private List<Condition> conditions;
 
@@ -25,6 +27,8 @@ public class MicroVMReplicaSetStatus {
     public void setSuspendedReplicas(Integer suspendedReplicas) { this.suspendedReplicas = suspendedReplicas; }
     public Integer getUpdatedReplicas() { return updatedReplicas; }
     public void setUpdatedReplicas(Integer updatedReplicas) { this.updatedReplicas = updatedReplicas; }
+    public String getCurrentTemplateHash() { return currentTemplateHash; }
+    public void setCurrentTemplateHash(String currentTemplateHash) { this.currentTemplateHash = currentTemplateHash; }
     public Long getObservedGeneration() { return observedGeneration; }
     public void setObservedGeneration(Long observedGeneration) { this.observedGeneration = observedGeneration; }
     public List<Condition> getConditions() { return conditions; }

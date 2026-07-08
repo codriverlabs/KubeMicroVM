@@ -272,4 +272,55 @@ class MicroVMReplicaSetReconcilerIT {
         when(ctx.getClient()).thenReturn(client);
         return ctx;
     }
+
+    // ── Rolling update tests ──────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("ROLLING UPDATE: template change detected when imageRef changes")
+    void rollingUpdate_detectedOnImageRefChange() {
+        var rs = testReplicaSet("rs-rolling", 2);
+        rs.getSpec().getTemplate().setImageRef("old-image");
+        // Prime status with the old template hash
+        rs.setStatus(new ai.codriverlabs.microvm.operator.core.model.MicroVMReplicaSetStatus());
+        rs.getStatus().setCurrentTemplateHash("oldhash"); // wrong hash to trigger update
+        client.resource(rs).create();
+
+        // Create 2 running children with old template hash label
+        for (int i = 0; i < 2; i++) {
+            var child = runningChild("rs-rolling", "child-old-" + i);
+            child.getMetadata().getLabels().put(
+                    MicroVMReplicaSetReconciler.TEMPLATE_HASH_LABEL, "oldhash");
+            client.resource(child).create();
+        }
+
+        // Change imageRef — new template hash will differ from "oldhash"
+        rs.getSpec().getTemplate().setImageRef("new-image");
+
+        reconciler.reconcile(rs, mockContext());
+
+        // Should have created a new child (rolling update step)
+        List<MicroVM> allChildren = client.resources(MicroVM.class).inNamespace("default")
+                .withLabel(MicroVMReplicaSetReconciler.OWNER_LABEL, "rs-rolling")
+                .list().getItems();
+        // 2 old + 1 new (one create per reconcile cycle during rolling update)
+        assertTrue(allChildren.size() >= 3, "Rolling update should have created a new child");
+    }
+
+    @Test
+    @DisplayName("TEMPLATE HASH: set on first create, same for same template")
+    void templateHash_setOnFirstCreateAndStable() {
+        var rs = testReplicaSet("rs-hash-test", 1);
+        client.resource(rs).create();
+
+        reconciler.reconcile(rs, mockContext());
+
+        String hash = rs.getStatus().getCurrentTemplateHash();
+        assertNotNull(hash, "Template hash should be set after first reconcile");
+        assertFalse(hash.isEmpty(), "Template hash should not be empty");
+
+        // Reconcile again — hash should be stable
+        reconciler.reconcile(rs, mockContext());
+        assertEquals(hash, rs.getStatus().getCurrentTemplateHash(),
+                "Template hash should not change for same template");
+    }
 }
