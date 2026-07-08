@@ -19,7 +19,7 @@ Robot Framework is chosen because:
 ## Architecture
 
 ```
-uat-robot/
+uat/
 ├── resources/
 │   ├── common.resource        # Shared keywords (kubectl, aws, microvm CLI)
 │   ├── cluster_setup.resource # Image creation, namespace labelling
@@ -50,7 +50,7 @@ uat-robot/
 
 ```bash
 # Run all UAT suites
-cd uat-robot
+cd uat
 robot --outputdir results tests/
 
 # Run a single suite
@@ -78,13 +78,13 @@ The robot tests run as a post-deploy validation step:
 - name: Run UAT
   run: |
     pip install robotframework
-    cd uat-robot
+    cd uat
     robot --outputdir results --loglevel INFO tests/
 - name: Upload results
   uses: actions/upload-artifact@v4
   with:
     name: uat-results
-    path: uat-robot/results/
+    path: uat/results/
 ```
 
 ## Tagging

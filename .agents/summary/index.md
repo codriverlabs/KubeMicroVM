@@ -42,7 +42,7 @@ graph TD
 - **"How does token auth work?"** → architecture.md (overview) + components.md (MicroVMTokenResource) + workflows.md (token flow)
 - **"What AWS APIs do we call?"** → interfaces.md (AWS APIs Used) + components.md (SDK clients)
 - **"How do I deploy to EKS?"** → workflows.md (EKS Deployment) + `.kiro/steering/eks-deployment.md`
-- **"What's the test strategy?"** → codebase_info.md (test tools) + workflows.md (dev workflow) + `uat-robot/` (Robot Framework)
+- **"What's the test strategy?"** → codebase_info.md (test tools) + workflows.md (dev workflow) + `uat/` (Robot Framework)
 - **"How does the mutating webhook work?"** → components.md (Webhooks) + architecture.md (Admission Control Flow)
 
 ## Steering Files (Operational Rules)

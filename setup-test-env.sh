@@ -14,7 +14,7 @@ set -euo pipefail
 REGION="us-east-1"
 BUCKET=""
 ROLE_NAME="KubeMicroVMBuildRole"
-FIXTURE_DIR="$(cd "$(dirname "$0")/test-fixtures/microvm-hello-node" && pwd)"
+FIXTURE_DIR="$(cd "$(dirname "$0")/uat/fixtures/microvm-hello-node" && pwd)"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -27,7 +27,7 @@ done
 
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 [[ -n "$BUCKET" ]] || BUCKET="kube-microvm-test-${ACCOUNT}-${REGION}"
-S3_KEY="test-fixtures/microvm-hello-node.zip"
+S3_KEY="uat/fixtures/microvm-hello-node.zip"
 
 echo "==> Setup KubeMicroVM test environment"
 echo "    account : ${ACCOUNT}"

@@ -85,7 +85,7 @@ Only merge after all steps complete successfully.
 ## Rules
 
 - **Never push with failing tests** — run the full suite before every push **with code changes**
-- **Skip tests for doc-only changes** — `.md`, `.kiro/`, `docs/`, `test-fixtures/`, `.github/`
+- **Skip tests for doc-only changes** — `.md`, `.kiro/`, `docs/`, `uat/fixtures/`, `.github/`
 - **Never use `helm upgrade` during dev** — always uninstall + install
 - **Always delete webhooks before CRs** when operator is not running
 - **Document results** of each step (logs, status output) in the PR or commit messages

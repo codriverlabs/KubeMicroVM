@@ -41,7 +41,7 @@ operator-webhook/       Validating + mutating admission webhooks
 operator-auth-agent/    Sidecar for auto-refreshing MicroVM auth tokens
 operator-cli/           `microvm` CLI (PicoCLI, GraalVM native binary)
 operator-tests/         Integration tests (Fabric8 MockServer)
-uat-robot/              Robot Framework E2E tests (8 suites, 62 tests)
+uat/              Robot Framework E2E tests (8 suites, 62 tests)
 docs/                   User guides and design documents
 ```
 
@@ -99,7 +99,7 @@ All tests must pass before submitting a PR.
 ### 7. Run Robot Framework UAT (optional, requires live EKS cluster)
 
 ```bash
-cd uat-robot
+cd uat
 robot --outputdir results tests/
 ```
 

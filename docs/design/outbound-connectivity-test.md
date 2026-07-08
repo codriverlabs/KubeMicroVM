@@ -82,7 +82,7 @@ server.listen(8080, () => console.log('Listening on 8080'));
 ## Build
 
 ```bash
-cd test-fixtures/microvm-net-test
+cd uat/fixtures/microvm-net-test
 zip -r ../../microvm-net-test.zip .
 aws s3 cp microvm-net-test.zip s3://kube-microvm-test-<ACCOUNT_ID>-us-east-1/test-fixtures/
 ```
