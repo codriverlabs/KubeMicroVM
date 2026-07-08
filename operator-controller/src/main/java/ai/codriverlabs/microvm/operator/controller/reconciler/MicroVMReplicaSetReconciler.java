@@ -41,6 +41,7 @@ public class MicroVMReplicaSetReconciler
     private static final long FAILED_EVICTION_THRESHOLD_S = 60;
     private static final long PENDING_STUCK_THRESHOLD_S = 300;
     public static final String OWNER_LABEL = "lambda.aws.amazon.com/replicaset-name";
+    public static final String TEMPLATE_HASH_LABEL = "lambda.aws.amazon.com/template-hash";
 
     private final KubernetesClient k8s;
     private final QuotaGuard quotaGuard;
@@ -130,12 +131,85 @@ public class MicroVMReplicaSetReconciler
                         || c.getStatus().getState() != MicroVMState.TERMINATED)
                 .count();
 
+        // Compute template hash to detect rolling update triggers
+        String templateHash = computeTemplateHash(spec.getTemplate());
+        String storedHash = rs.getStatus().getCurrentTemplateHash();
+        boolean rollingUpdateNeeded = storedHash != null && !storedHash.equals(templateHash);
+
+        if (rollingUpdateNeeded) {
+            String strategy = spec.getUpdateStrategyType() != null
+                    ? spec.getUpdateStrategyType() : "RollingUpdate";
+            if ("Recreate".equalsIgnoreCase(strategy)) {
+                // Recreate: terminate all existing, let normal scale-up recreate them
+                children.stream()
+                        .filter(c -> c.getStatus() == null
+                                || c.getStatus().getState() != MicroVMState.TERMINATED)
+                        .forEach(c -> {
+                            c.getSpec().setDesiredState(DesiredState.TERMINATED);
+                            k8s.resource(c).patch();
+                        });
+                rs.getStatus().setCurrentTemplateHash(templateHash);
+                updateStatus(rs, children, desired);
+                return UpdateControl.patchStatus(rs).rescheduleAfter(Duration.ofSeconds(5));
+            } else {
+                // RollingUpdate: create new VM from new template, wait for Running, then terminate oldest outdated VM
+                int maxUnavail = spec.getMaxUnavailable() != null ? spec.getMaxUnavailable() : 1;
+
+                // Count VMs still running the old template (no TEMPLATE_HASH label match)
+                List<MicroVM> outdated = children.stream()
+                        .filter(c -> {
+                            String hash = c.getMetadata().getLabels() != null
+                                    ? c.getMetadata().getLabels().get(TEMPLATE_HASH_LABEL) : null;
+                            return !templateHash.equals(hash)
+                                    && (c.getStatus() == null
+                                        || c.getStatus().getState() != MicroVMState.TERMINATED);
+                        })
+                        .collect(java.util.stream.Collectors.toList());
+
+                long newRunning = children.stream()
+                        .filter(c -> templateHash.equals(
+                                c.getMetadata().getLabels() != null
+                                ? c.getMetadata().getLabels().get(TEMPLATE_HASH_LABEL) : null)
+                                && c.getStatus() != null
+                                && c.getStatus().getState() == MicroVMState.RUNNING)
+                        .count();
+
+                if (!outdated.isEmpty() && newRunning < desired) {
+                    // Create one new VM from the new template
+                    createChild(rs, ns, name, spec, templateHash);
+                    updateStatus(rs, children, desired);
+                    return UpdateControl.patchStatus(rs).rescheduleAfter(Duration.ofSeconds(5));
+                } else if (!outdated.isEmpty() && newRunning >= Math.max(1, desired - maxUnavail)) {
+                    // Enough new VMs running — terminate one outdated VM
+                    MicroVM victim = outdated.get(0);
+                    victim.getSpec().setDesiredState(DesiredState.TERMINATED);
+                    k8s.resource(victim).patch();
+                    LOG.infof("Rolling update: terminating outdated VM %s in RS %s",
+                            victim.getMetadata().getName(), name);
+                    updateStatus(rs, children, desired);
+                    return UpdateControl.patchStatus(rs).rescheduleAfter(Duration.ofSeconds(5));
+                } else if (outdated.isEmpty()) {
+                    // Rolling update complete
+                    LOG.infof("Rolling update complete for RS %s — template hash %s", name, templateHash);
+                    rs.getStatus().setCurrentTemplateHash(templateHash);
+                    updateStatus(rs, children, desired);
+                    return UpdateControl.patchStatus(rs).rescheduleAfter(RESYNC);
+                }
+                updateStatus(rs, children, desired);
+                return UpdateControl.patchStatus(rs).rescheduleAfter(Duration.ofSeconds(5));
+            }
+        }
+
         if (current < desired) {
             // Scale-up: create up to maxCreatesPerCycle() children per reconcile.
             // Derived from RunMicrovm quota to avoid flooding child reconcilers.
             int toCreate = Math.min(desired - current, maxCreatesPerCycle());
             for (int i = 0; i < toCreate; i++) {
-                createChild(rs, ns, name, spec);
+                createChild(rs, ns, name, spec, templateHash);
+            }
+            // Record template hash on first successful create
+            if (rs.getStatus().getCurrentTemplateHash() == null) {
+                rs.getStatus().setCurrentTemplateHash(templateHash);
             }
             updateStatus(rs, children, desired);
             return UpdateControl.patchStatus(rs).rescheduleAfter(Duration.ofSeconds(3));
@@ -151,6 +225,10 @@ public class MicroVMReplicaSetReconciler
             }
         }
 
+        // Record template hash when stable (no rolling update in progress)
+        if (rs.getStatus().getCurrentTemplateHash() == null) {
+            rs.getStatus().setCurrentTemplateHash(templateHash);
+        }
         updateStatus(rs, children, desired);
         return UpdateControl.patchStatus(rs).rescheduleAfter(RESYNC);
     }
@@ -161,12 +239,14 @@ public class MicroVMReplicaSetReconciler
         return DeleteControl.defaultDelete();
     }
 
-    private void createChild(MicroVMReplicaSet rs, String ns, String rsName, MicroVMReplicaSetSpec spec) {
+    private void createChild(MicroVMReplicaSet rs, String ns, String rsName,
+                              MicroVMReplicaSetSpec spec, String templateHash) {
         var vm = new MicroVM();
         vm.setMetadata(new ObjectMetaBuilder()
                 .withGenerateName(rsName + "-")
                 .withNamespace(ns)
                 .addToLabels(OWNER_LABEL, rsName)
+                .addToLabels(TEMPLATE_HASH_LABEL, templateHash)
                 .addToOwnerReferences(new OwnerReferenceBuilder()
                         .withApiVersion(rs.getApiVersion())
                         .withKind(rs.getKind())
@@ -179,7 +259,19 @@ public class MicroVMReplicaSetReconciler
         // Deep-copy the template spec to avoid shared mutable state
         vm.setSpec(spec.getTemplate());
         k8s.resource(vm).create();
-        LOG.infof("Created child MicroVM for ReplicaSet %s", rsName);
+        LOG.infof("Created child MicroVM for ReplicaSet %s (templateHash=%s)", rsName, templateHash);
+    }
+
+    /**
+     * Computes a short hash of the template spec to detect rolling update triggers.
+     * Uses the imageRef and desiredState as the key fields — changes to these
+     * indicate a new template version that requires a rolling update.
+     */
+    private String computeTemplateHash(MicroVMSpec template) {
+        if (template == null) return "null";
+        String key = (template.getImageRef() != null ? template.getImageRef() : "")
+                + "|" + (template.getImageVersion() != null ? template.getImageVersion() : "");
+        return Integer.toHexString(key.hashCode());
     }
 
     private List<MicroVM> selectVictims(List<MicroVM> children,
@@ -221,7 +313,8 @@ public class MicroVMReplicaSetReconciler
 
     private void updateStatus(MicroVMReplicaSet rs, List<MicroVM> children, int desired) {
         var status = rs.getStatus();
-        int ready = 0, suspended = 0, current = 0;
+        String templateHash = status.getCurrentTemplateHash();
+        int ready = 0, suspended = 0, current = 0, updated = 0;
         for (MicroVM c : children) {
             if (c.getStatus() == null) continue;
             MicroVMState state = c.getStatus().getState();
@@ -229,11 +322,16 @@ public class MicroVMReplicaSetReconciler
             current++;
             if (state == MicroVMState.RUNNING) ready++;
             if (state == MicroVMState.SUSPENDED) suspended++;
+            // Count VMs running the current template
+            String childHash = c.getMetadata().getLabels() != null
+                    ? c.getMetadata().getLabels().get(TEMPLATE_HASH_LABEL) : null;
+            if (templateHash != null && templateHash.equals(childHash)) updated++;
         }
         status.setReadyReplicas(ready);
         status.setSuspendedReplicas(suspended);
         status.setCurrentReplicas(current);
         status.setDesiredReplicas(desired);
+        status.setUpdatedReplicas(updated);
         status.setObservedGeneration(rs.getMetadata().getGeneration());
 
         boolean allReady = ready >= desired;
