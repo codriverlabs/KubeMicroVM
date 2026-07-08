@@ -137,6 +137,10 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
                         imageClient.activateVersion(status.getImageArn(), status.getLatestVersion())
                                 .get(TIMEOUT_S, TimeUnit.SECONDS);
                         status.setActiveVersion(status.getLatestVersion());
+                        // Prune old versions if maxVersionsToKeep is set
+                        if (spec.getMaxVersionsToKeep() != null && spec.getMaxVersionsToKeep() >= 1) {
+                            pruneOldVersions(name, status.getImageArn(), spec.getMaxVersionsToKeep());
+                        }
                     }
 
                     LOG.infof("Image %s state=%s version=%s versionState=%s",
@@ -228,6 +232,33 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
         int effectiveMemory = memorySizeMiB != null ? memorySizeMiB : 2048;
         status.setMemorySizeMiB(effectiveMemory);
         status.setComputeProfile(buildComputeProfile(effectiveMemory));
+    }
+
+    /**
+     * Prunes old image versions, keeping only the {@code maxToKeep} most recent.
+     * Versions are sorted by creation time ascending (oldest first) and deleted
+     * until the count is within the retention limit.
+     */
+    private void pruneOldVersions(String imageName, String imageArn, int maxToKeep) {
+        try {
+            var versions = imageClient.listVersions(imageArn).get(TIMEOUT_S, TimeUnit.SECONDS);
+            if (versions == null || versions.size() <= maxToKeep) return;
+
+            // Sort oldest first by imageVersion string (versions are sequential: "1.0", "2.0", ...)
+            var sorted = new java.util.ArrayList<>(versions);
+            sorted.sort(java.util.Comparator.comparing(
+                v -> v.imageVersion() != null ? v.imageVersion() : ""));
+
+            int toDelete = sorted.size() - maxToKeep;
+            for (int i = 0; i < toDelete; i++) {
+                String versionId = sorted.get(i).imageVersion();
+                LOG.infof("Pruning image %s version %s (maxVersionsToKeep=%d)",
+                        imageName, versionId, maxToKeep);
+                imageClient.deleteImageVersion(imageArn, versionId).get(TIMEOUT_S, TimeUnit.SECONDS);
+            }
+        } catch (Exception e) {
+            LOG.warnf("Failed to prune old versions for image %s: %s", imageName, e.getMessage());
+        }
     }
 
     static String buildComputeProfile(int memoryMiB) {

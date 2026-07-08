@@ -82,6 +82,14 @@ public class MicroVMImageClient {
                 .build());
     }
 
+    public CompletableFuture<Void> deleteImageVersion(String imageIdentifier, String imageVersion) {
+        return sdk.deleteMicrovmImageVersion(DeleteMicrovmImageVersionRequest.builder()
+                .imageIdentifier(imageIdentifier)
+                .imageVersion(imageVersion)
+                .build())
+                .thenApply(r -> null);
+    }
+
     public CompletableFuture<List<MicrovmImageVersionSummary>> listVersions(String imageIdentifier) {
         return sdk.listMicrovmImageVersions(ListMicrovmImageVersionsRequest.builder()
                 .imageIdentifier(imageIdentifier)
