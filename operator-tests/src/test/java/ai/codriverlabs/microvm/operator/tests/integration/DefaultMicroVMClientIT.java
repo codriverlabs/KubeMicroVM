@@ -119,4 +119,22 @@ class DefaultMicroVMClientIT {
                         .endpoint("mvm-test.lambda-microvm.us-east-1.on.aws")
                         .build()));
     }
+
+    @Test
+    @DisplayName("createShellAuthToken: calls AWS SDK and returns token map")
+    void createShellAuthToken_returnsTokenMap() throws Exception {
+        when(mockSdk.createMicrovmShellAuthToken(
+                (ai.codriverlabs.microvm.aws.lambdamicrovms.model.CreateMicrovmShellAuthTokenRequest) any()))
+            .thenReturn(CompletableFuture.completedFuture(
+                ai.codriverlabs.microvm.aws.lambdamicrovms.model.CreateMicrovmShellAuthTokenResponse.builder()
+                    .authToken(java.util.Map.of("X-aws-proxy-auth", "shell-token-abc"))
+                    .build()));
+
+        var result = client.createShellAuthToken("mvm-shell-test", 30).get(5, java.util.concurrent.TimeUnit.SECONDS);
+
+        assertNotNull(result, "Result should not be null");
+        assertFalse(result.isEmpty(), "Token map should not be empty");
+        assertTrue(result.containsKey("X-aws-proxy-auth") || !result.values().isEmpty(),
+                "Token map should contain an auth token");
+    }
 }
