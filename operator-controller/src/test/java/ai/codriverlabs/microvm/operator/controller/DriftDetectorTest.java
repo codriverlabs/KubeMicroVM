@@ -109,4 +109,20 @@ class DriftDetectorTest {
         DriftResult result = detector.detectDrift(DesiredState.TERMINATED, MicroVMState.TERMINATED);
         assertInstanceOf(DriftResult.NoOp.class, result);
     }
+
+    @Test
+    void suspendedWithDesiredRunningAndAutoResumeEnabledReturnsNoOp() {
+        // autoResumeEnabled=true: idle policy owns resume — operator must not fight it
+        DriftResult result = detector.detectDrift(DesiredState.RUNNING, MicroVMState.SUSPENDED, true);
+        assertInstanceOf(DriftResult.NoOp.class, result);
+        assertTrue(((DriftResult.NoOp) result).reason().contains("idle policy"));
+    }
+
+    @Test
+    void suspendedWithDesiredRunningAndAutoResumeDisabledReturnsResume() {
+        // autoResumeEnabled=false: user controls lifecycle — operator resumes when desiredState=Running
+        DriftResult result = detector.detectDrift(DesiredState.RUNNING, MicroVMState.SUSPENDED, false);
+        assertInstanceOf(DriftResult.ActionRequired.class, result);
+        assertEquals(DriftAction.RESUME, ((DriftResult.ActionRequired) result).action());
+    }
 }

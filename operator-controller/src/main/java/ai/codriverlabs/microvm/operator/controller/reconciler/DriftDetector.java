@@ -22,22 +22,46 @@ public class DriftDetector {
     }
 
     public DriftResult detectDrift(DesiredState desired, MicroVMState actual) {
+        return detectDrift(desired, actual, false);
+    }
+
+    /**
+     * Detects drift between desired state and actual AWS state.
+     *
+     * @param desired         the desired state from spec
+     * @param actual          the actual state from AWS
+     * @param autoResumeEnabled whether the VM's idle policy will auto-resume it.
+     *                        When true and the VM is Suspended with desired=Running,
+     *                        the operator does NOT call ResumeMicrovm — the idle policy
+     *                        handles resume when traffic arrives.
+     *                        When false, the operator manages suspend/resume explicitly.
+     */
+    public DriftResult detectDrift(DesiredState desired, MicroVMState actual, boolean autoResumeEnabled) {
         if (desired == null) return new DriftResult.Error("desiredState is null");
         if (actual == null) return new DriftResult.Error("actual state is null");
 
         return switch (desired) {
-            case RUNNING -> detectRunningDrift(actual);
+            case RUNNING -> detectRunningDrift(actual, autoResumeEnabled);
             case SUSPENDED -> detectSuspendedDrift(actual);
             case TERMINATED -> detectTerminatedDrift(actual);
         };
     }
 
-    private DriftResult detectRunningDrift(MicroVMState actual) {
+    private DriftResult detectRunningDrift(MicroVMState actual, boolean autoResumeEnabled) {
         return switch (actual) {
             case RUNNING -> new DriftResult.NoOp("Aligned: Running");
             case PENDING -> new DriftResult.NoOp("Transitional: provisioning in progress");
-            case SUSPENDING -> new DriftResult.NoOp("Transitional: suspending (will resume after)");
-            case SUSPENDED -> new DriftResult.ActionRequired(DriftAction.RESUME, MicroVMState.RUNNING);
+            case SUSPENDING -> new DriftResult.NoOp("Transitional: suspending (idle policy or explicit suspend)");
+            case SUSPENDED -> {
+                if (autoResumeEnabled) {
+                    // Idle policy owns resume — do not fight it.
+                    // Status updated; VM will auto-resume when traffic arrives.
+                    yield new DriftResult.NoOp("Auto-suspended by idle policy; auto-resume enabled");
+                }
+                // autoResumeEnabled=false: user controls lifecycle via desiredState.
+                // desiredState=Running while actual=Suspended → call ResumeMicrovm.
+                yield new DriftResult.ActionRequired(DriftAction.RESUME, MicroVMState.RUNNING);
+            }
             case TERMINATED -> new DriftResult.ActionRequired(DriftAction.RECREATE, MicroVMState.PENDING);
             case FAILED -> new DriftResult.ActionRequired(DriftAction.RECREATE, MicroVMState.PENDING);
             case TERMINATING -> new DriftResult.Error("Cannot resume: termination in progress");

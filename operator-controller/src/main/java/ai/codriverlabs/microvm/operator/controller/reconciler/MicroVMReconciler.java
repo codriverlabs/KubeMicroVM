@@ -104,7 +104,8 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
             // Detect drift between desired and actual state
             MicroVMState actualState = MicroVMState.fromValue(awsState.state());
             DesiredState desired = resource.getSpec().getDesiredState();
-            DriftDetector.DriftResult driftResult = driftDetector.detectDrift(desired, actualState);
+            boolean autoResumeEnabled = Boolean.TRUE.equals(resource.getSpec().getAutoResumeEnabled());
+            DriftDetector.DriftResult driftResult = driftDetector.detectDrift(desired, actualState, autoResumeEnabled);
 
             return switch (driftResult) {
                 case DriftDetector.DriftResult.NoOp noOp -> {
