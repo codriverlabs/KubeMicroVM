@@ -252,4 +252,22 @@ class MicroVMImageReconcilerIT {
         when(ctx.getClient()).thenReturn(client);
         return ctx;
     }
+
+    @Test
+    @DisplayName("listManagedBaseImages: client method returns managed image list")
+    void listManagedBaseImages_returnsResults() throws Exception {
+        var summary = ManagedMicrovmImageSummary.builder()
+                .imageArn("arn:aws:lambda:us-east-1:aws:microvm-image:al2023-1")
+                .build();
+        when(mockImageClient.listManagedBaseImages())
+                .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(
+                        java.util.List.of(summary)));
+
+        var result = mockImageClient.listManagedBaseImages().get(5, java.util.concurrent.TimeUnit.SECONDS);
+
+        assertNotNull(result);
+        assertFalse(result.isEmpty());
+        assertEquals("arn:aws:lambda:us-east-1:aws:microvm-image:al2023-1",
+                result.get(0).imageArn());
+    }
 }
