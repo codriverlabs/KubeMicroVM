@@ -2,7 +2,6 @@ package ai.codriverlabs.microvm.operator.tests.integration;
 
 import ai.codriverlabs.microvm.aws.lambdacore.model.*;
 import ai.codriverlabs.microvm.operator.controller.aws.MicroVMNetworkClient;
-import ai.codriverlabs.microvm.operator.controller.health.AwsIdentity;
 import ai.codriverlabs.microvm.operator.controller.reconciler.MicroVMNetworkReconciler;
 import ai.codriverlabs.microvm.operator.core.model.*;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
@@ -31,14 +30,11 @@ class MicroVMNetworkReconcilerIT {
 
     private MicroVMNetworkClient mockNetworkClient;
     private MicroVMNetworkReconciler reconciler;
-    private AwsIdentity awsIdentity;
 
     @BeforeEach
     void setUp() {
         mockNetworkClient = mock(MicroVMNetworkClient.class);
-        awsIdentity = new AwsIdentity();
-        awsIdentity.set("123456789012", "us-east-1");
-        reconciler = new MicroVMNetworkReconciler(mockNetworkClient, client, awsIdentity);
+        reconciler = new MicroVMNetworkReconciler(mockNetworkClient, client);
     }
 
     @Test
@@ -48,8 +44,8 @@ class MicroVMNetworkReconcilerIT {
         client.resource(network).create();
 
         // No existing connector in AWS — adopt-if-exists falls through to create
-        String expectedArn = "arn:aws:lambda:us-east-1:123456789012:network-connector:default-my-vpc-egress";
-        when(mockNetworkClient.getConnector(expectedArn))
+        // Reconciler looks up by name "default-my-vpc-egress" (namespace-CR-name default)
+        when(mockNetworkClient.getConnector("default-my-vpc-egress"))
                 .thenReturn(java.util.concurrent.CompletableFuture.failedFuture(
                         new RuntimeException(
                             ai.codriverlabs.microvm.aws.lambdacore.model.ResourceNotFoundException.builder()
@@ -69,6 +65,7 @@ class MicroVMNetworkReconcilerIT {
                 network.getStatus().getConnectorArn());
         assertEquals("nc-abc123", network.getStatus().getConnectorId());
         assertEquals("PENDING", network.getStatus().getConnectorState());
+        // Verify the effective name passed to createConnector is namespace-CRname
         verify(mockNetworkClient).createConnector(
                 eq("default-my-vpc-egress"), any(MicroVMNetworkSpec.class));
     }
@@ -221,38 +218,35 @@ class MicroVMNetworkReconcilerIT {
     // ── Adoption tests ────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("ADOPT: existing connector found by ARN — CreateNetworkConnector not called")
+    @DisplayName("ADOPT: existing connector found by name — CreateNetworkConnector not called")
     void adopt_existingConnector_skipsCreate() throws Exception {
         var network = testNetwork("my-vpc-egress");
         client.resource(network).create();
 
+        // Reconciler looks up by name "default-my-vpc-egress" (namespace-CR-name)
         String expectedArn = "arn:aws:lambda:us-east-1:123456789012:network-connector:default-my-vpc-egress";
         var existingResp = mock(ai.codriverlabs.microvm.aws.lambdacore.model.GetNetworkConnectorResponse.class);
         when(existingResp.arn()).thenReturn(expectedArn);
         when(existingResp.id()).thenReturn("conn-id-001");
         when(existingResp.stateAsString()).thenReturn("ACTIVE");
 
-        when(mockNetworkClient.getConnector(expectedArn))
+        when(mockNetworkClient.getConnector("default-my-vpc-egress"))
                 .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(existingResp));
 
         reconciler.reconcile(network, mockContext());
 
-        // CreateNetworkConnector must NOT have been called
         verify(mockNetworkClient, never()).createConnector(any(), any());
-        // Status populated from existing connector
         assertEquals(expectedArn, network.getStatus().getConnectorArn());
         assertEquals("ACTIVE", network.getStatus().getConnectorState());
     }
 
     @Test
-    @DisplayName("ADOPT: connector not found in AWS — falls through to createConnector")
+    @DisplayName("ADOPT: connector not found — falls through to createConnector")
     void adopt_notFound_fallsThroughToCreate() throws Exception {
         var network = testNetwork("new-connector");
         client.resource(network).create();
 
-        String expectedArn = "arn:aws:lambda:us-east-1:123456789012:network-connector:default-new-connector";
-        // Simulate 404 on GetNetworkConnector
-        when(mockNetworkClient.getConnector(expectedArn))
+        when(mockNetworkClient.getConnector("default-new-connector"))
                 .thenReturn(java.util.concurrent.CompletableFuture.failedFuture(
                         new RuntimeException(
                             ai.codriverlabs.microvm.aws.lambdacore.model.ResourceNotFoundException.builder()
@@ -266,8 +260,58 @@ class MicroVMNetworkReconcilerIT {
 
         reconciler.reconcile(network, mockContext());
 
-        // CreateNetworkConnector must have been called
-        verify(mockNetworkClient, times(1)).createConnector(any(), any());
+        verify(mockNetworkClient, times(1)).createConnector(eq("default-new-connector"), any());
         assertEquals("PENDING", network.getStatus().getConnectorState());
+    }
+
+    @Test
+    @DisplayName("CONNECTOR NAME: spec.connectorName used as effective name for lookup and create")
+    void connectorName_override_usedForLookupAndCreate() throws Exception {
+        var network = testNetwork("my-vpc-egress");
+        network.getSpec().setConnectorName("cli-created-connector"); // CLI name, not namespace-prefixed
+        client.resource(network).create();
+
+        // Reconciler should look up by the explicit connectorName, not by namespace-CR-name
+        when(mockNetworkClient.getConnector("cli-created-connector"))
+                .thenReturn(java.util.concurrent.CompletableFuture.failedFuture(
+                        new RuntimeException(
+                            ai.codriverlabs.microvm.aws.lambdacore.model.ResourceNotFoundException.builder()
+                                .message("not found").build())));
+
+        var createResp = mock(ai.codriverlabs.microvm.aws.lambdacore.model.CreateNetworkConnectorResponse.class);
+        when(createResp.arn()).thenReturn("arn:aws:lambda:us-east-1:123456789012:network-connector:cli-created-connector");
+        when(createResp.id()).thenReturn("conn-id-cli");
+        when(mockNetworkClient.createConnector(any(), any()))
+                .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(createResp));
+
+        reconciler.reconcile(network, mockContext());
+
+        // Must use "cli-created-connector", NOT "default-my-vpc-egress"
+        verify(mockNetworkClient, never()).getConnector("default-my-vpc-egress");
+        verify(mockNetworkClient).getConnector("cli-created-connector");
+        verify(mockNetworkClient).createConnector(eq("cli-created-connector"), any());
+    }
+
+    @Test
+    @DisplayName("CONNECTOR NAME: spec.connectorName adopts existing CLI connector")
+    void connectorName_override_adoptsExistingCliConnector() throws Exception {
+        var network = testNetwork("my-vpc-egress");
+        network.getSpec().setConnectorName("cli-created-connector");
+        client.resource(network).create();
+
+        String cliArn = "arn:aws:lambda:us-east-1:123456789012:network-connector:cli-created-connector";
+        var existingResp = mock(ai.codriverlabs.microvm.aws.lambdacore.model.GetNetworkConnectorResponse.class);
+        when(existingResp.arn()).thenReturn(cliArn);
+        when(existingResp.id()).thenReturn("conn-id-cli");
+        when(existingResp.stateAsString()).thenReturn("ACTIVE");
+
+        when(mockNetworkClient.getConnector("cli-created-connector"))
+                .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(existingResp));
+
+        reconciler.reconcile(network, mockContext());
+
+        verify(mockNetworkClient, never()).createConnector(any(), any());
+        assertEquals(cliArn, network.getStatus().getConnectorArn());
+        assertEquals("ACTIVE", network.getStatus().getConnectorState());
     }
 }

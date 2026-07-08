@@ -3,7 +3,6 @@ package ai.codriverlabs.microvm.operator.controller.reconciler;
 import ai.codriverlabs.microvm.aws.lambdacore.model.GetNetworkConnectorResponse;
 import ai.codriverlabs.microvm.aws.lambdacore.model.NetworkConnectorState;
 import ai.codriverlabs.microvm.operator.controller.aws.MicroVMNetworkClient;
-import ai.codriverlabs.microvm.operator.controller.health.AwsIdentity;
 import ai.codriverlabs.microvm.operator.core.model.*;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.*;
@@ -28,14 +27,11 @@ public class MicroVMNetworkReconciler implements Reconciler<MicroVMNetwork>, Cle
 
     private final MicroVMNetworkClient networkClient;
     private final KubernetesClient k8s;
-    private final AwsIdentity awsIdentity;
 
     @Inject
-    public MicroVMNetworkReconciler(MicroVMNetworkClient networkClient, KubernetesClient k8s,
-                                    AwsIdentity awsIdentity) {
+    public MicroVMNetworkReconciler(MicroVMNetworkClient networkClient, KubernetesClient k8s) {
         this.networkClient = networkClient;
         this.k8s = k8s;
-        this.awsIdentity = awsIdentity;
     }
 
     @Override
@@ -47,28 +43,32 @@ public class MicroVMNetworkReconciler implements Reconciler<MicroVMNetwork>, Cle
         try {
             // CREATE: connector ARN not yet set — try to adopt existing before creating
             if (status.getConnectorArn() == null) {
-                String name = resource.getMetadata().getNamespace() + "-" + resource.getMetadata().getName();
+                // Compute effective AWS connector name:
+                // - spec.connectorName (explicit override) — use when importing CLI-created connectors
+                // - <namespace>-<CR-name> (default) — preserves backward compatibility
+                String defaultName = resource.getMetadata().getNamespace() + "-" + resource.getMetadata().getName();
+                String effectiveName = (spec.getConnectorName() != null && !spec.getConnectorName().isBlank())
+                        ? spec.getConnectorName()
+                        : defaultName;
 
-                // Adopt-if-exists: check whether a connector with the same name already exists in AWS.
-                // This handles re-install after cluster wipe, CLI-created connectors, and disaster recovery.
-                String expectedArn = awsIdentity.constructNetworkConnectorArn(name);
-                if (expectedArn != null) {
-                    try {
-                        var existing = networkClient.getConnector(expectedArn).get(AWS_TIMEOUT_S, TimeUnit.SECONDS);
-                        LOG.infof("Adopting existing network connector %s  arn=%s state=%s",
-                                resource.getMetadata().getName(), existing.arn(), existing.stateAsString());
-                        status.setConnectorArn(existing.arn());
-                        status.setConnectorId(existing.id());
-                        status.setConnectorState(existing.stateAsString());
-                        status.setObservedGeneration(resource.getMetadata().getGeneration());
-                        return UpdateControl.patchStatus(resource).rescheduleAfter(POLL_INTERVAL);
-                    } catch (Exception e) {
-                        if (!isNotFound(e)) throw e;
-                        LOG.debugf("Network connector %s not found in AWS, will create", name);
-                    }
+                // Adopt-if-exists: GetNetworkConnector accepts name, ID, or ARN directly —
+                // no ARN construction needed. This handles re-install after cluster wipe,
+                // CLI-created connectors (using spec.connectorName), and disaster recovery.
+                try {
+                    var existing = networkClient.getConnector(effectiveName).get(AWS_TIMEOUT_S, TimeUnit.SECONDS);
+                    LOG.infof("Adopting existing network connector %s  arn=%s state=%s",
+                            resource.getMetadata().getName(), existing.arn(), existing.stateAsString());
+                    status.setConnectorArn(existing.arn());
+                    status.setConnectorId(existing.id());
+                    status.setConnectorState(existing.stateAsString());
+                    status.setObservedGeneration(resource.getMetadata().getGeneration());
+                    return UpdateControl.patchStatus(resource).rescheduleAfter(POLL_INTERVAL);
+                } catch (Exception e) {
+                    if (!isNotFound(e)) throw e;
+                    LOG.debugf("Network connector %s not found in AWS, will create", effectiveName);
                 }
 
-                var resp = networkClient.createConnector(name, spec).get(AWS_TIMEOUT_S, TimeUnit.SECONDS);
+                var resp = networkClient.createConnector(effectiveName, spec).get(AWS_TIMEOUT_S, TimeUnit.SECONDS);
                 status.setConnectorArn(resp.arn());
                 status.setConnectorId(resp.id());
                 status.setConnectorState("PENDING");
