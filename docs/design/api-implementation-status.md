@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-07-01 (post v1.0.0-rc1 E2E validation)
+Last updated: 2026-07-08
 
 ## AWS Lambda MicroVMs API (24 operations)
 
@@ -8,36 +8,36 @@ Last updated: 2026-07-01 (post v1.0.0-rc1 E2E validation)
 |-----------|--------|------------|------------|-------|
 | RunMicrovm | ✅ | ✅ imageRef resolution | ✅ | |
 | GetMicrovm | ✅ | ✅ poll + drift | ✅ | |
-| SuspendMicrovm | ✅ | ✅ | ❌ | Not tested on real cluster |
-| ResumeMicrovm | ✅ | ✅ | ❌ | Not tested on real cluster |
+| SuspendMicrovm | ✅ | ✅ | ❌ | Integration tests pass; never verified on real cluster — see `feature/e2e-suspend-resume` |
+| ResumeMicrovm | ✅ | ✅ | ❌ | Same as above |
 | TerminateMicrovm | ✅ | ✅ finalizer | ✅ | |
-| ListMicrovms | ✅ | — | — | CLI lists CRs only |
-| CreateMicrovmAuthToken | ✅ | — | ✅ | via kubectl plugin `--direct` |
-| CreateMicrovmShellAuthToken | ✅ | — | ❌ | `kubectl microvm exec` not tested |
-| TagResource | ✅ | ❌ disabled | — | API doesn't support `microvm:` resource type |
-| UntagResource | ✅ | ❌ | — | Same as above |
-| ListTags | ✅ | ❌ | — | Same as above |
-| CreateMicrovmImage | ✅ | ✅ | ✅ | |
+| ListMicrovms | ✅ | — | — | CLI lists CRs only; AWS-side list not surfaced |
+| CreateMicrovmAuthToken | ✅ | — | ✅ | via `--direct` flag |
+| CreateMicrovmShellAuthToken | ✅ | — | ❌ | `microvm exec` not E2E tested; no integration test — see `feature/exec-shellauth` |
+| TagResource | ✅ | ❌ disabled | — | API doesn't support `microvm:` resource type — blocked |
+| UntagResource | ✅ | ❌ | — | Blocked (same) |
+| ListTags | ✅ | ❌ | — | Blocked (same) |
+| CreateMicrovmImage | ✅ | ✅ + adopt-if-exists | ✅ | Adoption verified 2026-07-08 |
 | GetMicrovmImage | ✅ | ✅ poll | ✅ | |
-| UpdateMicrovmImage | ✅ | ✅ generation change | ❌ | Not tested on real cluster |
+| UpdateMicrovmImage | ✅ | ✅ generation change | ❌ | Integration tests pass; never E2E tested — see `feature/e2e-image-update-v2` |
 | DeleteMicrovmImage | ✅ | ✅ finalizer | ✅ | |
 | GetMicrovmImageVersion | ✅ | ✅ | ✅ | |
 | ListMicrovmImageVersions | ✅ | ✅ status.versions[] | ✅ | |
 | UpdateMicrovmImageVersion | ✅ | ✅ auto-activate | ✅ | |
-| DeleteMicrovmImageVersion | ❌ | ❌ | — | Version pruning not implemented |
-| ListMicrovmImages | ❌ | — | — | Not implemented |
-| GetMicrovmImageBuild | ✅ | ❌ | — | Client exists, not surfaced in status |
+| DeleteMicrovmImageVersion | ❌ | ❌ | — | Not implemented — see `feature/delete-image-version` |
+| ListMicrovmImages | ❌ | — | — | Not implemented — P3 |
+| GetMicrovmImageBuild | ✅ | ❌ | — | Client exists; build logs not surfaced in status — see `feature/image-build-logs` |
 | ListMicrovmImageBuilds | ✅ | ❌ | — | Same |
-| ListManagedMicrovmImages | ✅ | ❌ | — | Client exists, not wired to CLI |
+| ListManagedMicrovmImages | ✅ | ❌ | — | Client exists; not wired to CLI — see `feature/base-images-cli` |
 | ListManagedMicrovmImageVersions | ✅ | ❌ | — | Same |
 
 ## Lambda Core API (Network Connectors)
 
 | Operation | Client | Reconciler | E2E on EKS |
 |-----------|--------|------------|------------|
-| CreateNetworkConnector | ✅ | ✅ | ✅ |
+| CreateNetworkConnector | ✅ | ✅ + adopt-if-exists | ✅ |
 | GetNetworkConnector | ✅ | ✅ poll | ✅ |
-| UpdateNetworkConnector | ✅ | ✅ | ❌ (not tested) |
+| UpdateNetworkConnector | ✅ | ✅ | ❌ — see `feature/e2e-network-update` |
 | DeleteNetworkConnector | ✅ | ✅ finalizer + protection | ✅ |
 | ListNetworkConnectors | ✅ | — | — |
 
@@ -48,46 +48,64 @@ Last updated: 2026-07-01 (post v1.0.0-rc1 E2E validation)
 | No egress (default) | ✅ | Outbound blocked (503) |
 | Internet egress (AWS-managed) | ✅ | checkip.amazonaws.com reachable |
 | VPC egress (customer-managed) | ✅ | Connector ACTIVE, VM starts |
+| Connector import (`spec.connectorName`) | ✅ 2026-07-08 | Adoption verified, no duplicate |
 
-## Operator Extensions (beyond AWS API)
+## Import / Adoption (E2E verified 2026-07-08)
+
+| Resource | Method | E2E |
+|----------|--------|-----|
+| MicroVMImage | Name-based (ARN constructed from name) | ✅ |
+| MicroVMNetwork | Name-based (`spec.connectorName` or `<ns>-<name>`) | ✅ |
+| MicroVM | Explicit `spec.importMicroVmId` | ✅ |
+
+## Operator Extensions
 
 | Feature | Code | Integration Tests | E2E on EKS | Notes |
 |---------|------|-------------------|------------|-------|
-| imageRef resolution by CR name | ✅ | ✅ | ✅ | RBAC-enforced, validates state |
-| networkRef resolution by CR name | ✅ | ✅ | ✅ | Validates connector ACTIVE |
-| MicroVMReplicaSet reconciler | ✅ | ✅ (5 tests) | ❌ | Scale up/down works in mocks; QuotaGuard not wired yet (see quota-guardrails-replicaset) |
-| Token REST endpoint (operator) | ✅ | ✅ (7 tests) | ❌ | TokenReview + SubjectAccessReview |
-| Pod mutating webhook (sidecar) | ✅ | ✅ (5 tests) | ❌ | Injects auth-agent container |
-| Validating webhook | ✅ (code) | ❌ | ❌ | Endpoints not working on cluster |
-| Mutating webhook (spec defaulting) | ✅ (code) | ❌ | ❌ | Not tested |
-| Drift detection | ✅ | ✅ (mocked) | ❌ | Detects AWS ≠ desired state |
-| kubectl microvm exec | ✅ (code) | ❌ | ❌ | Uses ShellAuthToken |
-| QuotaGuard (rate limiting + backpressure) | ✅ | ✅ (wired in all 4 reconcilers + TokenResource) | ✅ 2026-07-07 | burst test: 50/50 tokens (was 0/256); cascade pacing verified |
-| QuotaPolicy SPI | ✅ | ✅ (SpiDefaultsIT) | ✅ 2026-07-07 | DefaultQuotaPolicy confirmed in startup log |
-| Quota discovery (install-time) | ✅ | — | ✅ 2026-07-07 | install_kube_microvm.sh queries service-quotas; fallback to AWS defaults |
-| Quota discovery (runtime) | ✅ | — | ❌ | --quota-discovery=runtime; requires service-quotas:GetServiceQuota IAM |
+| imageRef resolution by CR name | ✅ | ✅ | ✅ | |
+| networkRef resolution by CR name | ✅ | ✅ | ✅ | |
+| MicroVMReplicaSet reconciler | ✅ | ✅ 9 tests | ❌ | Scale up/down on real cluster never run — see `feature/e2e-replicaset-v2` |
+| Token REST endpoint (operator) | ✅ | ✅ 7 tests | ❌ | In-cluster token flow never E2E tested — see `feature/e2e-token-endpoint` |
+| Pod mutating webhook (sidecar) | ✅ | ✅ 5 tests | ❌ | Never verified on cluster — see `feature/e2e-sidecar-v2` |
+| Validating webhook | ✅ | ❌ | ❌ | Endpoint not confirmed working on cluster; no integration tests — see `feature/webhook-fix` |
+| Mutating webhook (spec defaulting) | ✅ | ❌ | ❌ | No integration tests — see `feature/webhook-fix` |
+| Drift detection | ✅ | ✅ mocked | ❌ | Never tested with real external termination — see `feature/e2e-drift-v2` |
+| kubectl microvm exec | ✅ | ❌ | ❌ | No integration test, no E2E — see `feature/exec-shellauth` |
+| QuotaGuard (rate limiting) | ✅ | ✅ 67 tests | ✅ 2026-07-07 | Burst test: 50/50 tokens (was 0/256) |
+| QuotaPolicy SPI | ✅ | ✅ | ✅ 2026-07-07 | DefaultQuotaPolicy confirmed |
+| Quota discovery (install-time) | ✅ | — | ✅ 2026-07-07 | |
+| Quota discovery (runtime) | ✅ | — | ❌ | `--quota-discovery=runtime` never tested — see `feature/e2e-quota-discovery` |
 
 ## Not Implemented
 
-| Feature | Priority | Notes |
-|---------|----------|-------|
-| DeleteMicrovmImageVersion | P2 | Version pruning |
-| ListMicrovmImages (AWS state) | P3 | CLI shows CRs only |
-| ListManagedMicrovmImages in CLI | P2 | `kubectl microvm image list-base` |
-| Build logs in CR status | P3 | GetMicrovmImageBuild not surfaced |
-| Tag sync | Blocked | API doesn't support microvm resource type |
-| Rolling update (ReplicaSet) | P2 | Design exists, not coded |
-| Cross-namespace image ref | P3 | MVP = same namespace only |
-| Krew manifest | P3 | Distribution |
-| macOS native CLI | P3 | Linux only for now |
+| Feature | Priority | Branch | Notes |
+|---------|----------|--------|-------|
+| DeleteMicrovmImageVersion | P2 | `feature/delete-image-version` | Version pruning |
+| ListManagedMicrovmImages in CLI | P2 | `feature/base-images-cli` | `microvm image base-images` command |
+| Build logs in CR status | P3 | `feature/image-build-logs` | Surface GetMicrovmImageBuild in status |
+| Rolling update (ReplicaSet) | P2 | `feature/replicaset-rolling-update` | Design in docs/design/replicaset.md |
+| ListMicrovmImages (AWS state) | P3 | — | CLI shows CRs only |
+| Tag sync | Blocked | — | API doesn't support microvm resource type |
+| Cross-namespace imageRef | P3 | — | MVP = same namespace only |
+| Krew manifest | P3 | — | Distribution |
+| macOS native CLI | P3 | — | Linux only for now |
 
 ## E2E Test Coverage Summary
 
 | Area | Tested | Not Tested |
 |------|--------|------------|
-| MicroVMImage lifecycle | create, build, activate, delete | update (new version) |
-| MicroVM lifecycle | run, terminate | suspend, resume |
-| Networking | all 3 egress modes | network update, VPC→private target |
+| MicroVMImage lifecycle | create, build, adopt, delete | update (new version) |
+| MicroVM lifecycle | run, terminate, import | suspend, resume, exec |
+| Networking | all 3 egress modes, adopt, connectorName | network update |
 | Auth | token --direct + curl | token via operator, sidecar, exec |
 | Webhooks | — | validating, mutating |
 | ReplicaSet | — | scale up/down on real cluster |
+| Drift | — | real external termination |
+| QuotaGuard | burst test, cascade pacing | runtime quota discovery |
+
+## Current Test Count
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| Integration tests (`operator-tests`) | 74 | ✅ All pass |
+| Robot Framework UAT (`uat/`) | 62 | ✅ All pass (v1.0.x) |
