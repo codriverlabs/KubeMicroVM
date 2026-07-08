@@ -61,7 +61,6 @@ class DriftDetectionPropertyTest {
     Arbitrary<DesiredActualPair> alignedPairs() {
         return Arbitraries.of(
             new DesiredActualPair(DesiredState.RUNNING, RUNNING),
-            new DesiredActualPair(DesiredState.RUNNING, SUSPENDED),  // auto-suspend by idle policy → NoOp
             new DesiredActualPair(DesiredState.SUSPENDED, SUSPENDED),
             new DesiredActualPair(DesiredState.SUSPENDED, SUSPENDED)
         );
@@ -69,9 +68,9 @@ class DriftDetectionPropertyTest {
 
     @Provide
     Arbitrary<DesiredActualPair> driftPairs() {
-        // RUNNING+SUSPENDED is intentionally excluded: treated as NoOp to avoid
-        // fighting the idle policy (VM may have been auto-suspended by AWS).
         return Arbitraries.of(
+            // RUNNING+SUSPENDED: autoResumeEnabled=false → ActionRequired(RESUME)
+            new DesiredActualPair(DesiredState.RUNNING, SUSPENDED),
             new DesiredActualPair(DesiredState.RUNNING, TERMINATED),
             new DesiredActualPair(DesiredState.SUSPENDED, RUNNING),
             new DesiredActualPair(DesiredState.TERMINATED, RUNNING),

@@ -52,12 +52,12 @@ class DriftDetectorTest {
     }
 
     @Test
-    void suspendedWithDesiredRunningReturnsNoOp() {
-        // RUNNING+SUSPENDED is treated as NoOp to avoid fighting the idle policy.
-        // AWS may auto-suspend a VM via maxIdleDurationSeconds; the operator reflects
-        // the state without resuming. User must explicitly patch desiredState to resume.
+    void suspendedWithDesiredRunningAndAutoResumeDisabled_returnsResume() {
+        // autoResumeEnabled=false (default): operator manages lifecycle explicitly.
+        // desiredState=Running while actual=Suspended → RESUME action.
         DriftResult result = detector.detectDrift(DesiredState.RUNNING, MicroVMState.SUSPENDED);
-        assertInstanceOf(DriftResult.NoOp.class, result);
+        assertInstanceOf(DriftResult.ActionRequired.class, result);
+        assertEquals(DriftAction.RESUME, ((DriftResult.ActionRequired) result).action());
     }
 
     @Test
@@ -109,5 +109,21 @@ class DriftDetectorTest {
     void terminatedWithDesiredTerminatedReturnsNoOp() {
         DriftResult result = detector.detectDrift(DesiredState.TERMINATED, MicroVMState.TERMINATED);
         assertInstanceOf(DriftResult.NoOp.class, result);
+    }
+
+    @Test
+    void suspendedWithDesiredRunningAndAutoResumeEnabledReturnsNoOp() {
+        // autoResumeEnabled=true: idle policy owns resume — operator must not fight it
+        DriftResult result = detector.detectDrift(DesiredState.RUNNING, MicroVMState.SUSPENDED, true);
+        assertInstanceOf(DriftResult.NoOp.class, result);
+        assertTrue(((DriftResult.NoOp) result).reason().contains("idle policy"));
+    }
+
+    @Test
+    void suspendedWithDesiredRunningAndAutoResumeDisabledReturnsResume() {
+        // autoResumeEnabled=false: user controls lifecycle — operator resumes when desiredState=Running
+        DriftResult result = detector.detectDrift(DesiredState.RUNNING, MicroVMState.SUSPENDED, false);
+        assertInstanceOf(DriftResult.ActionRequired.class, result);
+        assertEquals(DriftAction.RESUME, ((DriftResult.ActionRequired) result).action());
     }
 }
