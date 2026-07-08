@@ -13,6 +13,13 @@ public class MicroVMImageSpec {
     private String region;
     /** Baseline memory in MiB. Valid: 512, 1024, 2048, 4096, 8192. Omit for AWS default (2048). */
     private Integer memorySizeMiB;
+    /**
+     * Optional: maximum number of image versions to retain.
+     * After each successful version activation, versions beyond this count
+     * (oldest first) are automatically deleted via DeleteMicrovmImageVersion.
+     * Must be >= 1 if set. Default: null (no automatic pruning).
+     */
+    private Integer maxVersionsToKeep;
 
     public MicroVMImageSource getSource() { return source; }
     public void setSource(MicroVMImageSource source) { this.source = source; }
@@ -34,4 +41,7 @@ public class MicroVMImageSpec {
 
     public Integer getMemorySizeMiB() { return memorySizeMiB; }
     public void setMemorySizeMiB(Integer memorySizeMiB) { this.memorySizeMiB = memorySizeMiB; }
+
+    public Integer getMaxVersionsToKeep() { return maxVersionsToKeep; }
+    public void setMaxVersionsToKeep(Integer maxVersionsToKeep) { this.maxVersionsToKeep = maxVersionsToKeep; }
 }

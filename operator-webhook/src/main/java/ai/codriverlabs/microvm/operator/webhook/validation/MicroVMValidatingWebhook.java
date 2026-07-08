@@ -129,6 +129,7 @@ public class MicroVMValidatingWebhook {
                 MicroVMImage image = objectMapper.convertValue(rawObject, MicroVMImage.class);
                 if (image.getSpec() != null) {
                     validateMemorySizeMiB(image.getSpec(), errors);
+                    validateMaxVersionsToKeep(image.getSpec(), errors);
                     // Immutability check on UPDATE
                     if ("UPDATE".equals(request.getOperation()) && request.getOldObject() != null) {
                         MicroVMImage oldImage = objectMapper.convertValue(request.getOldObject(), MicroVMImage.class);
@@ -290,6 +291,13 @@ public class MicroVMValidatingWebhook {
                 LOG.warnf("Could not deserialize oldObject for importMicroVmId immutability check: %s",
                         e.getMessage());
             }
+        }
+    }
+
+    void validateMaxVersionsToKeep(MicroVMImageSpec spec, List<String> errors) {
+        if (spec.getMaxVersionsToKeep() == null) return;
+        if (spec.getMaxVersionsToKeep() < 1) {
+            errors.add("spec.maxVersionsToKeep must be >= 1 (or omit to disable automatic pruning)");
         }
     }
 }

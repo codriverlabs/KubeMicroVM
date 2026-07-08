@@ -252,4 +252,97 @@ class MicroVMImageReconcilerIT {
         when(ctx.getClient()).thenReturn(client);
         return ctx;
     }
+
+    // ── maxVersionsToKeep tests ───────────────────────────────────────────────
+
+    @Test
+    @DisplayName("VERSION PRUNING: 3 versions with maxVersionsToKeep=2 deletes oldest")
+    void versionPruning_deletesOldestVersionsWhenLimitExceeded() throws Exception {
+        // Image with 3 existing versions, maxVersionsToKeep=2
+        var image = testImage("prune-test");
+        image.getSpec().setMaxVersionsToKeep(2);
+        var status = new ai.codriverlabs.microvm.operator.core.model.MicroVMImageStatus();
+        status.setImageArn("arn:aws:lambda:us-east-1:123456789012:microvm-image:prune-test");
+        status.setImageState("UPDATING");
+        status.setLatestVersion("3.0");
+        status.setLatestVersionState("IN_PROGRESS");
+        image.setStatus(status);
+        client.resource(image).create();
+
+        // Stub: version reaches SUCCESSFUL
+        var versionResp = GetMicrovmImageVersionResponse.builder()
+                .state(MicrovmImageVersionState.SUCCESSFUL)
+                .imageVersion("3.0")
+                .build();
+        when(mockImageClient.getImageVersion(any(), eq("3.0")))
+                .thenReturn(CompletableFuture.completedFuture(versionResp));
+
+        // Stub: getImage for the settled resync
+        var imageResp = GetMicrovmImageResponse.builder()
+                .imageArn("arn:aws:lambda:us-east-1:123456789012:microvm-image:prune-test")
+                .state(MicrovmImageState.UPDATING)
+                .latestActiveImageVersion("3.0")
+                .build();
+        when(mockImageClient.getImage(any()))
+                .thenReturn(CompletableFuture.completedFuture(imageResp));
+
+        // Stub: activateVersion
+        when(mockImageClient.activateVersion(any(), any()))
+                .thenReturn(CompletableFuture.completedFuture(
+                        UpdateMicrovmImageVersionResponse.builder().build()));
+
+        // Stub: listVersions returns 3 versions
+        var v1 = MicrovmImageVersionSummary.builder().imageVersion("1.0").build();
+        var v2 = MicrovmImageVersionSummary.builder().imageVersion("2.0").build();
+        var v3 = MicrovmImageVersionSummary.builder().imageVersion("3.0").build();
+        when(mockImageClient.listVersions(any()))
+                .thenReturn(CompletableFuture.completedFuture(java.util.List.of(v1, v2, v3)));
+
+        // Stub: deleteImageVersion
+        when(mockImageClient.deleteImageVersion(any(), any()))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        reconciler.reconcile(image, mockContext());
+
+        // Verify oldest version (1.0) was deleted, newer ones kept
+        verify(mockImageClient).deleteImageVersion(
+                eq("arn:aws:lambda:us-east-1:123456789012:microvm-image:prune-test"),
+                eq("1.0"));
+        verify(mockImageClient, never()).deleteImageVersion(any(), eq("2.0"));
+        verify(mockImageClient, never()).deleteImageVersion(any(), eq("3.0"));
+    }
+
+    @Test
+    @DisplayName("VERSION PRUNING: maxVersionsToKeep=null — deleteImageVersion never called")
+    void versionPruning_noOpWhenMaxVersionsToKeepNotSet() throws Exception {
+        var image = testImage("no-prune-test");
+        // maxVersionsToKeep NOT set
+        var status = new ai.codriverlabs.microvm.operator.core.model.MicroVMImageStatus();
+        status.setImageArn("arn:aws:lambda:us-east-1:123456789012:microvm-image:no-prune-test");
+        status.setImageState("UPDATING");
+        status.setLatestVersion("2.0");
+        status.setLatestVersionState("IN_PROGRESS");
+        image.setStatus(status);
+        client.resource(image).create();
+
+        var versionResp = GetMicrovmImageVersionResponse.builder()
+                .state(MicrovmImageVersionState.SUCCESSFUL)
+                .imageVersion("2.0").build();
+        when(mockImageClient.getImageVersion(any(), eq("2.0")))
+                .thenReturn(CompletableFuture.completedFuture(versionResp));
+        var imageResp = GetMicrovmImageResponse.builder()
+                .imageArn("arn:aws:lambda:us-east-1:123456789012:microvm-image:no-prune-test")
+                .state(MicrovmImageState.UPDATING)
+                .latestActiveImageVersion("2.0").build();
+        when(mockImageClient.getImage(any()))
+                .thenReturn(CompletableFuture.completedFuture(imageResp));
+        when(mockImageClient.activateVersion(any(), any()))
+                .thenReturn(CompletableFuture.completedFuture(
+                        UpdateMicrovmImageVersionResponse.builder().build()));
+
+        reconciler.reconcile(image, mockContext());
+
+        verify(mockImageClient, never()).deleteImageVersion(any(), any());
+        verify(mockImageClient, never()).listVersions(any());
+    }
 }
