@@ -140,6 +140,18 @@ public class MicroVMImageClient {
                 });
     }
 
+    /**
+     * Lists the most recent build summaries for the image (all versions).
+     */
+    public CompletableFuture<List<ai.codriverlabs.microvm.aws.lambdamicrovms.model.MicrovmImageBuildSummary>> listBuilds(
+            String imageIdentifier) {
+        return sdk.listMicrovmImageBuilds(ListMicrovmImageBuildsRequest.builder()
+                .imageIdentifier(imageIdentifier)
+                .maxResults(5)
+                .build())
+                .thenApply(r -> r.hasItems() ? r.items() : java.util.List.of());
+    }
+
     @PreDestroy
     void close() { sdk.close(); }
 }
