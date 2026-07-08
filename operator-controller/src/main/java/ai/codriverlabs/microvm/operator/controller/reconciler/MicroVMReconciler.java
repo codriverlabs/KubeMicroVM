@@ -311,6 +311,12 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
             return ImageResolution.error("ImageRefMissing", "spec.imageRef is required");
         }
 
+        // Cross-namespace refs (namespace/name) are a PRO feature
+        if (imageRef.contains("/")) {
+            return ImageResolution.error("CrossNamespaceImageRefNotSupported",
+                    "Cross-namespace image references require KubeMicroVM PRO (imageRef: " + imageRef + ")");
+        }
+
         // Look up MicroVMImage CR in the same namespace
         MicroVMImage image = kubernetesClient.resources(MicroVMImage.class)
                 .inNamespace(namespace)

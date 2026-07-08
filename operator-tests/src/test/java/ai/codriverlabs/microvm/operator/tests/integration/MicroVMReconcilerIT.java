@@ -288,4 +288,23 @@ class MicroVMReconcilerIT {
         // RunMicrovm must have been called
         verify(mockClient, times(1)).runMicroVM(any());
     }
+
+    @Test
+    @DisplayName("CROSS-NAMESPACE imageRef: transitions to FAILED with PRO upsell message")
+    void crossNamespaceImageRef_transitionsToFailed() {
+        var vm = testMicroVM("vm-cross-ns", null);
+        vm.getSpec().setImageRef("other-namespace/some-image");
+        client.resource(vm).createOrReplace();
+
+        reconciler.reconcile(vm, mockContext());
+
+        assertEquals(MicroVMState.FAILED, vm.getStatus().getState());
+        assertNotNull(vm.getStatus().getConditions());
+        String msg = vm.getStatus().getConditions().get(0).getMessage();
+        assertNotNull(msg);
+        assertTrue(msg.contains("KubeMicroVM PRO"),
+                "Error message should mention PRO: " + msg);
+        assertTrue(msg.contains("other-namespace/some-image"),
+                "Error message should include the offending imageRef: " + msg);
+    }
 }
