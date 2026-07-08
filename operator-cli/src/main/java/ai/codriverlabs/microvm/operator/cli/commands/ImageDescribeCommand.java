@@ -74,6 +74,18 @@ public class ImageDescribeCommand implements Runnable {
             System.out.printf("Active Version: %s%n", status.getActiveVersion() != null ? status.getActiveVersion() : "-");
             System.out.printf("Latest Version: %s%n", status.getLatestVersion() != null ? status.getLatestVersion() : "-");
 
+            // Build progress (shown while image is CREATING/UPDATING)
+            if (status.getCurrentBuildId() != null) {
+                System.out.println();
+                System.out.printf("Build:          %s%n", status.getCurrentBuildId());
+                if (status.getBuildStartedAt() != null) {
+                    System.out.printf("Build started:  %s%n", status.getBuildStartedAt());
+                }
+                if (status.getBuildMessage() != null) {
+                    System.out.printf("Build status:   %s%n", status.getBuildMessage());
+                }
+            }
+
             if (status.getVersions() != null && !status.getVersions().isEmpty()) {
                 System.out.println();
                 System.out.println("Versions:");

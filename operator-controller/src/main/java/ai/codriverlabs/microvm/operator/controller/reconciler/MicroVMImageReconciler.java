@@ -129,6 +129,15 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
                         status.setLatestVersionStateReason(versionResp.stateReason());
                     }
 
+                    // Surface build progress info while version is building
+                    if (isVersionBuilding(versionResp.stateAsString())) {
+                        populateBuildProgress(name, status.getImageArn(), status);
+                    } else {
+                        // Build settled — clear build progress fields
+                        status.setCurrentBuildId(null);
+                        status.setBuildMessage(null);
+                    }
+
                     // Auto-activate once version reaches SUCCESSFUL
                     boolean autoActivate = spec.getAutoActivate() == null || spec.getAutoActivate();
                     if (MicrovmImageVersionState.SUCCESSFUL.toString().equals(versionResp.stateAsString())
@@ -226,6 +235,32 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
             resource.setStatus(new MicroVMImageStatus());
         }
         return resource.getStatus();
+    }
+
+    /**
+     * Fetches the latest build info and populates status build fields.
+     * Called while the version is still in PENDING/IN_PROGRESS state.
+     */
+    private void populateBuildProgress(String imageName, String imageArn, MicroVMImageStatus status) {
+        if (status.getLatestVersion() == null) return;
+        try {
+            var buildDetail = imageClient.getLatestBuild(imageArn, status.getLatestVersion())
+                    .get(TIMEOUT_S, TimeUnit.SECONDS);
+            if (buildDetail != null) {
+                status.setCurrentBuildId(buildDetail.buildId());
+                if (status.getBuildStartedAt() == null && buildDetail.createdAt() != null) {
+                    status.setBuildStartedAt(buildDetail.createdAt().toString());
+                }
+                // Use stateReason as message if present, else use build state
+                if (buildDetail.stateReason() != null && !buildDetail.stateReason().isBlank()) {
+                    status.setBuildMessage(buildDetail.stateReason());
+                } else {
+                    status.setBuildMessage(buildDetail.buildStateAsString());
+                }
+            }
+        } catch (Exception e) {
+            LOG.debugf("Could not fetch build info for image %s: %s", imageName, e.getMessage());
+        }
     }
 
     private void updateMemoryStatus(MicroVMImageStatus status, Integer memorySizeMiB) {

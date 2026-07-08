@@ -52,4 +52,20 @@ public class MicroVMImageStatus {
 
     public String getComputeProfile() { return computeProfile; }
     public void setComputeProfile(String computeProfile) { this.computeProfile = computeProfile; }
+
+    // ── Build progress fields (populated while imageState=CREATING/UPDATING) ─
+
+    /** Current build ID from GetMicrovmImageBuild. Cleared when build settles. */
+    private String currentBuildId;
+    /** Short status message from the latest build step. */
+    private String buildMessage;
+    /** ISO timestamp when the current build started. */
+    private String buildStartedAt;
+
+    public String getCurrentBuildId() { return currentBuildId; }
+    public void setCurrentBuildId(String currentBuildId) { this.currentBuildId = currentBuildId; }
+    public String getBuildMessage() { return buildMessage; }
+    public void setBuildMessage(String buildMessage) { this.buildMessage = buildMessage; }
+    public String getBuildStartedAt() { return buildStartedAt; }
+    public void setBuildStartedAt(String buildStartedAt) { this.buildStartedAt = buildStartedAt; }
 }
