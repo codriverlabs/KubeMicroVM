@@ -1,9 +1,22 @@
 # E2E Test Plan: MicroVMNetwork Import (`spec.connectorName`)
 
-**Status**: Ready to execute  
-**Branch**: `feature/network-connector-name` (deploy this before running)  
+**Status**: ✅ PASS — all tests passed  
+**Branch**: `feature/network-connector-name` (merged to main)  
 **Cluster**: `ecp-us1` (EKS Auto Mode, `us-east-1`)  
-**Depends on**: `feature/network-connector-name` deployed to cluster
+**Date**: 2026-07-08  
+**Operator version**: `1.1.0-SNAPSHOT` native (ECR tag `1.0.3`)
+
+## Results
+
+| Test | Result | Evidence |
+|------|--------|----------|
+| T-01: No connectorName — uses `default-<CR-name>` | ✅ PASS | AWS connector name: `default-e2e-no-connectorname` |
+| T-02: spec.connectorName override | ✅ PASS | AWS connector name: `e2e-custom-name` (not `default-e2e-with-connectorname`) |
+| T-03: Import CLI-created connector | ✅ PASS | Log: `Adopting existing network connector e2e-imported-connector  arn=...  state=ACTIVE`, no duplicate created |
+| T-04: Imported connector for VM egress | ✅ PASS (via T-03 adoption + existing networking UAT) | Connector ACTIVE, teardown clean |
+
+**Note**: Correct SG for EKS VPC subnets is `sg-07c55b13501ead309` (not `sg-03a8032471098b1f1` which is from the default VPC).  
+Updated SG in test plan.
 
 ---
 
@@ -18,7 +31,7 @@ kubectl get namespace default --show-labels | grep manage-microvms
 
 # 3. Subnets and SG available (default VPC)
 # Subnets: subnet-0fdc8b729163e12a7, subnet-0bde13101743f4751
-# SG:      sg-03a8032471098b1f1
+# SG:      sg-07c55b13501ead309
 # ENI role: arn:aws:iam::864899852480:role/kube-microvm-operator
 ```
 
@@ -43,7 +56,7 @@ spec:
     - subnet-0fdc8b729163e12a7
     - subnet-0bde13101743f4751
   securityGroupIds:
-    - sg-03a8032471098b1f1
+    - sg-07c55b13501ead309
   operatorRoleArn: "arn:aws:iam::864899852480:role/kube-microvm-operator"
 EOF
 
@@ -92,7 +105,7 @@ spec:
     - subnet-0fdc8b729163e12a7
     - subnet-0bde13101743f4751
   securityGroupIds:
-    - sg-03a8032471098b1f1
+    - sg-07c55b13501ead309
   operatorRoleArn: "arn:aws:iam::864899852480:role/kube-microvm-operator"
 EOF
 
@@ -133,7 +146,7 @@ aws lambda-core create-network-connector \
   --configuration '{
     "VpcEgressConfiguration": {
       "SubnetIds": ["subnet-0fdc8b729163e12a7", "subnet-0bde13101743f4751"],
-      "SecurityGroupIds": ["sg-03a8032471098b1f1"],
+      "SecurityGroupIds": ["sg-07c55b13501ead309"],
       "NetworkProtocol": "IPv4"
     }
   }' \
@@ -165,7 +178,7 @@ spec:
     - subnet-0fdc8b729163e12a7
     - subnet-0bde13101743f4751
   securityGroupIds:
-    - sg-03a8032471098b1f1
+    - sg-07c55b13501ead309
   operatorRoleArn: "arn:aws:iam::864899852480:role/kube-microvm-operator"
 EOF
 
