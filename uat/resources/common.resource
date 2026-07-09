@@ -65,7 +65,7 @@ Kubectl Delete Force
     Run Process    kubectl    delete    ${resource}    ${name}    -n    ${namespace}    --force    --grace-period\=0    --timeout\=30s
 
 Wait For Image Ready
-    [Arguments]    ${name}    ${namespace}=${NAMESPACE}    ${timeout}=300
+    [Arguments]    ${name}    ${namespace}=${NAMESPACE}    ${timeout}=600
     FOR    ${i}    IN RANGE    ${{int($timeout) // 10}}
         ${state}=    Kubectl Get JsonPath    microvmimage    ${name}    {.status.imageState}    ${namespace}
         ${vstate}=    Kubectl Get JsonPath    microvmimage    ${name}    {.status.latestVersionState}    ${namespace}

@@ -197,6 +197,12 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
         if (status == null || status.getImageArn() == null) {
             return DeleteControl.defaultDelete();
         }
+        // Release build permit if the image was still building when deleted —
+        // prevents the in-memory semaphore from leaking across CR deletions.
+        if (!isBuildSettled(status.getImageState()) || isVersionBuilding(status.getLatestVersionState())) {
+            LOG.debugf("Releasing build permit for %s (deleted while building)", resource.getMetadata().getName());
+            quotaGuard.releaseImageBuildPermit();
+        }
         try {
             LOG.infof("Deleting image %s  arn=%s", resource.getMetadata().getName(), status.getImageArn());
             imageClient.deleteImage(status.getImageArn()).get(TIMEOUT_S, TimeUnit.SECONDS);
