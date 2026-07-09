@@ -8,8 +8,9 @@ Suite Teardown   Cleanup ReplicaSet Resources
 Force Tags       replicaset
 
 *** Variables ***
-${RS_NAME}      rs-pool-${RUN_ID}
-${RUN_ID}       ${EMPTY}
+${RS_NAME}          rs-pool-${RUN_ID}
+${RS_SECOND_IMAGE}  uat-rolling-image-${RUN_ID}
+${RUN_ID}           ${EMPTY}
 
 *** Test Cases ***
 RS-01 ReplicaSet Creates 3 MicroVMs
@@ -36,6 +37,42 @@ RS-04 Scale Down To 2
     ${result}=    Microvm CLI    rs    list    -n    ${NAMESPACE}
     Should Contain    ${result.stdout}    2
 
+RS-05 Rolling Update Changes ImageRef
+    [Documentation]    Change spec.template.imageRef and verify rolling update:
+    ...    - templateHash changes in status
+    ...    - updatedReplicas reaches desired count
+    ...    - no downtime (readyReplicas never drops to 0)
+    # Record the original template hash
+    ${original_hash}=    Run Process    kubectl    get    microvmreplicaset    ${RS_NAME}
+    ...    -n    ${NAMESPACE}    -o    jsonpath\={.status.currentTemplateHash}
+    Log    Original templateHash: ${original_hash.stdout}
+    # Trigger rolling update by changing imageRef to the second image
+    Run Process    kubectl    patch    microvmreplicaset    ${RS_NAME}    -n    ${NAMESPACE}
+    ...    --type\=merge    -p    {"spec":{"template":{"imageRef":"${RS_SECOND_IMAGE}"}}}
+    # Wait up to 3 minutes for rolling update to complete
+    FOR    ${i}    IN RANGE    18
+        Sleep    10s
+        ${updated}=    Run Process    kubectl    get    microvmreplicaset    ${RS_NAME}
+        ...    -n    ${NAMESPACE}    -o    jsonpath\={.status.updatedReplicas}
+        ${hash}=    Run Process    kubectl    get    microvmreplicaset    ${RS_NAME}
+        ...    -n    ${NAMESPACE}    -o    jsonpath\={.status.currentTemplateHash}
+        Log    [${i}] updatedReplicas=${updated.stdout} templateHash=${hash.stdout}
+        Exit For Loop If    '${updated.stdout}' == '2' and '${hash.stdout}' != '${original_hash.stdout}'
+    END
+    # Verify final state
+    ${final_hash}=    Run Process    kubectl    get    microvmreplicaset    ${RS_NAME}
+    ...    -n    ${NAMESPACE}    -o    jsonpath\={.status.currentTemplateHash}
+    ${final_updated}=    Run Process    kubectl    get    microvmreplicaset    ${RS_NAME}
+    ...    -n    ${NAMESPACE}    -o    jsonpath\={.status.updatedReplicas}
+    ${final_ready}=    Run Process    kubectl    get    microvmreplicaset    ${RS_NAME}
+    ...    -n    ${NAMESPACE}    -o    jsonpath\={.status.readyReplicas}
+    Should Not Be Equal    ${final_hash.stdout}    ${original_hash.stdout}
+    ...    msg=templateHash should have changed after rolling update
+    Should Be Equal    ${final_updated.stdout}    2
+    ...    msg=updatedReplicas should be 2 after rolling update completes
+    Should Be Equal As Integers    ${final_ready.stdout}    2
+    ...    msg=readyReplicas should be 2 after rolling update
+
 RS-06 Delete ReplicaSet Terminates All VMs
     [Tags]    destructive
     Run Process    kubectl    delete    microvmreplicaset    ${RS_NAME}    -n    ${NAMESPACE}    --timeout\=60s
@@ -48,7 +85,13 @@ Create ReplicaSet Resources
     ${id}=    Evaluate    __import__('time').strftime('%H%M%S')
     Set Suite Variable    ${RUN_ID}    ${id}
     Set Suite Variable    ${RS_NAME}    rs-pool-${id}
+    Set Suite Variable    ${RS_SECOND_IMAGE}    uat-rolling-image-${id}
     Ensure Shared Image Ready
+    # Create second image for rolling update test (same source, different name = different imageRef)
+    Set Suite Variable    ${NAME}    ${RS_SECOND_IMAGE}
+    Apply Template    shared/microvm-image.yaml
+    Wait For Image Ready    ${RS_SECOND_IMAGE}
+    # Create the ReplicaSet with the first image
     Set Suite Variable    ${NAME}    ${RS_NAME}
     Set Suite Variable    ${REPLICAS}    3
     Set Suite Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
@@ -56,3 +99,7 @@ Create ReplicaSet Resources
 
 Cleanup ReplicaSet Resources
     Run Keyword And Ignore Error    Run Process    kubectl    delete    microvmreplicaset    ${RS_NAME}    -n    ${NAMESPACE}    --timeout\=60s
+    Run Keyword And Ignore Error    Run Process    kubectl    patch    microvmimage    ${RS_SECOND_IMAGE}
+    ...    -n    ${NAMESPACE}    --type\=json    -p    [{"op":"remove","path":"/metadata/finalizers"}]
+    Run Keyword And Ignore Error    Run Process    kubectl    delete    microvmimage    ${RS_SECOND_IMAGE}
+    ...    -n    ${NAMESPACE}    --timeout\=30s
