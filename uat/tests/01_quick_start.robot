@@ -16,24 +16,24 @@ ${RUN_ID}      ${EMPTY}
 QS-00 Installer Download And Checksum Verification
     [Documentation]    Validates Step 1: download installer from release, verify SHA256, confirm executable
     [Tags]    smoke
-    # Use unique temp paths to avoid stale files from previous runs
+    # Clean up any stale files from previous runs
+    Run Process    bash    -c    rm -f /tmp/uat-check-installer.sh /tmp/uat-check-installer.sh.sha256
     ${dl}=    Run Process    curl    -fsSL
     ...    https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh
-    ...    -o    /tmp/uat-installer-check.sh
+    ...    -o    /tmp/uat-check-installer.sh
     Should Be Equal As Integers    ${dl.rc}    0    Failed to download installer script
     ${sha}=    Run Process    curl    -fsSL
     ...    https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256
-    ...    -o    /tmp/uat-installer-check.sh.sha256.raw
+    ...    -o    /tmp/uat-check-installer.sh.sha256.raw
     Should Be Equal As Integers    ${sha.rc}    0    Failed to download checksum
-    # Strip any path prefix from the filename field — GitHub Actions produces 'repo/filename'
-    # sed 's|  .*/|  |' strips the directory part but keeps the hash
+    # Strip path prefix and rename to match downloaded filename, then verify
     ${fix}=    Run Process    bash    -c
-    ...    sed 's|  .*/|  |' /tmp/uat-installer-check.sh.sha256.raw | sed 's|install_kube_microvm.sh|uat-installer-check.sh|' > /tmp/uat-installer-check.sh.sha256
-    ${verify}=    Run Process    sha256sum    -c    /tmp/uat-installer-check.sh.sha256    cwd=/tmp
+    ...    sed 's|  .*install_kube_microvm.sh|  uat-check-installer.sh|' /tmp/uat-check-installer.sh.sha256.raw > /tmp/uat-check-installer.sh.sha256
+    ${verify}=    Run Process    bash    -c    cd /tmp && sha256sum -c uat-check-installer.sh.sha256
     Should Be Equal As Integers    ${verify.rc}    0    Checksum verification failed: ${verify.stdout}
     # Confirm script is parseable and shows help
-    Run Process    chmod    +x    /tmp/uat-installer-check.sh
-    ${help}=    Run Process    /tmp/uat-installer-check.sh    --help
+    Run Process    chmod    +x    /tmp/uat-check-installer.sh
+    ${help}=    Run Process    /tmp/uat-check-installer.sh    --help
     Should Be Equal As Integers    ${help.rc}    0    Script failed to run --help
     Should Contain    ${help.stdout}    --cluster
     Should Contain    ${help.stdout}    --region

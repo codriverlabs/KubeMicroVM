@@ -47,9 +47,8 @@ RS-05 Rolling Update Changes ImageRef
     ...    -n    ${NAMESPACE}    -o    jsonpath\={.status.currentTemplateHash}
     Log    Original templateHash: ${original_hash.stdout}
     # Trigger rolling update by changing imageRef to the second image
-    # Use bash -c to ensure variable interpolation works correctly in JSON
-    Run Process    bash    -c
-    ...    kubectl patch microvmreplicaset ${RS_NAME} -n ${NAMESPACE} --type=merge -p '{"spec":{"template":{"imageRef":"${RS_SECOND_IMAGE}"}}}'
+    ${patch_cmd}=    Set Variable    kubectl patch microvmreplicaset ${RS_NAME} -n ${NAMESPACE} --type=merge -p '{"spec":{"template":{"imageRef":"${RS_SECOND_IMAGE}"}}}'
+    Run Process    bash    -c    ${patch_cmd}
     # Wait up to 3 minutes for rolling update to complete
     FOR    ${i}    IN RANGE    18
         Sleep    10s
