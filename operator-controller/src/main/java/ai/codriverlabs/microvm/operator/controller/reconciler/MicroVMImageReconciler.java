@@ -1,5 +1,6 @@
 package ai.codriverlabs.microvm.operator.controller.reconciler;
 
+import ai.codriverlabs.microvm.aws.lambdamicrovms.model.GetMicrovmImageResponse;
 import ai.codriverlabs.microvm.aws.lambdamicrovms.model.MicrovmImageState;
 import ai.codriverlabs.microvm.aws.lambdamicrovms.model.MicrovmImageVersionState;
 import ai.codriverlabs.microvm.operator.controller.aws.AwsApiException;
@@ -124,7 +125,25 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
             // --- POLL --- while image or version build is in progress
             if (!isBuildSettled(status.getImageState()) || isVersionBuilding(status.getLatestVersionState())) {
                 // Poll image state
-                var imageResp = imageClient.getImage(status.getImageArn()).get(TIMEOUT_S, TimeUnit.SECONDS);
+                GetMicrovmImageResponse imageResp;
+                try {
+                    imageResp = imageClient.getImage(status.getImageArn()).get(TIMEOUT_S, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    if (isNotFound(e)) {
+                        // Image deleted in AWS while we were tracking it — reset and recreate
+                        LOG.warnf("Image %s no longer exists in AWS (arn=%s) — resetting for recreation",
+                                name, status.getImageArn());
+                        status.setImageArn(null);
+                        status.setImageState(null);
+                        status.setLatestVersion(null);
+                        status.setLatestVersionState(null);
+                        status.setActiveVersion(null);
+                        status.setCurrentBuildId(null);
+                        status.setBuildMessage(null);
+                        return UpdateControl.patchStatus(resource).rescheduleAfter(POLL_INTERVAL);
+                    }
+                    throw e;
+                }
                 status.setImageState(imageResp.stateAsString());
 
                 // Poll version state if we have a version to track
@@ -174,6 +193,16 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
                     status.setActiveVersion(imageResp.latestActiveImageVersion());
                 }
             } catch (Exception e) {
+                if (isNotFound(e)) {
+                    LOG.warnf("Image %s no longer exists in AWS (arn=%s) — resetting for recreation",
+                            name, status.getImageArn());
+                    status.setImageArn(null);
+                    status.setImageState(null);
+                    status.setLatestVersion(null);
+                    status.setLatestVersionState(null);
+                    status.setActiveVersion(null);
+                    return UpdateControl.patchStatus(resource).rescheduleAfter(POLL_INTERVAL);
+                }
                 LOG.warnf("Failed to sync active version for %s: %s", name, e.getMessage());
             }
             // Release build permit once settled (idempotent — no-op if already released)
