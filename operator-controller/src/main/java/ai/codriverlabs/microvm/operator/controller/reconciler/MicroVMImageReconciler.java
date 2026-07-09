@@ -80,7 +80,7 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
 
                 String s3Uri = "s3://" + spec.getSource().getS3Bucket() + "/" + spec.getSource().getS3Key();
                 LOG.infof("Creating image %s from %s", name, s3Uri);
-                quotaGuard.acquireImageBuildPermit();
+                quotaGuard.acquireImageBuildPermit(name);
                 var response = imageClient.createImage(
                         name, s3Uri, spec.getBaseImageArn(), spec.getBuildRoleArn(),
                         spec.getMemorySizeMiB())
@@ -170,7 +170,7 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
                 LOG.warnf("Failed to sync active version for %s: %s", name, e.getMessage());
             }
             // Release build permit once settled (idempotent — no-op if already released)
-            quotaGuard.releaseImageBuildPermit();
+            quotaGuard.releaseImageBuildPermit(name);
             try {
                 var versions = imageClient.listVersions(status.getImageArn()).get(TIMEOUT_S, TimeUnit.SECONDS);
                 status.setVersions(versions.stream().map(v -> {
@@ -201,7 +201,7 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
         // prevents the in-memory semaphore from leaking across CR deletions.
         if (!isBuildSettled(status.getImageState()) || isVersionBuilding(status.getLatestVersionState())) {
             LOG.debugf("Releasing build permit for %s (deleted while building)", resource.getMetadata().getName());
-            quotaGuard.releaseImageBuildPermit();
+            quotaGuard.releaseImageBuildPermit(resource.getMetadata().getName());
         }
         try {
             LOG.infof("Deleting image %s  arn=%s", resource.getMetadata().getName(), status.getImageArn());

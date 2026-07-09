@@ -6,7 +6,11 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
+import java.time.Instant;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -38,6 +42,15 @@ public class QuotaGuard {
 
     private final Semaphore imageBuildSemaphore;
     private final Semaphore tokenQueueSemaphore;
+    /**
+     * Tracks active image build leases: imageArn → acquired time.
+     * Used to auto-expire permits for builds that were deleted mid-flight
+     * (e.g. force-deleted CRs that bypass the operator's cleanup() method).
+     * Permits older than IMAGE_BUILD_LEASE_MINUTES are automatically reclaimed
+     * by the next acquireImageBuildPermit() call.
+     */
+    private final ConcurrentHashMap<String, Instant> imageBuildLeases = new ConcurrentHashMap<>();
+    private static final long IMAGE_BUILD_LEASE_MINUTES = 20;
 
     @Inject
     public QuotaGuard(
@@ -140,8 +153,16 @@ public class QuotaGuard {
     /**
      * Acquire an image build permit. Blocks up to 60s.
      * Throws QuotaExceededException if no slot becomes available.
+     * Automatically reclaims permits held longer than IMAGE_BUILD_LEASE_MINUTES
+     * to handle cases where a build CR was force-deleted mid-flight.
      */
     public void acquireImageBuildPermit() throws QuotaExceededException {
+        acquireImageBuildPermit(null);
+    }
+
+    public void acquireImageBuildPermit(String imageIdentifier) throws QuotaExceededException {
+        // Reclaim expired leases before attempting to acquire
+        reclaimExpiredBuildLeases();
         try {
             if (!imageBuildSemaphore.tryAcquire(60, TimeUnit.SECONDS)) {
                 throw new QuotaExceededException(
@@ -151,14 +172,43 @@ public class QuotaGuard {
             Thread.currentThread().interrupt();
             throw new QuotaExceededException("Interrupted waiting for image build permit");
         }
-        LOG.debugf("Image build permit acquired (%d remaining)",
-                imageBuildSemaphore.availablePermits());
+        if (imageIdentifier != null) {
+            imageBuildLeases.put(imageIdentifier, Instant.now());
+        }
+        LOG.debugf("Image build permit acquired for %s (%d remaining)",
+                imageIdentifier, imageBuildSemaphore.availablePermits());
     }
 
     public void releaseImageBuildPermit() {
+        releaseImageBuildPermit(null);
+    }
+
+    public void releaseImageBuildPermit(String imageIdentifier) {
+        if (imageIdentifier != null) {
+            imageBuildLeases.remove(imageIdentifier);
+        }
         imageBuildSemaphore.release();
-        LOG.debugf("Image build permit released (%d available)",
-                imageBuildSemaphore.availablePermits());
+        LOG.debugf("Image build permit released for %s (%d available)",
+                imageIdentifier, imageBuildSemaphore.availablePermits());
+    }
+
+    /**
+     * Reclaims permits for build leases that have been held longer than
+     * IMAGE_BUILD_LEASE_MINUTES. This handles force-deleted CRs that bypass
+     * the operator's cleanup() method (e.g. kubectl delete --force).
+     */
+    private void reclaimExpiredBuildLeases() {
+        Instant expiry = Instant.now().minusSeconds(IMAGE_BUILD_LEASE_MINUTES * 60);
+        Iterator<Map.Entry<String, Instant>> it = imageBuildLeases.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, Instant> entry = it.next();
+            if (entry.getValue().isBefore(expiry)) {
+                it.remove();
+                imageBuildSemaphore.release();
+                LOG.warnf("Reclaimed expired image build permit for %s (held since %s)",
+                        entry.getKey(), entry.getValue());
+            }
+        }
     }
 
     public int availableImageBuildPermits() {
