@@ -24,11 +24,12 @@ QS-00 Installer Download And Checksum Verification
     ...    https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256
     ...    -o    /tmp/uat-check-installer-raw.sha256
     Should Be Equal As Integers    ${sha.rc}    0    Failed to download checksum file
-    # Normalize sha256 file: replace any leading path with just the filename we downloaded
-    ${normalize}=    Run Process    python3    -c
-    ...    import re; open('/tmp/uat-check-installer.sha256','w').write(re.sub(r'  .+install_kube_microvm\\.sh', '  uat-check-installer.sh', open('/tmp/uat-check-installer-raw.sha256').read()))
-    ${verify}=    Run Process    sha256sum    -c    uat-check-installer.sha256    cwd=/tmp
-    Should Be Equal As Integers    ${verify.rc}    0    Checksum verification failed: ${verify.stdout}
+    # Verify checksum: sha256 file may contain a path prefix (e.g. 'repo/install_kube_microvm.sh')
+    # Compute expected hash and compare directly
+    ${actual}=    Run Process    sha256sum    /tmp/uat-check-installer.sh
+    ${expected}=    Run Process    awk    {print $1}    /tmp/uat-check-installer-raw.sha256
+    Should Be Equal    ${actual.stdout.split()[0]}    ${expected.stdout.strip()}
+    ...    Checksum mismatch: ${actual.stdout.split()[0]} != ${expected.stdout.strip()}
     # Confirm script is parseable and shows help
     Run Process    chmod    +x    /tmp/uat-check-installer.sh
     ${help}=    Run Process    /tmp/uat-check-installer.sh    --help
