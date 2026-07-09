@@ -243,6 +243,11 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
             LOG.infof("Deleting image %s  arn=%s", resource.getMetadata().getName(), status.getImageArn());
             imageClient.deleteImage(status.getImageArn()).get(TIMEOUT_S, TimeUnit.SECONDS);
         } catch (Exception e) {
+            if (isNotFound(e)) {
+                // Already deleted in AWS — proceed with CR cleanup
+                LOG.debugf("Image %s already gone in AWS, proceeding with CR deletion", status.getImageArn());
+                return DeleteControl.defaultDelete();
+            }
             LOG.warnf("Error deleting image %s: %s — retrying", status.getImageArn(), e.getMessage());
             return DeleteControl.noFinalizerRemoval().rescheduleAfter(Duration.ofSeconds(15));
         }
