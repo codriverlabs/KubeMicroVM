@@ -35,10 +35,7 @@ INJ-05 Token Volume Present
     Should Contain    ${volumes}    microvm-token
 
 INJ-06 Token Files Written
-    [Tags]    known-issue
-    [Setup]    Skip    Known issue — not yet E2E verified
-    [Documentation]    Known gap: microvm-auth-agent sidecar token refresh not yet E2E verified.
-    ...    Tracked as feature/e2e-sidecar-v2.
+    [Documentation]    Verifies microvm-auth-agent writes auth-token, endpoint, and expires-at files.
     Sleep    45s    Wait for agent to fetch token
     ${result}=    Run Process    kubectl    exec    inject-pod-${RUN_ID}    -c    app    -n    ${NAMESPACE}    --    ls    /var/run/microvm/
     Should Contain    ${result.stdout}    auth-token
@@ -46,15 +43,12 @@ INJ-06 Token Files Written
     Should Contain    ${result.stdout}    expires-at
 
 INJ-07 Auth Token Non-Empty
-    [Tags]    known-issue
-    [Setup]    Skip    Known issue — not yet E2E verified
     ${result}=    Run Process    kubectl    exec    inject-pod-${RUN_ID}    -c    app    -n    ${NAMESPACE}    --    cat    /var/run/microvm/auth-token
     Should Not Be Empty    ${result.stdout}
     Length Should Be Greater Than    ${result.stdout}    100
 
 INJ-08 Token Works To Call MicroVM
-    [Tags]    smoke    known-issue
-    [Setup]    Skip    Known issue — not yet E2E verified
+    [Tags]    smoke
     ${token}=    Run Process    kubectl    exec    inject-pod-${RUN_ID}    -c    app    -n    ${NAMESPACE}    --    cat    /var/run/microvm/auth-token
     ${endpoint}=    Get MicroVM Endpoint    ${INJ_VM}
     ${response}=    Call MicroVM Endpoint    ${endpoint}    ${token.stdout}

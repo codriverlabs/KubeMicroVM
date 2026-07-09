@@ -1,8 +1,7 @@
 # Design: ReplicaSet Rolling Update
 
-**Status**: Design only — reconciler not implemented  
-**Branch**: `feature/replicaset-rolling-update`  
-**Priority**: P2
+**Status**: Implemented and E2E verified (2026-07-09)  
+**Branch**: `feature/replicaset-rolling-update` → merged to main
 
 ---
 
@@ -81,12 +80,12 @@ private Integer updatedReplicas;
 
 ## Implementation Checklist
 
-- [ ] Add `updateStrategyType`, `maxUnavailable` to `MicroVMReplicaSetSpec`
-- [ ] Add `currentTemplateHash`, `updatedReplicas` to `MicroVMReplicaSetStatus`
-- [ ] `MicroVMReplicaSetReconciler`: compute template hash, detect change
-- [ ] `MicroVMReplicaSetReconciler`: rolling update loop (create new → wait → terminate old)
-- [ ] `MicroVMReplicaSetReconciler`: `Recreate` strategy (terminate all, then create new)
-- [ ] Integration tests: rolling update replaces outdated VMs one-by-one
-- [ ] Integration tests: `Recreate` strategy terminates all before creating
-- [ ] E2E: change imageRef on running RS → all VMs updated with new image
-- [ ] Update `docs/user-guides/replicaset.md`
+- [x] Add `updateStrategyType`, `maxUnavailable` to `MicroVMReplicaSetSpec`
+- [x] Add `currentTemplateHash`, `updatedReplicas` to `MicroVMReplicaSetStatus`
+- [x] `MicroVMReplicaSetReconciler`: compute template hash, detect change
+- [x] `MicroVMReplicaSetReconciler`: rolling update loop (create new → wait → terminate old)
+- [x] `MicroVMReplicaSetReconciler`: `Recreate` strategy (terminate all, then create new)
+- [x] Integration tests: rolling update replaces outdated VMs one-by-one
+- [x] Integration tests: `Recreate` strategy terminates all before creating
+- [x] E2E: change imageRef on running RS → all VMs updated with new image (RS-05 un-skipped 2026-07-09)
+- [x] Update `docs/user-guides/replicaset.md`

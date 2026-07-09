@@ -1,7 +1,6 @@
 # Token Injection — Completion Plan
 
-**Branch**: `feat/token-injection-complete`  
-**Builds on**: Phase 2 infrastructure already merged to main (operator endpoint, auth-agent, pod webhook).
+**Branch**: `feat/token-injection-complete` — **fully merged to main (2026-07-09)**. All items below complete.
 
 ---
 
