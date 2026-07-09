@@ -81,21 +81,28 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
                 String s3Uri = "s3://" + spec.getSource().getS3Bucket() + "/" + spec.getSource().getS3Key();
                 LOG.infof("Creating image %s from %s", name, s3Uri);
                 quotaGuard.acquireImageBuildPermit(name);
-                var response = imageClient.createImage(
-                        name, s3Uri, spec.getBaseImageArn(), spec.getBuildRoleArn(),
-                        spec.getMemorySizeMiB())
-                        .get(TIMEOUT_S, TimeUnit.SECONDS);
+                try {
+                    var response = imageClient.createImage(
+                            name, s3Uri, spec.getBaseImageArn(), spec.getBuildRoleArn(),
+                            spec.getMemorySizeMiB())
+                            .get(TIMEOUT_S, TimeUnit.SECONDS);
 
-                status.setImageArn(response.imageArn());
-                status.setImageState(response.stateAsString());
-                status.setLatestVersion(response.imageVersion());
-                status.setLatestVersionState(MicrovmImageVersionState.PENDING.toString());
-                status.setObservedGeneration(resource.getMetadata().getGeneration());
-                updateMemoryStatus(status, spec.getMemorySizeMiB());
-                LOG.infof("Image %s created: arn=%s state=%s memory=%s",
-                        name, response.imageArn(), response.stateAsString(),
-                        spec.getMemorySizeMiB() != null ? spec.getMemorySizeMiB() + " MiB" : "default");
-                return UpdateControl.patchStatus(resource).rescheduleAfter(POLL_INTERVAL);
+                    status.setImageArn(response.imageArn());
+                    status.setImageState(response.stateAsString());
+                    status.setLatestVersion(response.imageVersion());
+                    status.setLatestVersionState(MicrovmImageVersionState.PENDING.toString());
+                    status.setObservedGeneration(resource.getMetadata().getGeneration());
+                    updateMemoryStatus(status, spec.getMemorySizeMiB());
+                    LOG.infof("Image %s created: arn=%s state=%s memory=%s",
+                            name, response.imageArn(), response.stateAsString(),
+                            spec.getMemorySizeMiB() != null ? spec.getMemorySizeMiB() + " MiB" : "default");
+                    return UpdateControl.patchStatus(resource).rescheduleAfter(POLL_INTERVAL);
+                } catch (Exception e) {
+                    // Release permit immediately if createImage fails — don't hold it
+                    // until the next reconcile cycle or lease expiry
+                    quotaGuard.releaseImageBuildPermit(name);
+                    throw e;
+                }
             }
 
             // --- UPDATE (spec changed) ---
