@@ -16,24 +16,24 @@ ${RUN_ID}      ${EMPTY}
 QS-00 Installer Download And Checksum Verification
     [Documentation]    Validates Step 1: download installer from release, verify SHA256, confirm executable
     [Tags]    smoke
+    # Use unique temp paths to avoid stale files from previous runs
     ${dl}=    Run Process    curl    -fsSL
     ...    https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh
-    ...    -o    /tmp/install_kube_microvm.sh
+    ...    -o    /tmp/uat-installer-check.sh
     Should Be Equal As Integers    ${dl.rc}    0    Failed to download installer script
     ${sha}=    Run Process    curl    -fsSL
     ...    https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256
-    ...    -o    /tmp/install_kube_microvm.sh.sha256.raw
+    ...    -o    /tmp/uat-installer-check.sh.sha256.raw
     Should Be Equal As Integers    ${sha.rc}    0    Failed to download checksum
-    # Strip any path prefix from the filename part of the checksum file
-    # GitHub Actions sha256 files use format: '<hash>  repo/filename'
-    # We need: '<hash>  filename' for sha256sum -c to work in /tmp
+    # Strip any path prefix from the filename field — GitHub Actions produces 'repo/filename'
+    # sed 's|  .*/|  |' strips the directory part but keeps the hash
     ${fix}=    Run Process    bash    -c
-    ...    sed 's|  .*/|  |' /tmp/install_kube_microvm.sh.sha256.raw > /tmp/install_kube_microvm.sh.sha256
-    ${verify}=    Run Process    sha256sum    -c    /tmp/install_kube_microvm.sh.sha256    cwd=/tmp
+    ...    sed 's|  .*/|  |' /tmp/uat-installer-check.sh.sha256.raw | sed 's|install_kube_microvm.sh|uat-installer-check.sh|' > /tmp/uat-installer-check.sh.sha256
+    ${verify}=    Run Process    sha256sum    -c    /tmp/uat-installer-check.sh.sha256    cwd=/tmp
     Should Be Equal As Integers    ${verify.rc}    0    Checksum verification failed: ${verify.stdout}
     # Confirm script is parseable and shows help
-    Run Process    chmod    +x    /tmp/install_kube_microvm.sh
-    ${help}=    Run Process    /tmp/install_kube_microvm.sh    --help
+    Run Process    chmod    +x    /tmp/uat-installer-check.sh
+    ${help}=    Run Process    /tmp/uat-installer-check.sh    --help
     Should Be Equal As Integers    ${help.rc}    0    Script failed to run --help
     Should Contain    ${help.stdout}    --cluster
     Should Contain    ${help.stdout}    --region
