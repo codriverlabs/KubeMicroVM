@@ -24,10 +24,11 @@ QS-00 Installer Download And Checksum Verification
     ...    https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256
     ...    -o    /tmp/install_kube_microvm.sh.sha256.raw
     Should Be Equal As Integers    ${sha.rc}    0    Failed to download checksum
-    # Strip any path prefix from the checksum file (GitHub Actions may produce 'repo/filename')
-    # so sha256sum -c works when both files are in /tmp
+    # Strip any path prefix from the filename part of the checksum file
+    # GitHub Actions sha256 files use format: '<hash>  repo/filename'
+    # We need: '<hash>  filename' for sha256sum -c to work in /tmp
     ${fix}=    Run Process    bash    -c
-    ...    sed 's|.*/||' /tmp/install_kube_microvm.sh.sha256.raw > /tmp/install_kube_microvm.sh.sha256
+    ...    sed 's|  .*/|  |' /tmp/install_kube_microvm.sh.sha256.raw > /tmp/install_kube_microvm.sh.sha256
     ${verify}=    Run Process    sha256sum    -c    /tmp/install_kube_microvm.sh.sha256    cwd=/tmp
     Should Be Equal As Integers    ${verify.rc}    0    Checksum verification failed: ${verify.stdout}
     # Confirm script is parseable and shows help
