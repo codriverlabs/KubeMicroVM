@@ -9,7 +9,7 @@ ${BUILD_ROLE_ARN}   arn:aws:iam::${ACCOUNT_ID}:role/KubeMicroVMBuildRole
 ${OPERATOR_ROLE}    arn:aws:iam::${ACCOUNT_ID}:role/kube-microvm-operator
 ${NAMESPACE}        default
 ${OPERATOR_NS}      kube-microvm
-${CHART_VERSION}    1.0.5-rc1
+${CHART_VERSION}    1.0.5-rc4
 ${CODEBASE_PATH}    /home/ubuntu/projects/pl-cloud/KubeMicroVM
 ${TIMEOUT}          600s
 ${POLL_INTERVAL}    10s
