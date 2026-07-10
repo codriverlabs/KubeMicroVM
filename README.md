@@ -49,7 +49,7 @@ KubeMicroVM brings them into the Kubernetes resource model:
 
 ## Installation
 
-> **Latest stable release: `v1.0.4`** — [Download](https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest)
+> **Latest stable release: `v1.0.5`** — [Download](https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest)
 >
 > **Replace throughout this section**:
 > - `<CLUSTER>` → your EKS cluster name
