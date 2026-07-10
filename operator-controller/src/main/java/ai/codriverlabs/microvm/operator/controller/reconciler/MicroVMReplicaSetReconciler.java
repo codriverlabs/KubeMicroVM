@@ -203,10 +203,12 @@ public class MicroVMReplicaSetReconciler
                     int maxSurge = spec.getMaxUnavailable() != null ? spec.getMaxUnavailable() : 1;
                     if (activeCount < desired + maxSurge) {
                         createChild(rs, ns, name, spec, templateHash);
+                        updateStatus(rs, children, desired);
+                        return UpdateControl.patchStatus(rs).rescheduleAfter(Duration.ofSeconds(5));
                     }
-                    updateStatus(rs, children, desired);
-                    return UpdateControl.patchStatus(rs).rescheduleAfter(Duration.ofSeconds(5));
-                } else if (!outdated.isEmpty() && newRunning >= Math.max(1, desired - maxUnavail)) {
+                    // Surge limit reached — fall through to terminate check below
+                }
+                if (!outdated.isEmpty() && newRunning >= Math.max(1, desired - maxUnavail)) {
                     // Enough new VMs running — terminate one outdated VM
                     MicroVM victim = outdated.get(0);
                     victim.getSpec().setDesiredState(DesiredState.TERMINATED);
