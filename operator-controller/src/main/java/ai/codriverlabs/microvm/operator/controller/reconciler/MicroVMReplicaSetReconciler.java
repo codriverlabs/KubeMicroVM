@@ -88,6 +88,13 @@ public class MicroVMReplicaSetReconciler
         // the ReplicaSet is large. Each patch triggers a child reconcile → AWS call.
         boolean wantSuspended = "Suspended".equalsIgnoreCase(spec.getDesiredReplicaSetState());
         for (MicroVM child : children) {
+            // Never touch scale-down victims or already-terminated VMs —
+            // the cascade must not overwrite desiredState=TERMINATED back to Running.
+            if (child.getSpec() != null
+                    && child.getSpec().getDesiredState() == DesiredState.TERMINATED) continue;
+            if (child.getStatus() != null
+                    && child.getStatus().getState() == MicroVMState.TERMINATED) continue;
+
             String childDesired = child.getSpec() != null
                     ? (child.getSpec().getDesiredState() != null
                         ? child.getSpec().getDesiredState().toString() : "Running")
