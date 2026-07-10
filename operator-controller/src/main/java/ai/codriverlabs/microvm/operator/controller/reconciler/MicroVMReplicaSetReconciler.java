@@ -155,14 +155,19 @@ public class MicroVMReplicaSetReconciler
                 // RollingUpdate: create new VM from new template, wait for Running, then terminate oldest outdated VM
                 int maxUnavail = spec.getMaxUnavailable() != null ? spec.getMaxUnavailable() : 1;
 
-                // Count VMs still running the old template (no TEMPLATE_HASH label match)
+                // Count VMs still running the old template (not terminated, not about to be terminated)
                 List<MicroVM> outdated = children.stream()
                         .filter(c -> {
                             String hash = c.getMetadata().getLabels() != null
                                     ? c.getMetadata().getLabels().get(TEMPLATE_HASH_LABEL) : null;
-                            return !templateHash.equals(hash)
-                                    && (c.getStatus() == null
-                                        || c.getStatus().getState() != MicroVMState.TERMINATED);
+                            // Exclude VMs with the new hash (they're already updated)
+                            if (templateHash.equals(hash)) return false;
+                            // Exclude VMs that are terminated or being terminated
+                            if (c.getStatus() != null
+                                    && c.getStatus().getState() == MicroVMState.TERMINATED) return false;
+                            if (c.getSpec() != null
+                                    && c.getSpec().getDesiredState() == DesiredState.TERMINATED) return false;
+                            return true;
                         })
                         .collect(java.util.stream.Collectors.toList());
 
@@ -175,8 +180,23 @@ public class MicroVMReplicaSetReconciler
                         .count();
 
                 if (!outdated.isEmpty() && newRunning < desired) {
-                    // Create one new VM from the new template
-                    createChild(rs, ns, name, spec, templateHash);
+                    // Only create a new VM if within surge budget.
+                    // Count only VMs that are not terminated and not being terminated —
+                    // scale-down victims (desiredState=TERMINATED) may still show RUNNING
+                    // in status while the child reconciler catches up.
+                    long activeCount = children.stream()
+                            .filter(c -> {
+                                if (c.getStatus() != null
+                                        && c.getStatus().getState() == MicroVMState.TERMINATED) return false;
+                                if (c.getSpec() != null
+                                        && c.getSpec().getDesiredState() == DesiredState.TERMINATED) return false;
+                                return true;
+                            })
+                            .count();
+                    int maxSurge = spec.getMaxUnavailable() != null ? spec.getMaxUnavailable() : 1;
+                    if (activeCount < desired + maxSurge) {
+                        createChild(rs, ns, name, spec, templateHash);
+                    }
                     updateStatus(rs, children, desired);
                     return UpdateControl.patchStatus(rs).rescheduleAfter(Duration.ofSeconds(5));
                 } else if (!outdated.isEmpty() && newRunning >= Math.max(1, desired - maxUnavail)) {
