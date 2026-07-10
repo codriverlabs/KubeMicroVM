@@ -138,6 +138,15 @@ if should_build "agent"; then
       $AGENT_IMAGE_FLAGS
   else
     ./mvnw -B -pl operator-auth-agent package $SKIP_FLAG
+    if $PUSH; then
+      # JVM mode: build and push via Dockerfile
+      AGENT_REPO="${REGISTRY:+${REGISTRY}/}plasticity-of-cloud/microvm-auth-agent"
+      AGENT_IMAGE="${AGENT_REPO}:${IMAGE_TAG}"
+      echo "==> Building auth-agent image: ${AGENT_IMAGE}"
+      docker build -t "${AGENT_IMAGE}" -f operator-auth-agent/Dockerfile operator-auth-agent/
+      docker push "${AGENT_IMAGE}"
+      echo "==> Auth-agent image pushed: ${AGENT_IMAGE}"
+    fi
   fi
 fi
 
