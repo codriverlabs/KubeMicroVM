@@ -16,12 +16,12 @@
 | File | Purpose | Consult When... |
 |------|---------|----------------|
 | [codebase_info.md](codebase_info.md) | Project identity, tech stack, module map | You need to understand what this project is, what language/framework it uses, or how modules relate |
-| [architecture.md](architecture.md) | System design, reconciliation pattern, state machine, admission flow | You need to understand how the system works end-to-end, component interactions, or design decisions |
-| [components.md](components.md) | Detailed breakdown of reconcilers, clients, webhooks, CLI | You need to find which class is responsible for a feature, or understand a specific component |
-| [interfaces.md](interfaces.md) | CRD specs, REST API, AWS API operations, CLI commands | You need field names, API shapes, endpoint paths, or CLI syntax |
-| [data_models.md](data_models.md) | CRD model classes, enums, state transitions, SDK types | You need to understand data structures, valid states, or serialization |
-| [workflows.md](workflows.md) | Development workflow, image build, VM run, token flow, deployment | You need step-by-step processes or sequence diagrams |
-| [dependencies.md](dependencies.md) | Tech stack versions, AWS services, base images, infrastructure | You need dependency info, version numbers, or external service details |
+| [architecture.md](architecture.md) | System design, reconciliation pattern, state machine, admission flow, token auth security | You need to understand how the system works end-to-end, component interactions, or design decisions |
+| [components.md](components.md) | Detailed breakdown of reconcilers, clients, webhooks, CLI, quota guard, SPI | You need to find which class is responsible for a feature, or understand a specific component |
+| [interfaces.md](interfaces.md) | CRD specs, pod annotations, REST API, AWS API operations, CLI commands | You need field names, API shapes, endpoint paths, or CLI syntax |
+| [data_models.md](data_models.md) | CRD model classes, enums, state transitions, ReplicaSet rolling update fields | You need to understand data structures, valid states, or serialization |
+| [workflows.md](workflows.md) | Development workflow, image build, VM run, token flow, rolling update, deployment, release | You need step-by-step processes or sequence diagrams |
+| [dependencies.md](dependencies.md) | Tech stack versions, AWS services, base images, CI workflows | You need dependency info, version numbers, or external service details |
 
 ## Key Relationships
 
@@ -39,11 +39,14 @@ graph TD
 ## Quick Reference
 
 - **"How do I add a new CRD field?"** → data_models.md (model structure) + components.md (reconciler) + interfaces.md (CRD schema)
-- **"How does token auth work?"** → architecture.md (overview) + components.md (MicroVMTokenResource) + workflows.md (token flow)
+- **"How does token auth work?"** → architecture.md (two-step flow) + components.md (MicroVMTokenResource) + workflows.md (token flow)
+- **"How does sidecar injection work?"** → components.md (PodMutatingWebhook + Auth Agent) + interfaces.md (pod annotations)
 - **"What AWS APIs do we call?"** → interfaces.md (AWS APIs Used) + components.md (SDK clients)
 - **"How do I deploy to EKS?"** → workflows.md (EKS Deployment) + `.kiro/steering/eks-deployment.md`
 - **"What's the test strategy?"** → codebase_info.md (test tools) + workflows.md (dev workflow) + `uat/` (Robot Framework)
 - **"How does the mutating webhook work?"** → components.md (Webhooks) + architecture.md (Admission Control Flow)
+- **"How does rolling update work?"** → data_models.md (ReplicaSet fields) + workflows.md (Rolling Update Workflow)
+- **"What SPI hooks exist?"** → components.md (SPI section) + `operator-spi/src/main/java/`
 
 ## Steering Files (Operational Rules)
 

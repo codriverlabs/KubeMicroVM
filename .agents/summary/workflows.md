@@ -63,7 +63,7 @@ sequenceDiagram
     R->>K: Patch status (Running, endpoint, vmId)
 ```
 
-## Token Flow (in-cluster)
+## Token Flow (in-cluster, sidecar injection)
 
 ```mermaid
 sequenceDiagram
@@ -74,16 +74,37 @@ sequenceDiagram
     participant AWS as AWS Lambda
 
     Agent->>Op: POST /token (SA bearer token)
-    Op->>K8s: TokenReview
-    K8s-->>Op: SA identity confirmed
-    Op->>K8s: SubjectAccessReview (create microvms/token)
+    Op->>K8s: TokenReview (identify SA caller)
+    K8s-->>Op: username + groups
+    Op->>K8s: SubjectAccessReview (can identity create microvms/token/{name}?)
     K8s-->>Op: allowed
     Op->>AWS: CreateMicrovmAuthToken
     AWS-->>Op: JWE token
     Op-->>Agent: {authToken, endpoint, expiresAt}
-    Agent->>Agent: Write to /var/run/microvm/
-    App->>App: Read token file
+    Agent->>Agent: Write to /var/run/microvm/ (auth-token, endpoint, .ready)
+    App->>App: Detect .ready sentinel, read token file
     App->>AWS: HTTPS request with X-aws-proxy-auth
+```
+
+## ReplicaSet Rolling Update Workflow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant R as ReplicaSetReconciler
+    participant VMs as Child MicroVMs
+
+    U->>U: Change spec.template.imageRef
+    R->>R: Compute new templateHash
+    R->>R: Detect hash != status.currentTemplateHash
+    loop Until all VMs updated
+        R->>VMs: Create new VM (new image, surge slot)
+        R->>R: Wait for new VM → Running
+        R->>VMs: Set oldest outdated VM desiredState=Terminated
+        R->>R: Reschedule(10s)
+    end
+    R->>R: Update status.currentTemplateHash
+    R->>R: Update status.updatedReplicas
 ```
 
 ## EKS Deployment Workflow
@@ -105,10 +126,10 @@ graph TD
 graph LR
     A[All tests pass] --> B[Tag vX.Y.Z-rcN]
     B --> C[GitHub Actions]
-    C --> D[Native binaries]
+    C --> D[Native binaries linux/amd64 + arm64]
     C --> E[Container images → GHCR]
     C --> F[Helm chart → OCI registry]
-    C --> G[GitHub Release]
+    C --> G[GitHub Release with checksums]
 ```
 
 Tag notation: `v<major>.<minor>.<patch>-rc<N>` → GA drops `-rcN` suffix.

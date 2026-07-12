@@ -83,11 +83,37 @@ graph LR
     ETCD --> REC2[Reconciler]
 ```
 
+## Token Authorization Flow (two-step)
+
+The token endpoint enforces a two-step security model before proxying to AWS:
+
+```mermaid
+sequenceDiagram
+    participant Pod
+    participant Op as Operator Token Endpoint
+    participant K8s as Kubernetes API
+    participant AWS
+
+    Pod->>Op: POST /token (SA Bearer token)
+    Op->>K8s: TokenReview (exchange token for identity)
+    K8s-->>Op: username + groups
+    Op->>K8s: SubjectAccessReview (can identity create microvms/token/{name}?)
+    K8s-->>Op: allowed/denied
+    alt Allowed
+        Op->>AWS: CreateMicrovmAuthToken
+        AWS-->>Op: JWE token
+        Op-->>Pod: 200 {authToken, endpoint, expiresAt}
+    else Denied / Unauthenticated
+        Op-->>Pod: 403 / 401
+    end
+```
+
 ## Design Principles
 
 - **Namespace isolation**: Operator watches only namespaces labelled `lambda.aws.amazon.com/manage-microvms=true`
 - **Finalizer-based cleanup**: All CRs with AWS resources have finalizers to prevent orphaning
 - **Drift detection**: Reconcilers poll AWS state and correct divergence
-- **Token-based auth**: Two-step Kubernetes TokenReview + SubjectAccessReview before proxying to AWS
+- **Token-based auth**: Two-step TokenReview + SubjectAccessReview before proxying to AWS
 - **Immutable image sizing**: Memory is set at image creation (AWS constraint)
 - **Class inheritance**: MicroVMClass provides opt-in defaults merged at admission time
+- **SPI extension points**: Community defaults in `operator-controller/spi/Default*.java`; PRO overrides via `@Alternative @Priority(100)` CDI beans

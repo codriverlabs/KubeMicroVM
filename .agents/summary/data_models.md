@@ -22,7 +22,9 @@ classDiagram
         +List~String~ egressNetworkConnectors
         +String executionRoleArn
         +String runHookPayload
+        +String importMicroVmId
         +Map~String,String~ tags
+        +Map~String,Object~ additionalProperties
     }
     class MicroVMStatus {
         +MicroVMState state
@@ -31,6 +33,7 @@ classDiagram
         +String resolvedImageArn
         +String resolvedImageVersion
         +List~Condition~ conditions
+        +Long observedGeneration
     }
     class MicroVMImage {
         +MicroVMImageSpec spec
@@ -43,6 +46,31 @@ classDiagram
         +Integer buildTimeoutSeconds
         +Boolean autoActivate
         +Integer memorySizeMiB
+        +Integer maxVersionsToKeep
+    }
+    class MicroVMReplicaSet {
+        +MicroVMReplicaSetSpec spec
+        +MicroVMReplicaSetStatus status
+    }
+    class MicroVMReplicaSetSpec {
+        +Integer replicas
+        +MicroVMTemplateSpec template
+        +Integer maxSurge
+        +Integer minReady
+        +ScaleDownSpec scaleDown
+        +String updateStrategyType
+        +Integer maxUnavailable
+        +String desiredReplicaSetState
+    }
+    class MicroVMReplicaSetStatus {
+        +Integer readyReplicas
+        +Integer currentReplicas
+        +Integer desiredReplicas
+        +Integer suspendedReplicas
+        +Integer updatedReplicas
+        +String currentTemplateHash
+        +List~Condition~ conditions
+        +Long observedGeneration
     }
     class MicroVMClass {
         +MicroVMClassSpec spec
@@ -59,6 +87,8 @@ classDiagram
     MicroVM --> MicroVMSpec
     MicroVM --> MicroVMStatus
     MicroVMImage --> MicroVMImageSpec
+    MicroVMReplicaSet --> MicroVMReplicaSetSpec
+    MicroVMReplicaSet --> MicroVMReplicaSetStatus
     MicroVMSpec ..> MicroVMClass : className reference
     MicroVMSpec ..> MicroVMImage : imageRef reference
     MicroVMSpec ..> MicroVMNetwork : networkRef reference
@@ -83,6 +113,16 @@ classDiagram
 | Terminating | Terminated |
 | Terminated | (none) |
 
+## ReplicaSet Rolling Update Fields
+
+`updateStrategyType` (default: `RollingUpdate`):
+- `RollingUpdate` — create new VMs, wait for Running, then terminate old VMs one-by-one
+- `Recreate` — terminate all existing VMs first, then create new ones
+
+`currentTemplateHash` — SHA of `spec.template` contents. Changes trigger a rolling update cycle. Reconciler compares this to the current hash on each reconcile.
+
+`updatedReplicas` — count of VMs currently running the current template version.
+
 ## AWS SDK Models (operator-aws-client)
 
 Generated from service model. Key types:
@@ -95,3 +135,7 @@ Generated from service model. Key types:
 ## additionalProperties
 
 `MicroVMSpec` includes `@JsonAnySetter`/`@JsonAnyGetter` for forward-compatibility with new AWS fields. Unknown fields from the API are preserved in a `Map<String, Object>` without breaking deserialization.
+
+## Webhook Deserialization Note
+
+The webhook layer uses `treeToValue(valueToTree(...))` for CRD deserialization — **not** `convertValue()`. `convertValue()` breaks with admission request objects. This is an intentional deviation from the typical Jackson pattern.

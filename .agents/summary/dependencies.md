@@ -4,31 +4,32 @@
 
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
-| Quarkus | 3.36.x | Application framework, DI, REST, health, metrics |
-| quarkus-operator-sdk | — | JOSDK integration, CRD generation, reconciler lifecycle |
-| Fabric8 Kubernetes Client | — | Kubernetes API access, CRD models |
-| Jackson | — | JSON serialization (CRD specs, webhook requests) |
-| PicoCLI (via quarkus-picocli) | — | CLI argument parsing |
+| Quarkus | 3.36.3 | Application framework, DI, REST, health, metrics |
+| JOSDK | 5.0.4 | Operator SDK, CRD generation, reconciler lifecycle |
+| josdk-webhooks | 3.0.3 | Admission webhook framework |
+| Fabric8 Kubernetes Client | 7.7.0 | Kubernetes API access, CRD models, MockServer for tests |
+| Jackson | (via Quarkus BOM) | JSON serialization (CRD specs, webhook requests) |
+| PicoCLI | 4.7.6 | CLI argument parsing (via quarkus-picocli) |
 
 ## AWS
 
-| Dependency | Purpose |
-|-----------|---------|
-| Custom lambda-microvms SDK (code-generated) | Async client for Lambda MicroVMs API |
-| AWS SDK v2 core | HTTP client, auth, region resolution |
-| EKS Pod Identity | Credential injection at runtime |
+| Dependency | Version | Purpose |
+|-----------|---------|---------|
+| Custom lambda-microvms SDK (code-generated) | — | Async client for Lambda MicroVMs API |
+| AWS SDK v2 core | 2.44.6 | HTTP client, auth, region resolution |
+| EKS Pod Identity | — | Credential injection at runtime (preferred over IRSA) |
 
 ## Build & Test
 
-| Dependency | Purpose |
-|-----------|---------|
-| Maven 3.9+ (via mvnw) | Build system |
-| GraalVM (Java 25) | Native image compilation (CLI + operator) |
-| JUnit 5 | Unit + integration tests |
-| Mockito | Mocking AWS clients in tests |
-| jqwik | Property-based tests (state machine, serialization, scaling) |
-| Fabric8 MockServer | In-memory Kubernetes API for integration tests |
-| Robot Framework | Automated UAT on EKS |
+| Dependency | Version | Purpose |
+|-----------|---------|---------|
+| Maven 3.9+ (via mvnw) | 3.9+ | Build system (enforced by enforcer plugin) |
+| GraalVM / Mandrel | Java 25 | Native image compilation; builder image: `quay.io/quarkus/ubi9-quarkus-mandrel-builder-image:jdk-25` |
+| JUnit 5 | (via Quarkus BOM) | Unit + integration tests |
+| Mockito | (via Quarkus BOM) | Mocking AWS clients in tests |
+| jqwik | 1.9.2 | Property-based tests (state machine, serialization, scaling, drift detection) |
+| Fabric8 MockServer | 7.7.0 | In-memory Kubernetes API for integration tests |
+| Robot Framework | — | Automated UAT on EKS (62 tests across 10 suites) |
 
 ## Container Base Images
 
@@ -36,21 +37,30 @@
 |-------|---------|
 | `public.ecr.aws/amazoncorretto/amazoncorretto:25-al2023-headless` | Operator JVM, auth-agent |
 | `public.ecr.aws/amazonlinux/amazonlinux:2023` | Test pods |
-| `ghcr.io/graalvm/native-image:java25` | Native CLI build |
+| `quay.io/quarkus/ubi9-quarkus-mandrel-builder-image:jdk-25` | Native build |
 
 ## Infrastructure
 
 | Dependency | Purpose |
 |-----------|---------|
-| cert-manager | TLS certificates for webhook endpoints |
+| cert-manager | TLS certificates for webhook endpoints (port 8443) |
 | EKS Pod Identity / IRSA | AWS credential injection |
-| VPC Endpoints | Private API access (lambda-microvms, sts, ecr) |
+| VPC Endpoints | Private API access — lambda-microvm, sts, ecr.api, ecr.dkr, s3 (Gateway), eks-auth |
 
 ## External Services
 
 | Service | Endpoint | Purpose |
 |---------|----------|---------|
 | Lambda MicroVMs API | `lambda-microvm.<region>.on.aws` | Core MicroVM operations |
-| STS | `sts.<region>.amazonaws.com` | Identity validation |
-| S3 | `s3.<region>.amazonaws.com` | Code artifact storage |
-| ECR | `<account>.dkr.ecr.<region>.amazonaws.com` | Container images |
+| STS | `sts.<region>.amazonaws.com` | Identity validation (GetCallerIdentity) |
+| S3 | `s3.<region>.amazonaws.com` | Code artifact storage for image builds |
+| ECR | `<account>.dkr.ecr.<region>.amazonaws.com` | Operator + auth-agent container images |
+
+## GitHub Actions Workflows
+
+| Workflow | Trigger | Action |
+|----------|---------|--------|
+| `ci.yml` | Push/PR | Build, test (`./mvnw install -DskipTests && ./mvnw -pl operator-tests verify`) |
+| `native-build.yml` | Tag push | Build native binaries (linux/amd64, linux/arm64), push container images to GHCR, push Helm chart, create GitHub Release |
+| `cla.yml` | PR | CLA check; appends signature to `signatures/cla.json` on `main` |
+| `version-bump.yml` | Manual/tag | Version bump automation |
