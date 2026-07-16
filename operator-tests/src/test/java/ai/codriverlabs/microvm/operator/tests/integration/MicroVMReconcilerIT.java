@@ -42,13 +42,15 @@ class MicroVMReconcilerIT {
         var quotaGuard = new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(
                 new ai.codriverlabs.microvm.operator.controller.spi.DefaultQuotaPolicy(),
                 100, 100, 100, 100, 100, 100, 100, 10, 200); // unlimited for tests
+        var imageRefResolver = new ai.codriverlabs.microvm.operator.controller.spi.DefaultImageRefResolver(client);
         reconciler = new MicroVMReconciler(
                 mockClient,
                 new MicroVMStateMachine(),
                 new DriftDetector(),
                 metrics,
                 client,
-                quotaGuard);
+                quotaGuard,
+                imageRefResolver);
     }
 
     @Test

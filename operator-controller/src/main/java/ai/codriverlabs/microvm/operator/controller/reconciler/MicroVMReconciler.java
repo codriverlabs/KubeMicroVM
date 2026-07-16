@@ -3,11 +3,12 @@ package ai.codriverlabs.microvm.operator.controller.reconciler;
 import ai.codriverlabs.microvm.operator.controller.aws.*;
 import ai.codriverlabs.microvm.operator.controller.metrics.OperatorMetrics;
 import ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard;
+import ai.codriverlabs.microvm.operator.spi.image.ImageRefResolver;
+import ai.codriverlabs.microvm.operator.spi.image.ImageResolution;
 import ai.codriverlabs.microvm.operator.core.enums.DesiredState;
 import ai.codriverlabs.microvm.operator.core.enums.MicroVMState;
 import ai.codriverlabs.microvm.operator.core.model.Condition;
 import ai.codriverlabs.microvm.operator.core.model.MicroVM;
-import ai.codriverlabs.microvm.operator.core.model.MicroVMImage;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMNetwork;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMSpec;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMStatus;
@@ -57,6 +58,7 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
     private final OperatorMetrics metrics;
     private final KubernetesClient kubernetesClient;
     private final QuotaGuard quotaGuard;
+    private final ImageRefResolver imageRefResolver;
 
     @Inject
     public MicroVMReconciler(MicroVMClient microVMClient,
@@ -64,13 +66,15 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
                              DriftDetector driftDetector,
                              OperatorMetrics metrics,
                              KubernetesClient kubernetesClient,
-                             QuotaGuard quotaGuard) {
+                             QuotaGuard quotaGuard,
+                             ImageRefResolver imageRefResolver) {
         this.microVMClient = microVMClient;
         this.stateMachine = stateMachine;
         this.driftDetector = driftDetector;
         this.metrics = metrics;
         this.kubernetesClient = kubernetesClient;
         this.quotaGuard = quotaGuard;
+        this.imageRefResolver = imageRefResolver;
     }
 
     @Override
@@ -253,12 +257,12 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
         // --- Image reference resolution ---
         String imageIdentifier;
         String imageVersion;
-        var resolution = resolveImageRef(spec.getImageRef(), spec.getImageVersion(), namespace);
-        if (resolution.error != null) {
-            return transitionState(resource, MicroVMState.FAILED, resolution.reason, resolution.error);
+        var resolution = imageRefResolver.resolve(spec.getImageRef(), spec.getImageVersion(), namespace);
+        if (!resolution.isSuccess()) {
+            return transitionState(resource, MicroVMState.FAILED, resolution.reason(), resolution.error());
         }
-        imageIdentifier = resolution.imageArn;
-        imageVersion = resolution.imageVersion;
+        imageIdentifier = resolution.imageArn();
+        imageVersion = resolution.imageVersion();
         resource.getStatus().setResolvedImageArn(imageIdentifier);
         resource.getStatus().setResolvedImageVersion(imageVersion);
 
@@ -300,63 +304,6 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
         } catch (Exception e) {
             return handleCreationError(resource, e);
         }
-    }
-
-    /**
-     * Resolves a MicroVMImage CR name to an AWS image ARN.
-     * Returns the resolved ARN and version, or an error message.
-     */
-    private ImageResolution resolveImageRef(String imageRef, String requestedVersion, String namespace) {
-        if (imageRef == null || imageRef.isBlank()) {
-            return ImageResolution.error("ImageRefMissing", "spec.imageRef is required");
-        }
-
-        // Cross-namespace refs (namespace/name) are a PRO feature
-        if (imageRef.contains("/")) {
-            return ImageResolution.error("CrossNamespaceImageRefNotSupported",
-                    "Cross-namespace image references require KubeMicroVM PRO (imageRef: " + imageRef + ")");
-        }
-
-        // Look up MicroVMImage CR in the same namespace
-        MicroVMImage image = kubernetesClient.resources(MicroVMImage.class)
-                .inNamespace(namespace)
-                .withName(imageRef)
-                .get();
-
-        if (image == null) {
-            return ImageResolution.error("ImageNotFound",
-                    "MicroVMImage '" + imageRef + "' not found in namespace '" + namespace + "'");
-        }
-
-        var status = image.getStatus();
-        if (status == null || status.getImageArn() == null) {
-            return ImageResolution.error("ImageNotReady",
-                    "MicroVMImage '" + imageRef + "' has not been created yet (no imageArn)");
-        }
-
-        String imageState = status.getImageState();
-        if (!"CREATED".equals(imageState) && !"UPDATED".equals(imageState)) {
-            return ImageResolution.error("ImageNotReady",
-                    "MicroVMImage '" + imageRef + "' is in state '" + imageState + "', expected CREATED or UPDATED");
-        }
-
-        // Resolve version: use requested, or fall back to activeVersion
-        String resolvedVersion = requestedVersion;
-        if (resolvedVersion == null || resolvedVersion.isBlank()) {
-            resolvedVersion = status.getActiveVersion();
-            if (resolvedVersion == null || resolvedVersion.isBlank()) {
-                return ImageResolution.error("NoActiveVersion",
-                        "MicroVMImage '" + imageRef + "' has no active version. Set spec.imageVersion or activate a version.");
-            }
-        }
-
-        LOG.infof("Resolved imageRef '%s' → %s (version %s)", imageRef, status.getImageArn(), resolvedVersion);
-        return ImageResolution.success(status.getImageArn(), resolvedVersion);
-    }
-
-    private record ImageResolution(String imageArn, String imageVersion, String reason, String error) {
-        static ImageResolution success(String arn, String version) { return new ImageResolution(arn, version, null, null); }
-        static ImageResolution error(String reason, String message) { return new ImageResolution(null, null, reason, message); }
     }
 
     /**
