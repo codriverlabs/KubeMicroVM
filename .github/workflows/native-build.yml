@@ -29,6 +29,36 @@ jobs:
           ./mvnw versions:set -DnewVersion=${VERSION} -DgenerateBackupPoms=false --batch-mode --no-transfer-progress
       - run: ./mvnw verify -pl operator-core,operator-spi,operator-controller,operator-webhook,operator-cli,operator-tests -am --batch-mode --no-transfer-progress
 
+  # ─── Publish Maven artifacts to GitHub Packages ───────────────────────────
+
+  publish-maven:
+    name: Publish Maven Artifacts
+    needs: test-jvm
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Set version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ./mvnw versions:set -DnewVersion=${VERSION} -DgenerateBackupPoms=false --batch-mode --no-transfer-progress
+      - name: Deploy to GitHub Packages
+        run: |
+          ./mvnw deploy \
+            -pl operator-core,operator-spi,operator-aws-client-core,operator-aws-client,operator-controller,operator-webhook,operator-cli,operator-auth-agent \
+            -am -DskipTests --batch-mode --no-transfer-progress \
+            -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/plasticity-of-cloud/KubeMicroVM
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   # ─── Native CLI binary ────────────────────────────────────────────────────
 
   native-cli:
