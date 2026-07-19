@@ -3,6 +3,7 @@ package ai.codriverlabs.microvm.operator.agent;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.runtime.StartupEvent;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -172,6 +173,7 @@ public class TokenRefreshAgent {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
+    @RegisterForReflection
     public static class TokenResponse {
         public String authToken;
         public String endpoint;
