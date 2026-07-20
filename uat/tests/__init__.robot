@@ -15,5 +15,4 @@ Documentation    KubeMicroVM UAT — User Guide Acceptance Tests
 ...    Each suite verifies cluster prerequisites before running.
 ...    If the operator is not installed, suites will fail with a clear message.
 Resource         ../resources/cluster_setup.resource
-Default Tags     functional
 Suite Setup      Setup Cluster If Needed
