@@ -4,18 +4,18 @@ Documentation    UAT: Performance Scale Test — 1000 MicroVMs via ReplicaSet
 ...    Creates a ReplicaSet with 1000 replicas and validates:
 ...    - Operator handles scale-up without crashing
 ...    - Rate limiting (RunMicrovm 5/s) is respected by quota guard
-...    - VMs reach account concurrency limit (~161 Running)
+...    - All 1000 VMs reach Running within the time budget
 ...    - Status reporting is accurate (readyReplicas, currentReplicas)
 ...    - Scale-down and termination completes within bounded time
 ...    - No operator restarts during the entire test
 ...
-...    Expected behaviour (us-east-1 defaults):
-...    - RunMicrovm burst rate: 5 req/s → scale-up at ~3-4 VMs/s
-...    - Account concurrency limit: ~161 Running VMs
-...    - VMs beyond 161 remain Pending (API accepts but VM stays pending)
-...    - Termination rate: ~10 req/s → full drain in ~100s for 1000 VMs
+...    Expected behaviour (us-east-1, RunMicrovm rate 5/s):
+...    - Creation throughput: ~3-4 VMs/s reaching Running
+...    - Time to 1000 Running: ~5-8 minutes (rate-limited creation + boot)
+...    - Termination rate: ~10 req/s → full drain in ~2-3 minutes
 ...
 ...    This suite is long-running (~15-20 minutes). Tag: performance
+...    Run: robot --outputdir results -i performance tests/09_performance_scale.robot
 Resource         ../resources/common.resource
 Resource         ../resources/variables.robot
 Resource         ../resources/cluster_setup.resource
@@ -26,13 +26,12 @@ Force Tags       performance
 *** Variables ***
 ${PERF_RS_NAME}           perf-rs-${RUN_ID}
 ${PERF_REPLICAS}          1000
+# Time budget for all 1000 VMs to reach Running
+# At 5/s RunMicrovm rate + boot time ≈ 250s creation + 60s boot buffer = ~5-8 min
 ${SCALE_UP_TIMEOUT}       900
 ${SCALE_DOWN_TIMEOUT}     300
 ${POLL_INTERVAL_SCALE}    10
 ${RUN_ID}                 ${EMPTY}
-# Observed account limits (us-east-1, 2026-07-06)
-${EXPECTED_MIN_RUNNING}   100
-${EXPECTED_MAX_RUNNING}   200
 
 *** Test Cases ***
 PERF-01 Operator Stable Before Scale Test
@@ -56,60 +55,52 @@ PERF-02 ReplicaSet Created With 1000 Replicas
     ...    -n    ${NAMESPACE}    -o    jsonpath\={.spec.replicas}
     Should Be Equal    ${result.stdout}    1000
 
-PERF-03 Scale-Up Reaches Account Limit
-    [Documentation]    Monitor scale-up progress until Running VMs plateau.
-    ...    Expects 100-200 Running VMs (account concurrency limit).
-    ...    Records peak ready count and time to reach plateau.
+PERF-03 All 1000 VMs Reach Running
+    [Documentation]    Monitor scale-up until all 1000 VMs reach Running.
+    ...    Tracks throughput and logs progress every ${POLL_INTERVAL_SCALE}s.
     [Tags]    performance
     ${start_time}=    Evaluate    __import__('time').time()
-    ${peak_ready}=    Set Variable    0
-    ${peak_current}=    Set Variable    0
-    ${plateau_count}=    Set Variable    0
-    ${last_ready}=    Set Variable    0
+    ${first_running_time}=    Set Variable    0
     FOR    ${i}    IN RANGE    ${{int(${SCALE_UP_TIMEOUT}) // int(${POLL_INTERVAL_SCALE})}}
         Sleep    ${POLL_INTERVAL_SCALE}s
         ${ready}=    Get RS Field    readyReplicas
         ${current}=    Get RS Field    currentReplicas
         ${elapsed}=    Evaluate    int(__import__('time').time() - ${start_time})
-        Log    [${elapsed}s] ready=${ready} current=${current}
-        # Track peaks
-        ${ready_int}=    Convert To Integer    ${ready}    default=0
-        ${current_int}=    Convert To Integer    ${current}    default=0
-        ${peak_ready}=    Evaluate    max(${peak_ready}, ${ready_int})
-        ${peak_current}=    Evaluate    max(${peak_current}, ${current_int})
-        # Detect plateau (ready stable for 3 consecutive checks)
-        IF    ${ready_int} == ${last_ready} and ${ready_int} > 50
-            ${plateau_count}=    Evaluate    ${plateau_count} + 1
-        ELSE
-            ${plateau_count}=    Set Variable    0
+        ${ready_int}=    Safe Int    ${ready}
+        ${current_int}=    Safe Int    ${current}
+        # Track first Running VM time for throughput calculation
+        IF    ${ready_int} > 0 and ${first_running_time} == 0
+            ${first_running_time}=    Evaluate    __import__('time').time()
+            Set Suite Variable    ${FIRST_RUNNING_TIME}    ${first_running_time}
         END
-        ${last_ready}=    Set Variable    ${ready_int}
-        IF    ${plateau_count} >= 3
-            Log    Plateau detected at ${ready_int} VMs after ${elapsed}s
+        # Calculate live throughput
+        ${rate}=    Evaluate    round(${ready_int} / max(${elapsed}, 1), 1)
+        Log    [${elapsed}s] ready=${ready_int}/1000 current=${current_int} rate=${rate}/s
+        IF    ${ready_int} >= 1000
             Exit For Loop
         END
     END
     ${total_elapsed}=    Evaluate    int(__import__('time').time() - ${start_time})
-    Set Suite Variable    ${PEAK_READY}    ${peak_ready}
-    Set Suite Variable    ${PEAK_CURRENT}    ${peak_current}
+    ${final_rate}=    Evaluate    round(1000 / max(${total_elapsed}, 1), 2)
     Set Suite Variable    ${SCALE_UP_TIME}    ${total_elapsed}
-    Log    Peak ready: ${peak_ready}, Peak current: ${peak_current}, Time: ${total_elapsed}s
-    # Verify we reached a reasonable number of Running VMs
-    Should Be True    ${peak_ready} >= ${EXPECTED_MIN_RUNNING}
-    ...    msg=Expected at least ${EXPECTED_MIN_RUNNING} Running VMs but peak was ${peak_ready}
+    Set Suite Variable    ${SCALE_UP_RATE}    ${final_rate}
+    Log    All 1000 VMs Running in ${total_elapsed}s (effective rate: ${final_rate}/s)
+    # Verify all 1000 reached Running
+    ${final_ready}=    Get RS Field    readyReplicas
+    ${final_ready_int}=    Safe Int    ${final_ready}
+    Should Be Equal As Integers    ${final_ready_int}    1000
+    ...    msg=Expected 1000 Running VMs but got ${final_ready_int} after ${total_elapsed}s
 
 PERF-04 Status Reports Accurate Counts
-    [Documentation]    Verify ReplicaSet status fields are internally consistent.
+    [Documentation]    Verify ReplicaSet status fields are consistent at full scale.
     [Tags]    performance
     ${ready}=    Get RS Field    readyReplicas
     ${current}=    Get RS Field    currentReplicas
     ${desired}=    Get RS Field    replicas    spec
-    ${ready_int}=    Convert To Integer    ${ready}    default=0
-    ${current_int}=    Convert To Integer    ${current}    default=0
-    # current >= ready (some VMs may be Pending)
-    Should Be True    ${current_int} >= ${ready_int}
-    ...    msg=currentReplicas (${current_int}) should be >= readyReplicas (${ready_int})
-    # Desired is still 1000
+    ${ready_int}=    Safe Int    ${ready}
+    ${current_int}=    Safe Int    ${current}
+    Should Be Equal As Integers    ${ready_int}    1000
+    Should Be Equal As Integers    ${current_int}    1000
     Should Be Equal    ${desired}    1000
 
 PERF-05 No Operator Restarts During Scale-Up
@@ -120,27 +111,30 @@ PERF-05 No Operator Restarts During Scale-Up
     ...    msg=Operator restarted during scale-up! Restarts: baseline=${BASELINE_RESTARTS} current=${current_restarts}
 
 PERF-06 Scale Down To Zero
-    [Documentation]    Delete the ReplicaSet and measure time to drain all VM CRs.
+    [Documentation]    Delete the ReplicaSet and measure time to drain all 1000 VM CRs.
     ...    Target: all CRs removed within ${SCALE_DOWN_TIMEOUT}s.
     [Tags]    performance    destructive
     ${start_time}=    Evaluate    __import__('time').time()
     Run Process    kubectl    delete    microvmreplicaset    ${PERF_RS_NAME}
     ...    -n    ${NAMESPACE}    --timeout\=120s
-    # Wait for all child MicroVM CRs to be removed
+    # Monitor drain progress
     FOR    ${i}    IN RANGE    ${{int(${SCALE_DOWN_TIMEOUT}) // 5}}
         Sleep    5s
         ${result}=    Run Process    kubectl    get    microvms    -n    ${NAMESPACE}
         ...    -l    lambda.aws.amazon.com/replica-set\=${PERF_RS_NAME}    --no-headers
         ${remaining}=    Get Line Count    ${result.stdout}
         ${elapsed}=    Evaluate    int(__import__('time').time() - ${start_time})
-        Log    [${elapsed}s] VMs remaining: ${remaining}
+        ${terminate_rate}=    Evaluate    round((1000 - ${remaining}) / max(${elapsed}, 1), 1)
+        Log    [${elapsed}s] remaining=${remaining}/1000 terminate_rate=${terminate_rate}/s
         IF    ${remaining} == 0
             Exit For Loop
         END
     END
     ${drain_time}=    Evaluate    int(__import__('time').time() - ${start_time})
     Set Suite Variable    ${DRAIN_TIME}    ${drain_time}
-    Log    All VMs drained in ${drain_time}s
+    ${drain_rate}=    Evaluate    round(1000 / max(${drain_time}, 1), 2)
+    Set Suite Variable    ${DRAIN_RATE}    ${drain_rate}
+    Log    All 1000 VMs drained in ${drain_time}s (rate: ${drain_rate}/s)
     Should Be True    ${drain_time} <= ${SCALE_DOWN_TIMEOUT}
     ...    msg=Drain took ${drain_time}s, exceeding ${SCALE_DOWN_TIMEOUT}s budget
 
@@ -156,14 +150,12 @@ PERF-08 Performance Summary
     [Tags]    performance
     Log    \n========== PERFORMANCE SUMMARY ==========
     Log    Requested replicas: ${PERF_REPLICAS}
-    Log    Peak Running VMs: ${PEAK_READY}
-    Log    Peak Created VMs: ${PEAK_CURRENT}
-    Log    Scale-up time to plateau: ${SCALE_UP_TIME}s
-    Log    Scale-down drain time: ${DRAIN_TIME}s
+    Log    Scale-up: 1000 Running in ${SCALE_UP_TIME}s (${SCALE_UP_RATE} VMs/s)
+    Log    Scale-down: 1000 drained in ${DRAIN_TIME}s (${DRAIN_RATE} VMs/s)
     Log    Operator restarts: 0
-    Log    Account concurrency band: ${EXPECTED_MIN_RUNNING}-${EXPECTED_MAX_RUNNING}
+    Log    RunMicrovm rate limit: 5/s (pending quota increase)
     Log    ==========================================
-    # This test always passes — it's just for reporting
+    # This test always passes — it's for reporting
     Pass Execution    Summary logged
 
 *** Keywords ***
@@ -171,7 +163,6 @@ Setup Performance Test
     ${id}=    Evaluate    __import__('time').strftime('%H%M%S')
     Set Suite Variable    ${RUN_ID}    ${id}
     Set Suite Variable    ${PERF_RS_NAME}    perf-rs-${id}
-    # Ensure shared image is available (needed for ReplicaSet)
     Ensure Shared Image Ready
 
 Teardown Performance Test
@@ -195,7 +186,7 @@ Get Operator Restart Count
     ${result}=    Run Process    kubectl    get    pod    -n    ${OPERATOR_NS}
     ...    -l    app.kubernetes.io/name\=kube-microvm-operator
     ...    -o    jsonpath\={.items[0].status.containerStatuses[0].restartCount}
-    ${count}=    Convert To Integer    ${result.stdout}    default=0
+    ${count}=    Safe Int    ${result.stdout}
     RETURN    ${count}
 
 Get RS Field
@@ -205,8 +196,8 @@ Get RS Field
     ...    -n    ${NAMESPACE}    -o    jsonpath\={.${section}.${field}}
     RETURN    ${result.stdout}
 
-Convert To Integer
-    [Documentation]    Safely convert string to integer, returning default on failure.
-    [Arguments]    ${value}    ${default}=0
-    ${result}=    Evaluate    int('${value}') if '${value}'.strip().isdigit() else ${default}
+Safe Int
+    [Documentation]    Convert string to integer safely, returning 0 for empty/invalid.
+    [Arguments]    ${value}
+    ${result}=    Evaluate    int('${value}') if '${value}'.strip().lstrip('-').isdigit() else 0
     RETURN    ${result}
