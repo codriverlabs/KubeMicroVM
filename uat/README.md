@@ -3,6 +3,22 @@
 Automated User Acceptance Tests that validate every step in the user guides works
 exactly as documented.
 
+## Release Candidate Workflow
+
+UAT runs against **release candidate (rc) versions** built and published by GitHub
+Actions. The workflow is:
+
+1. Push a tag: `git tag v1.0.7-rc2 && git push origin v1.0.7-rc2`
+2. GitHub Actions builds native binaries, container images, and Helm chart → publishes
+   to `ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator`
+3. Update `CHART_VERSION` in `resources/variables.robot` to match the rc tag (without `v` prefix)
+4. Run UAT — the suite auto-installs the operator from GHCR if not already deployed
+
+Each rc is immutable in GitHub Packages. If a build partially fails (409 Conflict),
+bump to the next rc (`-rc2` → `-rc3`) rather than trying to overwrite.
+
+**Results are stored per-version** in `results/v<version>/` for comparison across runs.
+
 ## Prerequisites
 
 ```bash
@@ -10,10 +26,14 @@ pip install robotframework
 ```
 
 The cluster must have:
-- KubeMicroVM operator installed and running (`helm install ...` or via install script)
 - Pod Identity association for the operator SA
 - `microvm` CLI in PATH
 - AWS credentials with access to Lambda MicroVMs API
+
+> **Operator installation is automatic.** If the operator is not found on the cluster,
+> the UAT suite setup installs it from GHCR using the `CHART_VERSION` in
+> `resources/variables.robot`. To force a fresh install, uninstall first:
+> `helm uninstall kube-microvm-operator -n kube-microvm`
 
 > **VPC endpoints are not required.** The UAT suites work against any EKS cluster
 > with outbound internet access to the Lambda MicroVMs API. VPC endpoints are only
@@ -33,19 +53,13 @@ running **Quick Start first** (`01_quick_start.robot`) is recommended because:
 ```bash
 cd uat
 
-# 1. Validate cluster prerequisites
-robot --outputdir results tests/00_cluster_setup.robot
+# Default run — all functional suites (excludes performance)
+robot --outputdir results --exclude performance tests/
 
-# 2. Run Quick Start first (recommended baseline validation)
-robot --outputdir results tests/01_quick_start.robot
+# Include performance test (~15-20 min, depends on account limits)
+robot --outputdir results -i performance tests/
 
-# 3. Run remaining suites
-robot --outputdir results tests/02_rbac.robot tests/03_networking.robot \
-      tests/04_pod_token_injection.robot tests/05_replicaset.robot \
-      tests/06_microvm_class.robot tests/07_drift_autosuspend.robot \
-      tests/08_memory_sizing.robot
-
-# OR: run all suites at once (includes setup + cleanup)
+# Run everything including performance
 robot --outputdir results tests/
 ```
 
@@ -53,7 +67,7 @@ robot --outputdir results tests/
 
 ```bash
 cd uat
-robot --outputdir results tests/
+robot --outputdir results --exclude performance tests/
 ```
 
 ## Structure

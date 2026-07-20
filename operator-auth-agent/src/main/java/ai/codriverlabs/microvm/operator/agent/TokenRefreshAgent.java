@@ -81,7 +81,10 @@ public class TokenRefreshAgent {
     }
 
     void onStart(@Observes StartupEvent ev) {
-        Thread.ofVirtual().name("token-refresh-agent").start(this::run);
+        // IMPORTANT: Use platform thread, not virtual thread.
+        // java.net.http.HttpClient with TLS pins the carrier thread in GraalVM native images,
+        // causing a deadlock when used from a virtual thread. Platform threads don't have this issue.
+        Thread.ofPlatform().name("token-refresh-agent").daemon(true).start(this::run);
     }
 
     private void run() {
