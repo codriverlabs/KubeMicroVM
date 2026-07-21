@@ -1,4 +1,4 @@
-Lambda VM ACK Operator installed.
+KubeMicroVM Operator installed.
 
 Operator pod:
   kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/name=operator-controller
@@ -7,21 +7,20 @@ CRDs installed:
   kubectl get crd | grep lambda.aws.amazon.com
 
 AWS IAM Setup:
-{{- if and .Values.serviceAccount.irsaRoleArn (ne .Values.serviceAccount.irsaRoleArn "") }}
-  IRSA role ARN configured: {{ .Values.serviceAccount.irsaRoleArn }}
+{{- $irsaArn := index (.Values.serviceAccount.annotations | default dict) "eks.amazonaws.com/role-arn" }}
+{{- if $irsaArn }}
+  IRSA role ARN configured: {{ $irsaArn }}
 {{- else }}
-  No IAM role configured. Choose one:
+  No IAM role annotation configured. Choose one:
 
   Option 1 - EKS Pod Identity (recommended):
     aws eks create-pod-identity-association \
       --cluster-name <CLUSTER> \
       --namespace {{ .Release.Namespace }} \
       --service-account kube-microvm-operator \
-      --role-arn arn:aws:iam::<ACCOUNT_ID>:role/<ROLE_NAME>
+      --role-arn arn:aws:iam::<ACCOUNT_ID>:role/kube-microvm-operator
 
   Option 2 - IRSA:
-    kubectl annotate serviceaccount kube-microvm-operator \
-      -n {{ .Release.Namespace }} \
-      eks.amazonaws.com/role-arn=arn:aws:iam::<ACCOUNT_ID>:role/<ROLE_NAME>
-    # Or reinstall with: --set serviceAccount.irsaRoleArn=arn:aws:iam::<ACCOUNT_ID>:role/<ROLE_NAME>
+    helm upgrade kube-microvm-operator <chart> \
+      --set 'serviceAccount.annotations.eks\.amazonaws\.com/role-arn=arn:aws:iam::<ACCOUNT_ID>:role/kube-microvm-operator'
 {{- end }}
