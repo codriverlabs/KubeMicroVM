@@ -20,6 +20,12 @@ KubeMicroVM brings them into the Kubernetes resource model:
 - Access from pods via sidecar token injection — no AWS credentials in your app
 - Use `microvm` CLI for day-to-day operations
 
+KubeMicroVM is a **higher-level Kubernetes product layer** for AWS Lambda MicroVMs,
+adding workload orchestration, networking, admission control, token delivery, quota
+management, and CLI workflows beyond the official ACK controller. It is not an ACK
+replacement — see [Support Matrix](docs/SUPPORT_MATRIX.md) for feature maturity and
+scope.
+
 ---
 
 ## Components
@@ -380,6 +386,7 @@ transparently.
 
 | Guide | Description |
 |-------|-------------|
+| [Support Matrix](docs/SUPPORT_MATRIX.md) | Feature maturity, API coverage, and scope |
 | [Quick Start](docs/user-guides/quick-start.md) | Get a MicroVM running in 5 minutes |
 | [RBAC](docs/user-guides/rbac.md) | All roles — IAM, Kubernetes, app SA setup |
 | [Pod Token Injection](docs/user-guides/pod-token-injection.md) | Auth tokens in pods without AWS credentials |
