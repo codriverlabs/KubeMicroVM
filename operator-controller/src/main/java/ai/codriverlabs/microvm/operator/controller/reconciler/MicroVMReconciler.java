@@ -96,11 +96,6 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
                 return handlePendingState(resource);
             }
 
-            // If in Creating state, check if AWS resource is ready
-            if (currentState == MicroVMState.PENDING) {
-                return handleCreatingState(resource);
-            }
-
             // Describe current state from AWS
             DescribeMicroVMResponse awsState = describeFromAws(status.getMicroVmId());
             if (awsState == null) {

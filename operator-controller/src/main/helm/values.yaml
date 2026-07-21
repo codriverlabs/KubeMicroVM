@@ -1,55 +1,40 @@
 fullnameOverride: ""
 
 serviceAccount:
-  # For IRSA: set to the IAM role ARN (e.g. arn:aws:iam::123456789012:role/kube-microvm-operator)
-  # For EKS Pod Identity (recommended): leave empty and create a PodIdentityAssociation
-  irsaRoleArn: ""
+  # For IRSA: add annotation with the IAM role ARN.
+  # For EKS Pod Identity (recommended): leave empty and create a PodIdentityAssociation.
+  annotations: {}
+  # Example IRSA annotation:
+  #   annotations:
+  #     eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/kube-microvm-operator
 
-webhook:
-  enabled: true
-  certManager:
-    enabled: true
-    issuerRef:
-      name: selfsigned-issuer
-      kind: ClusterIssuer
-
-networkPolicy:
+# Leader election for HA deployments (multiple replicas).
+# Recommended for production. Not needed for single-replica dev clusters.
+leaderElection:
   enabled: false
-
-# Token injection Phase 2 — operator token sub-resource endpoint
-tokenEndpoint:
-  enabled: true
-  maxExpiryMinutes: 60
+  leaseDurationSeconds: 15
+  renewDeadlineSeconds: 10
+  retryPeriodSeconds: 2
 
 # Sidecar image for auto-injected microvm-auth-agent.
 # Override via: --set app.envs.MICROVM_AUTH_AGENT_IMAGE=<repo>:<tag>
-# Default points to the public GHCR image; set to your private ECR image when
-# using a private registry (e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com/plasticity-of-cloud/microvm-auth-agent:1.0.5)
+# Default is set at chart build time to match the operator version.
+# Set to your private ECR image when using a private registry:
+#   --set app.envs.MICROVM_AUTH_AGENT_IMAGE=123456789012.dkr.ecr.us-east-1.amazonaws.com/plasticity-of-cloud/microvm-auth-agent:1.0.7
 
 # AWS API quota guard — rate limits matching your account's service quotas.
-# Defaults match AWS account-level defaults exactly.
+# These are passed to the operator as environment variables via app.envs.*
 # The install script auto-discovers actual values via `aws service-quotas get-service-quota`
-# and overrides these at install time.
-# Enable runtime discovery with quotas.discoveryEnabled=true (requires additional IAM permission).
-quotas:
-  # RunMicrovm burst rate (req/s). AWS default: 5.
-  runMicrovmRate: 5
-  # TerminateMicrovm burst rate (req/s). AWS default: 10.
-  terminateMicrovmRate: 10
-  # SuspendMicrovm burst rate (req/s). AWS default: 2.
-  suspendMicrovmRate: 2
-  # ResumeMicrovm burst rate (req/s). AWS default: 5.
-  resumeMicrovmRate: 5
-  # GetMicrovm burst rate (req/s). AWS default: 100.
-  getMicrovmRate: 100
-  # CreateMicrovmAuthToken burst rate (req/s). AWS default: 50.
-  authTokenRate: 50
-  # CreateMicrovmShellAuthToken burst rate (req/s). AWS default: 5.
-  shellAuthTokenRate: 5
-  # Concurrent image builds. AWS default: 10.
-  concurrentImageBuilds: 10
-  # Max in-flight token requests before returning HTTP 429. Not an AWS quota.
-  tokenQueueSize: 200
-  # Enable runtime quota discovery via AWS Service Quotas API.
-  # Requires service-quotas:GetServiceQuota IAM permission on the operator role.
-  discoveryEnabled: false
+# and overrides at install time with --set app.envs.AWS_QUOTA_RUN_MICROVM_RATE=<value>.
+#
+# Defaults (us-east-1):
+#   app.envs.AWS_QUOTA_RUN_MICROVM_RATE: 5
+#   app.envs.AWS_QUOTA_TERMINATE_MICROVM_RATE: 10
+#   app.envs.AWS_QUOTA_SUSPEND_MICROVM_RATE: 2
+#   app.envs.AWS_QUOTA_RESUME_MICROVM_RATE: 5
+#   app.envs.AWS_QUOTA_GET_MICROVM_RATE: 100
+#   app.envs.AWS_QUOTA_AUTH_TOKEN_RATE: 50
+#   app.envs.AWS_QUOTA_SHELL_AUTH_TOKEN_RATE: 5
+#   app.envs.AWS_QUOTA_CONCURRENT_IMAGE_BUILDS: 10
+#   app.envs.AWS_QUOTA_TOKEN_QUEUE_SIZE: 200
+#   app.envs.AWS_QUOTA_DISCOVERY_ENABLED: false
