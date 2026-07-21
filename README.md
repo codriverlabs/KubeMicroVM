@@ -55,7 +55,7 @@ scope.
 
 ## Installation
 
-> **Latest stable release: `v1.0.5`** — [Download](https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest)
+> **Latest stable release: `v1.0.8`** — [Download](https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest)
 >
 > **Replace throughout this section**:
 > - `<CLUSTER>` → your EKS cluster name
@@ -110,7 +110,7 @@ chmod +x install_kube_microvm.sh
 
 ```bash
 # Pin to a specific version (find latest at github.com/plasticity-of-cloud/KubeMicroVM/releases)
-CHART_VERSION=1.0.4   # replace with the version you want
+CHART_VERSION=1.0.8   # replace with the version you want
 
 # EKS Pod Identity (recommended)
 helm install kube-microvm-operator \

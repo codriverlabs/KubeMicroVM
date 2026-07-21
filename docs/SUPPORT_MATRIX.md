@@ -1,8 +1,8 @@
 # KubeMicroVM — Support Matrix
 
-**Release:** v1.0.7  
+**Release:** v1.0.8  
 **Date:** 2026-07-21  
-**Test results:** [UAT v1.0.7 — 63/63 pass](../uat/results/v1.0.7/)
+**Test results:** [UAT v1.0.8 — 63/63 pass](../uat/results/v1.0.8/)
 
 ---
 
