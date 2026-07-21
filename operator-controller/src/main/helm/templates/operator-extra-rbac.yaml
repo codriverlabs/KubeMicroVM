@@ -75,3 +75,40 @@ roleRef:
   kind: ClusterRole
   name: kube-microvm-operator-webhook-role
   apiGroup: rbac.authorization.k8s.io
+
+---
+# Leader election RBAC — allows the operator to create and manage Lease objects.
+# Required for HA (multi-replica) deployments. JOSDK checks for this at startup.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kube-microvm-operator-leader-election
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  annotations:
+    meta.helm.sh/release-name: {{ .Release.Name }}
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
+rules:
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["create", "update", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kube-microvm-operator-leader-election
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  annotations:
+    meta.helm.sh/release-name: {{ .Release.Name }}
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  name: kube-microvm-operator
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: kube-microvm-operator-leader-election
+  apiGroup: rbac.authorization.k8s.io
