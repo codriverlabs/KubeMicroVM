@@ -7,11 +7,7 @@ CRDs installed:
   kubectl get crd | grep lambda.aws.amazon.com
 
 AWS IAM Setup:
-{{- $irsaArn := index (.Values.serviceAccount.annotations | default dict) "eks.amazonaws.com/role-arn" }}
-{{- if $irsaArn }}
-  IRSA role ARN configured: {{ $irsaArn }}
-{{- else }}
-  No IAM role annotation configured. Choose one:
+  Choose one of the following credential mechanisms:
 
   Option 1 - EKS Pod Identity (recommended):
     aws eks create-pod-identity-association \
@@ -20,7 +16,7 @@ AWS IAM Setup:
       --service-account kube-microvm-operator \
       --role-arn arn:aws:iam::<ACCOUNT_ID>:role/kube-microvm-operator
 
-  Option 2 - IRSA:
-    helm upgrade kube-microvm-operator <chart> \
-      --set 'serviceAccount.annotations.eks\.amazonaws\.com/role-arn=arn:aws:iam::<ACCOUNT_ID>:role/kube-microvm-operator'
-{{- end }}
+  Option 2 - IRSA (annotate the service account):
+    kubectl annotate serviceaccount kube-microvm-operator \
+      -n {{ .Release.Namespace }} \
+      eks.amazonaws.com/role-arn=arn:aws:iam::<ACCOUNT_ID>:role/kube-microvm-operator
