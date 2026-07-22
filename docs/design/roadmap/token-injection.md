@@ -140,7 +140,7 @@ When a `Pod` is admitted with the `lambda.microvm.auth` annotation, the webhook 
 **Sidecar container (`microvm-auth-agent`):**
 ```yaml
 name: microvm-auth-agent
-image: ghcr.io/plasticity-of-cloud/microvm-auth-agent:latest
+image: ghcr.io/codriverlabs/microvm-auth-agent:latest
 env:
   - name: MICROVM_NAME
     value: <annotation value>
@@ -258,7 +258,7 @@ POST /apis/lambda.aws.amazon.com/v1alpha1/namespaces/{ns}/microvms/{name}/token
 tokenInjection:
   enabled: true
   sidecarImage:
-    repository: ghcr.io/plasticity-of-cloud/microvm-auth-agent
+    repository: ghcr.io/codriverlabs/microvm-auth-agent
     tag: latest
   defaultExpiryMinutes: 30
   mountPath: /var/run/microvm

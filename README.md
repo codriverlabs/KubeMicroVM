@@ -6,7 +6,7 @@ you already use.
 
 Built with **Quarkus 3**, **JOSDK**, **GraalVM native image** (Java 25).
 
-[![Release](https://img.shields.io/github/v/release/plasticity-of-cloud/KubeMicroVM)](https://github.com/plasticity-of-cloud/KubeMicroVM/releases)
+[![Release](https://img.shields.io/github/v/release/codriverlabs/KubeMicroVM)](https://github.com/codriverlabs/KubeMicroVM/releases)
 
 ---
 
@@ -55,7 +55,7 @@ scope.
 
 ## Installation
 
-> **Latest stable release: `v1.0.8`** — [Download](https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest)
+> **Latest stable release: `v1.0.8`** — [Download](https://github.com/codriverlabs/KubeMicroVM/releases/latest)
 >
 > **Replace throughout this section**:
 > - `<CLUSTER>` → your EKS cluster name
@@ -71,9 +71,9 @@ scope.
 
 ```bash
 # Download and verify installer
-curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh \
+curl -fsSL https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/install_kube_microvm.sh \
   -o install_kube_microvm.sh
-curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256 \
+curl -fsSL https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256 \
   -o install_kube_microvm.sh.sha256
 sha256sum -c install_kube_microvm.sh.sha256
 chmod +x install_kube_microvm.sh
@@ -88,9 +88,9 @@ chmod +x install_kube_microvm.sh
 
 ```bash
 # Download and verify installer
-curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh \
+curl -fsSL https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/install_kube_microvm.sh \
   -o install_kube_microvm.sh
-curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256 \
+curl -fsSL https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256 \
   -o install_kube_microvm.sh.sha256
 sha256sum -c install_kube_microvm.sh.sha256
 chmod +x install_kube_microvm.sh
@@ -109,12 +109,12 @@ chmod +x install_kube_microvm.sh
 ### Helm (manual)
 
 ```bash
-# Pin to a specific version (find latest at github.com/plasticity-of-cloud/KubeMicroVM/releases)
+# Pin to a specific version (find latest at github.com/codriverlabs/KubeMicroVM/releases)
 CHART_VERSION=1.0.8   # replace with the version you want
 
 # EKS Pod Identity (recommended)
 helm install kube-microvm-operator \
-  oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator \
+  oci://ghcr.io/codriverlabs/helm/kube-microvm-operator \
   --version $CHART_VERSION \
   --namespace kube-microvm --create-namespace \
   --set app.envs.AWS_REGION=<REGION>
@@ -132,7 +132,7 @@ aws eks create-pod-identity-association \
 ```bash
 # Detect architecture and install microvm binary
 ARCH=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
-curl -fsSL "https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/microvm-linux-${ARCH}" \
+curl -fsSL "https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/microvm-linux-${ARCH}" \
   -o ~/bin/microvm && chmod +x ~/bin/microvm
 ln -sf ~/bin/microvm ~/bin/kubectl-microvm
 

@@ -55,9 +55,9 @@ QUOTA_DISCOVERY_RUNTIME=false   # --quota-discovery=runtime: operator queries qu
 
 # Resolved at runtime from GitHub Release or bundled in installer image
 VERSION="${KUBE_MICROVM_VERSION:-}"
-GHCR_OPERATOR="ghcr.io/plasticity-of-cloud/kube-microvm-operator"
-GHCR_AGENT="ghcr.io/plasticity-of-cloud/microvm-auth-agent"
-GHCR_HELM="oci://ghcr.io/plasticity-of-cloud/helm"
+GHCR_OPERATOR="ghcr.io/codriverlabs/kube-microvm-operator"
+GHCR_AGENT="ghcr.io/codriverlabs/microvm-auth-agent"
+GHCR_HELM="oci://ghcr.io/codriverlabs/helm"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Resolve version — prefer env var, then bundled VERSION file, then GitHub API
@@ -72,7 +72,7 @@ resolve_version() {
     # Query GitHub Releases API for latest
     info "Resolving latest version from GitHub..."
     VERSION=$(curl -fsSL \
-        "https://api.github.com/repos/plasticity-of-cloud/KubeMicroVM/releases/latest" \
+        "https://api.github.com/repos/codriverlabs/KubeMicroVM/releases/latest" \
         2>/dev/null | grep '"tag_name"' | grep -oP 'v[\d.]+(-rc\d+)?' | head -1)
     if [[ -z "$VERSION" ]]; then
         error "Could not resolve version. Set KUBE_MICROVM_VERSION env var or pass bundled installer."
@@ -216,14 +216,14 @@ import_images() {
     fi
 
     for IMAGE_NAME in kube-microvm-operator microvm-auth-agent; do
-        SRC_REPO="ghcr.io/plasticity-of-cloud/${IMAGE_NAME}"
-        DST_REPO="${REGISTRY}/plasticity-of-cloud/${IMAGE_NAME}"
+        SRC_REPO="ghcr.io/codriverlabs/${IMAGE_NAME}"
+        DST_REPO="${REGISTRY}/codriverlabs/${IMAGE_NAME}"
 
         # Create ECR repo if needed
         if [[ "$REGISTRY" == *".ecr."* ]]; then
-            info "Ensuring ECR repo: plasticity-of-cloud/${IMAGE_NAME}"
+            info "Ensuring ECR repo: codriverlabs/${IMAGE_NAME}"
             run "aws ecr create-repository \
-                --repository-name plasticity-of-cloud/${IMAGE_NAME} \
+                --repository-name codriverlabs/${IMAGE_NAME} \
                 --region ${ECR_REGION} 2>/dev/null || true"
         fi
 
@@ -259,7 +259,7 @@ setup_iam() {
     # Download IAM template from release if not bundled locally
     if [[ ! -f "$IAM_TEMPLATE" ]]; then
         info "Downloading IAM CloudFormation template from release..."
-        RELEASE_BASE="https://github.com/plasticity-of-cloud/KubeMicroVM/releases/download/${VERSION}"
+        RELEASE_BASE="https://github.com/codriverlabs/KubeMicroVM/releases/download/${VERSION}"
         mkdir -p "${SCRIPT_DIR}/iam"
         run "curl -fsSL ${RELEASE_BASE}/kube-microvm-operator-role.yaml -o $IAM_TEMPLATE"
         run "curl -fsSL ${RELEASE_BASE}/kube-microvm-operator-role.yaml.sha256 -o ${IAM_TEMPLATE}.sha256"
@@ -416,11 +416,11 @@ install_operator() {
 
     # Determine image
     OPERATOR_IMAGE="${GHCR_OPERATOR}:${IMAGE_TAG}"
-    [[ -n "$REGISTRY" ]] && OPERATOR_IMAGE="${REGISTRY}/plasticity-of-cloud/kube-microvm-operator:${IMAGE_TAG}"
+    [[ -n "$REGISTRY" ]] && OPERATOR_IMAGE="${REGISTRY}/codriverlabs/kube-microvm-operator:${IMAGE_TAG}"
 
     # Determine auth-agent image (injected as sidecar by mutating webhook)
     AGENT_IMAGE="${GHCR_AGENT}:${IMAGE_TAG}"
-    [[ -n "$REGISTRY" ]] && AGENT_IMAGE="${REGISTRY}/plasticity-of-cloud/microvm-auth-agent:${IMAGE_TAG}"
+    [[ -n "$REGISTRY" ]] && AGENT_IMAGE="${REGISTRY}/codriverlabs/microvm-auth-agent:${IMAGE_TAG}"
 
     # Ensure namespace
     run "kubectl create namespace kube-microvm --dry-run=client -o yaml | kubectl apply -f -"
@@ -476,7 +476,7 @@ install_cli() {
     else
         # Download from GitHub Release — VERSION includes 'v' prefix (e.g. v1.0.0)
         info "Downloading microvm-linux-${ARCH_TAG} (version: ${VERSION})"
-        DOWNLOAD_URL="https://github.com/plasticity-of-cloud/KubeMicroVM/releases/download/${VERSION}/microvm-linux-${ARCH_TAG}"
+        DOWNLOAD_URL="https://github.com/codriverlabs/KubeMicroVM/releases/download/${VERSION}/microvm-linux-${ARCH_TAG}"
         run "curl -fsSL $DOWNLOAD_URL -o $INSTALL_DIR/microvm"
     fi
 
@@ -577,7 +577,7 @@ main() {
         echo "Next steps:"
         echo "  1. Label a namespace:  kubectl label namespace default lambda.aws.amazon.com/manage-microvms=true"
         echo "  2. Create a MicroVMImage and MicroVM"
-        echo "  3. See docs: https://github.com/plasticity-of-cloud/KubeMicroVM"
+        echo "  3. See docs: https://github.com/codriverlabs/KubeMicroVM"
     fi
 }
 

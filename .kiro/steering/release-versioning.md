@@ -25,5 +25,5 @@ git tag v0.0.1-rc1 && git push --tags
 This triggers the GitHub Actions release workflow which:
 1. Builds native binaries for linux/amd64 and linux/arm64
 2. Builds and pushes multi-arch container images to GHCR
-3. Packages and pushes the Helm chart to `oci://ghcr.io/plasticity-of-cloud/helm`
+3. Packages and pushes the Helm chart to `oci://ghcr.io/codriverlabs/helm`
 4. Creates a GitHub Release with binaries, Helm chart, and checksums

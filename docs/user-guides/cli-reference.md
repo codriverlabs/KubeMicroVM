@@ -6,7 +6,7 @@ The `microvm` CLI manages AWS Lambda MicroVMs on Kubernetes.
 
 ```bash
 # Download binary
-curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/microvm-linux-amd64 \
+curl -fsSL https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/microvm-linux-amd64 \
   -o ~/bin/microvm && chmod +x ~/bin/microvm
 
 # kubectl plugin symlink (optional)

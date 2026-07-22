@@ -8,7 +8,7 @@
 
 ```bash
 # From GitHub Release
-curl -Lo kubectl-microvm https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/kubectl-microvm-linux-arm64
+curl -Lo kubectl-microvm https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/kubectl-microvm-linux-arm64
 chmod +x kubectl-microvm
 mv kubectl-microvm /usr/local/bin/
 

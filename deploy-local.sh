@@ -77,7 +77,7 @@ fi
 
 # Resolve chart source
 if $FROM_REGISTRY; then
-  CHART="oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator"
+  CHART="oci://ghcr.io/codriverlabs/helm/kube-microvm-operator"
   echo "==> Deploying from GHCR OCI registry"
 else
   CHART=$(ls operator-controller/target/helm/kubernetes/kube-microvm-operator-*.tar.gz 2>/dev/null | head -1)

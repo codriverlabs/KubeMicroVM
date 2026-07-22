@@ -71,7 +71,7 @@ If AWS grants your account a quota increase, update the operator without rebuild
 **Via Helm directly**:
 ```bash
 helm upgrade kube-microvm-operator \
-  oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator \
+  oci://ghcr.io/codriverlabs/helm/kube-microvm-operator \
   --reuse-values \
   --set quotas.runMicrovmRate=20 \
   --set quotas.authTokenRate=100

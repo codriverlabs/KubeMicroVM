@@ -33,7 +33,7 @@ Rationale:
 
 The operator and auth-agent images are pushed to private ECR for deployment:
 ```
-<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/plasticity-of-cloud/kube-microvm-operator
+<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/codriverlabs/kube-microvm-operator
 ```
 
 EKS nodes pull from private ECR via VPC endpoints — no internet egress required for image pulls.

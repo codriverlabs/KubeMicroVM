@@ -33,7 +33,7 @@ for arg in "$@"; do
       echo "  --push                Push container images after build"
       echo "  --helm                Generate Helm chart tarball into operator-controller/target/helm/"
       echo "  --only <list>         Comma-separated: operator, cli, agent, tests"
-      echo "  --registry <url>      Container registry (default: ghcr.io/plasticity-of-cloud)"
+      echo "  --registry <url>      Container registry (default: ghcr.io/codriverlabs)"
       echo "  --help                Show this help"
       echo ""
       echo "Examples:"
@@ -140,7 +140,7 @@ if should_build "agent"; then
     ./mvnw -B -pl operator-auth-agent package $SKIP_FLAG
     if $PUSH; then
       # JVM mode: build and push via Dockerfile
-      AGENT_REPO="${REGISTRY:+${REGISTRY}/}plasticity-of-cloud/microvm-auth-agent"
+      AGENT_REPO="${REGISTRY:+${REGISTRY}/}codriverlabs/microvm-auth-agent"
       AGENT_IMAGE="${AGENT_REPO}:${IMAGE_TAG}"
       echo "==> Building auth-agent image: ${AGENT_IMAGE}"
       docker build -t "${AGENT_IMAGE}" -f operator-auth-agent/Dockerfile operator-auth-agent/

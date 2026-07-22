@@ -8,7 +8,7 @@
 - **Framework**: JOSDK (Java Operator SDK) via Quarkus Operator SDK extension
 - **License**: Elastic License 2.0 (ELv2)
 - **Latest stable release**: v1.0.5 (dev branch: 1.1.0-SNAPSHOT)
-- **Repository**: github.com/plasticity-of-cloud/KubeMicroVM
+- **Repository**: github.com/codriverlabs/KubeMicroVM
 
 ## Technology Stack
 

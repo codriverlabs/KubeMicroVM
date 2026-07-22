@@ -50,7 +50,7 @@ shared in-memory volume, and refreshes it automatically.
 | ID | Result | Notes |
 |----|--------|-------|
 | SIDECAR-01 | ✅ PASS | `app` + `microvm-auth-agent` containers injected |
-| SIDECAR-02 | ✅ PASS | `<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/plasticity-of-cloud/microvm-auth-agent:1.0.0-rc1` |
+| SIDECAR-02 | ✅ PASS | `<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/codriverlabs/microvm-auth-agent:1.0.0-rc1` |
 | SIDECAR-03 | ✅ PASS | `Token written to /var/run/microvm` in agent logs |
 | SIDECAR-04 | ✅ PASS | `auth-token` (745 bytes), `endpoint`, `expires-at`, `.ready` |
 | SIDECAR-05 | ✅ PASS | `{"status":"ok","path":"/","ts":"2026-07-02T04:21:05.240Z"}` |

@@ -155,7 +155,7 @@ spec:
       mountPath: /var/run/microvm
       readOnly: true
   - name: microvm-auth-agent     # injected sidecar
-    image: ghcr.io/plasticity-of-cloud/microvm-auth-agent:latest
+    image: ghcr.io/codriverlabs/microvm-auth-agent:latest
     env:
     - name: MICROVM_NAME
       value: my-vm

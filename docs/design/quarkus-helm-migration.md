@@ -34,7 +34,7 @@ src/main/resources/application.properties
   quarkus.helm.name=kube-microvm-operator
   quarkus.helm.create-tar-file=true
   quarkus.container-image.registry=ghcr.io
-  quarkus.container-image.group=plasticity-of-cloud
+  quarkus.container-image.group=codriverlabs
   quarkus.container-image.name=kube-microvm-operator
   quarkus.container-image.tag=latest   ← overridden at build: -Dquarkus.container-image.tag=0.0.1
   quarkus.kubernetes.service-type=ClusterIP
@@ -111,7 +111,7 @@ quarkus.helm.version=0.0.1-SNAPSHOT
 
 # ─── Container image ──────────────────────────────────────────────────────
 quarkus.container-image.registry=ghcr.io
-quarkus.container-image.group=plasticity-of-cloud
+quarkus.container-image.group=codriverlabs
 quarkus.container-image.name=kube-microvm-operator
 quarkus.container-image.tag=latest
 
@@ -288,7 +288,7 @@ serviceAccount:
 # Token injection sidecar
 authAgent:
   image:
-    repository: ghcr.io/plasticity-of-cloud/microvm-auth-agent
+    repository: ghcr.io/codriverlabs/microvm-auth-agent
     tag: latest
 
 tokenEndpoint:
@@ -353,7 +353,7 @@ Quarkus Helm puts everything under `app:`:
 
 ```yaml
 app:
-  image: ghcr.io/plasticity-of-cloud/kube-microvm-operator:0.0.1-rc1
+  image: ghcr.io/codriverlabs/kube-microvm-operator:0.0.1-rc1
   envs:
     microvm.aws.region: us-east-1
   ports:
@@ -421,7 +421,7 @@ for arg in "$@"; do
       echo "  --push                Push container images after build"
       echo "  --helm                Generate Helm chart tarball"
       echo "  --only <list>         Comma-separated: operator, webhook, cli, agent, tests"
-      echo "  --registry <url>      Container registry (default: ghcr.io/plasticity-of-cloud)"
+      echo "  --registry <url>      Container registry (default: ghcr.io/codriverlabs)"
       echo "  --help                Show this help"
       echo ""
       echo "Examples:"
@@ -512,7 +512,7 @@ fi
 if should_build "agent"; then
   echo "--- [3] operator-auth-agent"
   if $NATIVE; then
-    AGENT_REGISTRY="${REGISTRY:-ghcr.io/plasticity-of-cloud}"
+    AGENT_REGISTRY="${REGISTRY:-ghcr.io/codriverlabs}"
     ./mvnw -B -pl operator-auth-agent package $SKIP_FLAG -Dnative \
       -Dquarkus.native.container-build=false \
       -Dquarkus.container-image.build=true \
@@ -629,7 +629,7 @@ fi
 
 # Resolve chart source
 if $FROM_REGISTRY; then
-  CHART="oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator"
+  CHART="oci://ghcr.io/codriverlabs/helm/kube-microvm-operator"
   echo "==> Deploying from GHCR OCI registry"
 else
   CHART=$(ls operator-controller/target/helm/kubernetes/kube-microvm-operator-*.tar.gz 2>/dev/null | head -1)

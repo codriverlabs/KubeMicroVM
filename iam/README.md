@@ -54,7 +54,7 @@ ROLE_ARN=$(aws cloudformation describe-stacks \
   --query 'Stacks[0].Outputs[?OutputKey==`RoleArn`].OutputValue' \
   --output text)
 
-helm install kube-microvm-operator oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator \
+helm install kube-microvm-operator oci://ghcr.io/codriverlabs/helm/kube-microvm-operator \
   --set serviceAccount.irsaRoleArn=$ROLE_ARN
 ```
 

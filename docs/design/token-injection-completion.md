@@ -163,7 +163,7 @@ FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4
 COPY --from=builder /code/operator-auth-agent/target/*-runner /usr/local/bin/microvm-auth-agent
 RUN chmod 775 /usr/local/bin/microvm-auth-agent && chown 1001:root /usr/local/bin/microvm-auth-agent
 USER 1001
-LABEL org.opencontainers.image.source="https://github.com/plasticity-of-cloud/KubeMicroVM"
+LABEL org.opencontainers.image.source="https://github.com/codriverlabs/KubeMicroVM"
 ENTRYPOINT ["microvm-auth-agent"]
 ```
 

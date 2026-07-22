@@ -25,9 +25,9 @@ Get a MicroVM running in about 5 minutes.
 
 ```bash
 # Download and verify installer
-curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh \
+curl -fsSL https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/install_kube_microvm.sh \
   -o install_kube_microvm.sh
-curl -fsSL https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256 \
+curl -fsSL https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256 \
   -o install_kube_microvm.sh.sha256
 sha256sum -c install_kube_microvm.sh.sha256
 chmod +x install_kube_microvm.sh
@@ -44,11 +44,11 @@ This creates the IAM role, deploys the Helm chart, and installs the `microvm` CL
 Or manually with Helm:
 
 ```bash
-# Pin to a specific version (recommended — find latest at github.com/plasticity-of-cloud/KubeMicroVM/releases)
+# Pin to a specific version (recommended — find latest at github.com/codriverlabs/KubeMicroVM/releases)
 CHART_VERSION=1.0.8   # replace with the version you want
 
 helm install kube-microvm-operator \
-  oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator \
+  oci://ghcr.io/codriverlabs/helm/kube-microvm-operator \
   --version $CHART_VERSION \
   --namespace kube-microvm --create-namespace \
   --set app.envs.AWS_REGION=us-east-1

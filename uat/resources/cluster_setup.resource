@@ -19,7 +19,7 @@ Verify Cluster Ready
 Verify Operator Running
     ${result}=    Run Process    kubectl    get    deploy    kube-microvm-operator    -n    ${OPERATOR_NS}    -o    jsonpath\={.status.readyReplicas}
     Should Be Equal As Integers    ${result.rc}    0    kubectl failed: ${result.stderr}
-    Should Be Equal    ${result.stdout}    1    Operator not running — install with: helm install kube-microvm-operator oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator --version ${CHART_VERSION} --namespace ${OPERATOR_NS} --create-namespace --set app.envs.AWS_REGION=${REGION}
+    Should Be Equal    ${result.stdout}    1    Operator not running — install with: helm install kube-microvm-operator oci://ghcr.io/codriverlabs/helm/kube-microvm-operator --version ${CHART_VERSION} --namespace ${OPERATOR_NS} --create-namespace --set app.envs.AWS_REGION=${REGION}
 
 Verify CRDs Installed
     ${result}=    Run Process    kubectl    get    crd    microvms.lambda.aws.amazon.com
@@ -66,7 +66,7 @@ Setup Cluster If Needed
 
 Install Operator
     ${result}=    Run Process    helm    install    kube-microvm-operator
-    ...    oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator
+    ...    oci://ghcr.io/codriverlabs/helm/kube-microvm-operator
     ...    --version    ${CHART_VERSION}
     ...    --namespace    ${OPERATOR_NS}
     ...    --create-namespace

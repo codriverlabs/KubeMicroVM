@@ -167,9 +167,9 @@ Included as part of each GitHub Release and the official installer Docker image.
 
 ### Installer Docker Image
 
-Published to GHCR as `ghcr.io/plasticity-of-cloud/kube-microvm-installer:<version>`:
+Published to GHCR as `ghcr.io/codriverlabs/kube-microvm-installer:<version>`:
 - Contains: `kubectl`, `helm`, `aws` CLI, `install_kube_microvm.sh`, all Helm charts, CLI binaries (arm64 + amd64)
-- Customer runs: `docker run --rm -it -v ~/.kube:/root/.kube ghcr.io/plasticity-of-cloud/kube-microvm-installer:1.0.0`
+- Customer runs: `docker run --rm -it -v ~/.kube:/root/.kube ghcr.io/codriverlabs/kube-microvm-installer:1.0.0`
 
 ### Script Steps (`install_kube_microvm.sh`)
 

@@ -41,7 +41,7 @@ public class PodMutatingWebhook {
     public static final String DEFAULT_MOUNT_PATH = "/var/run/microvm";
 
     @ConfigProperty(name = "microvm.webhook.agent-image",
-            defaultValue = "ghcr.io/plasticity-of-cloud/microvm-auth-agent:latest")
+            defaultValue = "ghcr.io/codriverlabs/microvm-auth-agent:latest")
     public String agentImage;
 
     @Inject

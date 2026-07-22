@@ -2,8 +2,8 @@
 
 ## Community
 
-- **GitHub Issues**: [Report bugs and request features](https://github.com/plasticity-of-cloud/KubeMicroVM/issues)
-- **Discussions**: [Ask questions and share ideas](https://github.com/plasticity-of-cloud/KubeMicroVM/discussions)
+- **GitHub Issues**: [Report bugs and request features](https://github.com/codriverlabs/KubeMicroVM/issues)
+- **Discussions**: [Ask questions and share ideas](https://github.com/codriverlabs/KubeMicroVM/discussions)
 - **Email**: ecosystem@plasticity.cloud
 
 ## Feedback

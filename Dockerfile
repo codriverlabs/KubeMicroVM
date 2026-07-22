@@ -29,7 +29,7 @@ EXPOSE 8080 8443
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/q/health/live || exit 1
 
-LABEL org.opencontainers.image.source="https://github.com/plasticity-of-cloud/KubeMicroVM" \
+LABEL org.opencontainers.image.source="https://github.com/codriverlabs/KubeMicroVM" \
       org.opencontainers.image.description="KubeMicroVM Operator - Kubernetes operator for AWS Lambda MicroVMs"
 
 ENTRYPOINT ["./application"]

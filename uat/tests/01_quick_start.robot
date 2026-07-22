@@ -17,11 +17,11 @@ QS-00 Installer Download And Checksum Verification
     [Documentation]    Validates Step 1: download installer from release, verify SHA256, confirm executable
     [Tags]    smoke
     ${dl}=    Run Process    curl    -fsSL
-    ...    https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh
+    ...    https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/install_kube_microvm.sh
     ...    -o    /tmp/uat-check-installer.sh
     Should Be Equal As Integers    ${dl.rc}    0    Failed to download installer script
     ${sha}=    Run Process    curl    -fsSL
-    ...    https://github.com/plasticity-of-cloud/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256
+    ...    https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/install_kube_microvm.sh.sha256
     ...    -o    /tmp/uat-check-installer-raw.sha256
     Should Be Equal As Integers    ${sha.rc}    0    Failed to download checksum file
     # Verify checksum: sha256 file may contain a path prefix (e.g. 'repo/install_kube_microvm.sh')

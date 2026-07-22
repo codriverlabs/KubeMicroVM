@@ -25,7 +25,7 @@ class PodMutatingWebhookIT {
     @BeforeEach
     void setUp() {
         webhook = new PodMutatingWebhook();
-        webhook.agentImage = "ghcr.io/plasticity-of-cloud/microvm-auth-agent:latest";
+        webhook.agentImage = "ghcr.io/codriverlabs/microvm-auth-agent:latest";
         webhook.mapper = mapper;
     }
 
