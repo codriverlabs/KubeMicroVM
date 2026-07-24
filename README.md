@@ -8,6 +8,8 @@ Built with **Quarkus 3**, **JOSDK**, **GraalVM native image** (Java 25).
 
 [![Release](https://img.shields.io/github/v/release/codriverlabs/KubeMicroVM)](https://github.com/codriverlabs/KubeMicroVM/releases)
 
+📢 [GA Announcement](https://www.linkedin.com/feed/update/urn:li:activity:7478884939476733952/) — 158+ reactions, discussed by AWS engineers and cloud-native leaders
+
 ---
 
 ## What is KubeMicroVM?
