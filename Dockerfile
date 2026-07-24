@@ -11,7 +11,7 @@ RUN ./mvnw package -pl operator-controller -am -Dnative \
     -Dquarkus.native.container-build=false
 
 # Stage 2: Runtime
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8
 
 ARG APP_DIR=/deployments
 
