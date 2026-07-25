@@ -92,10 +92,10 @@ image_flags() {
 
 echo "==> KubeMicroVM build  native=${NATIVE}  skipTests=${SKIP_TESTS}  only=${ONLY:-all}  push=${PUSH}  helm=${HELM}  tag=${IMAGE_TAG}"
 
-# 0. Parent POM + core + SDK clients (always required)
-echo "--- [0] parent + operator-core + SDK clients"
+# 0. Parent POM + core (always required)
+echo "--- [0] parent + operator-core"
 ./mvnw -B -N install $SKIP_FLAG
-./mvnw -B -pl operator-core,operator-aws-client,operator-aws-client-core install $SKIP_FLAG
+./mvnw -B -pl operator-core install $SKIP_FLAG
 
 # 1. Operator controller
 if should_build "operator"; then
