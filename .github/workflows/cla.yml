@@ -15,8 +15,9 @@ jobs:
   cla:
     runs-on: ubuntu-latest
     if: |
-      (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') ||
-      github.event_name == 'pull_request_target'
+      github.event.pull_request.author_association != 'OWNER' &&
+      ((github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') ||
+      github.event_name == 'pull_request_target')
     steps:
       - name: CLA Assistant
         uses: contributor-assistant/github-action@v2.6.1
@@ -31,7 +32,7 @@ jobs:
           path-to-signatures: 'signatures/cla.json'
           path-to-document: 'https://github.com/codriverlabs/KubeMicroVM/blob/main/CLA.md'
           branch: 'main'
-          allowlist: 'bot*,dependabot*,renovate*'
+          allowlist: 'dependabot[bot]'
           custom-notsigned-prcomment: |
             Thank you for your Pull Request! 🎉
 
