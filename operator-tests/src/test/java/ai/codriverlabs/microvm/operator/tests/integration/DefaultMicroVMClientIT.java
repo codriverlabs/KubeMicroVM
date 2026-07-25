@@ -1,7 +1,7 @@
 package ai.codriverlabs.microvm.operator.tests.integration;
 
-import ai.codriverlabs.microvm.aws.lambdamicrovms.LambdaMicrovmsAsyncClient;
-import ai.codriverlabs.microvm.aws.lambdamicrovms.model.*;
+import software.amazon.awssdk.services.lambdamicrovms.LambdaMicrovmsAsyncClient;
+import software.amazon.awssdk.services.lambdamicrovms.model.*;
 import ai.codriverlabs.microvm.operator.controller.aws.DefaultMicroVMClient;
 import ai.codriverlabs.microvm.operator.controller.aws.RunMicroVMRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -124,9 +124,9 @@ class DefaultMicroVMClientIT {
     @DisplayName("createShellAuthToken: calls AWS SDK and returns token map")
     void createShellAuthToken_returnsTokenMap() throws Exception {
         when(mockSdk.createMicrovmShellAuthToken(
-                (ai.codriverlabs.microvm.aws.lambdamicrovms.model.CreateMicrovmShellAuthTokenRequest) any()))
+                (software.amazon.awssdk.services.lambdamicrovms.model.CreateMicrovmShellAuthTokenRequest) any()))
             .thenReturn(CompletableFuture.completedFuture(
-                ai.codriverlabs.microvm.aws.lambdamicrovms.model.CreateMicrovmShellAuthTokenResponse.builder()
+                software.amazon.awssdk.services.lambdamicrovms.model.CreateMicrovmShellAuthTokenResponse.builder()
                     .authToken(java.util.Map.of("X-aws-proxy-auth", "shell-token-abc"))
                     .build()));
 

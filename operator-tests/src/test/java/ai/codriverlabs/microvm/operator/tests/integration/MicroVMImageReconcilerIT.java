@@ -1,6 +1,6 @@
 package ai.codriverlabs.microvm.operator.tests.integration;
 
-import ai.codriverlabs.microvm.aws.lambdamicrovms.model.*;
+import software.amazon.awssdk.services.lambdamicrovms.model.*;
 import ai.codriverlabs.microvm.operator.controller.aws.MicroVMImageClient;
 import ai.codriverlabs.microvm.operator.controller.reconciler.MicroVMImageReconciler;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMImage;
@@ -57,7 +57,7 @@ class MicroVMImageReconcilerIT {
         // Adopt-if-exists: getImage returns ResourceNotFoundException → fall through to create
         when(mockImageClient.getImage(anyString()))
                 .thenReturn(CompletableFuture.failedFuture(
-                        ai.codriverlabs.microvm.aws.lambdamicrovms.model.ResourceNotFoundException
+                        software.amazon.awssdk.services.lambdamicrovms.model.ResourceNotFoundException
                                 .builder().message("Image not found").build()));
         when(mockImageClient.createImage(eq("hello-node"), anyString(), anyString(), anyString(), any()))
                 .thenReturn(CompletableFuture.completedFuture(createResp));

@@ -1,7 +1,7 @@
 package ai.codriverlabs.microvm.operator.cli.commands;
 
-import ai.codriverlabs.microvm.aws.lambdamicrovms.LambdaMicrovmsClient;
-import ai.codriverlabs.microvm.aws.lambdamicrovms.model.*;
+import software.amazon.awssdk.services.lambdamicrovms.LambdaMicrovmsClient;
+import software.amazon.awssdk.services.lambdamicrovms.model.*;
 import ai.codriverlabs.microvm.operator.core.model.MicroVM;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,6 +1,6 @@
 package ai.codriverlabs.microvm.operator.tests.integration;
 
-import ai.codriverlabs.microvm.aws.lambdacore.model.*;
+import software.amazon.awssdk.services.lambdacore.model.*;
 import ai.codriverlabs.microvm.operator.controller.aws.MicroVMNetworkClient;
 import ai.codriverlabs.microvm.operator.controller.reconciler.MicroVMNetworkReconciler;
 import ai.codriverlabs.microvm.operator.core.model.*;
@@ -48,7 +48,7 @@ class MicroVMNetworkReconcilerIT {
         when(mockNetworkClient.getConnector("default-my-vpc-egress"))
                 .thenReturn(java.util.concurrent.CompletableFuture.failedFuture(
                         new RuntimeException(
-                            ai.codriverlabs.microvm.aws.lambdacore.model.ResourceNotFoundException.builder()
+                            software.amazon.awssdk.services.lambdacore.model.ResourceNotFoundException.builder()
                                 .message("not found").build())));
 
         when(mockNetworkClient.createConnector(anyString(), any()))
@@ -225,7 +225,7 @@ class MicroVMNetworkReconcilerIT {
 
         // Reconciler looks up by name "default-my-vpc-egress" (namespace-CR-name)
         String expectedArn = "arn:aws:lambda:us-east-1:123456789012:network-connector:default-my-vpc-egress";
-        var existingResp = mock(ai.codriverlabs.microvm.aws.lambdacore.model.GetNetworkConnectorResponse.class);
+        var existingResp = mock(software.amazon.awssdk.services.lambdacore.model.GetNetworkConnectorResponse.class);
         when(existingResp.arn()).thenReturn(expectedArn);
         when(existingResp.id()).thenReturn("conn-id-001");
         when(existingResp.stateAsString()).thenReturn("ACTIVE");
@@ -249,10 +249,10 @@ class MicroVMNetworkReconcilerIT {
         when(mockNetworkClient.getConnector("default-new-connector"))
                 .thenReturn(java.util.concurrent.CompletableFuture.failedFuture(
                         new RuntimeException(
-                            ai.codriverlabs.microvm.aws.lambdacore.model.ResourceNotFoundException.builder()
+                            software.amazon.awssdk.services.lambdacore.model.ResourceNotFoundException.builder()
                                 .message("not found").build())));
 
-        var createResp = mock(ai.codriverlabs.microvm.aws.lambdacore.model.CreateNetworkConnectorResponse.class);
+        var createResp = mock(software.amazon.awssdk.services.lambdacore.model.CreateNetworkConnectorResponse.class);
         when(createResp.arn()).thenReturn("arn:aws:lambda:us-east-1:123456789012:network-connector:default-new-connector");
         when(createResp.id()).thenReturn("conn-id-new");
         when(mockNetworkClient.createConnector(any(), any()))
@@ -275,10 +275,10 @@ class MicroVMNetworkReconcilerIT {
         when(mockNetworkClient.getConnector("cli-created-connector"))
                 .thenReturn(java.util.concurrent.CompletableFuture.failedFuture(
                         new RuntimeException(
-                            ai.codriverlabs.microvm.aws.lambdacore.model.ResourceNotFoundException.builder()
+                            software.amazon.awssdk.services.lambdacore.model.ResourceNotFoundException.builder()
                                 .message("not found").build())));
 
-        var createResp = mock(ai.codriverlabs.microvm.aws.lambdacore.model.CreateNetworkConnectorResponse.class);
+        var createResp = mock(software.amazon.awssdk.services.lambdacore.model.CreateNetworkConnectorResponse.class);
         when(createResp.arn()).thenReturn("arn:aws:lambda:us-east-1:123456789012:network-connector:cli-created-connector");
         when(createResp.id()).thenReturn("conn-id-cli");
         when(mockNetworkClient.createConnector(any(), any()))
@@ -300,7 +300,7 @@ class MicroVMNetworkReconcilerIT {
         client.resource(network).create();
 
         String cliArn = "arn:aws:lambda:us-east-1:123456789012:network-connector:cli-created-connector";
-        var existingResp = mock(ai.codriverlabs.microvm.aws.lambdacore.model.GetNetworkConnectorResponse.class);
+        var existingResp = mock(software.amazon.awssdk.services.lambdacore.model.GetNetworkConnectorResponse.class);
         when(existingResp.arn()).thenReturn(cliArn);
         when(existingResp.id()).thenReturn("conn-id-cli");
         when(existingResp.stateAsString()).thenReturn("ACTIVE");
