@@ -29,6 +29,7 @@
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.version>3.37.4</quarkus.platform.version>
         <aws.sdk.version>2.49.3</aws.sdk.version>
+        <jackson.version>2.22.1</jackson.version>
         <fabric8.version>7.8.0</fabric8.version>
         <josdk.version>5.5.0</josdk.version>
         <josdk-webhooks.version>3.0.4</josdk-webhooks.version>
@@ -41,6 +42,16 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Jackson override — CVE fixes in 2.22.1 (GHSA jackson-core async parser,
+                 jackson-databind @JsonView and @JsonIgnoreProperties bypasses).
+                 Must appear before Quarkus BOM so our version wins. -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <!-- AWS SDK BOM first — must win over Quarkus-managed SDK core versions
                  so that lambdamicrovms/lambdacore 2.49.x gets matching core classes -->
             <dependency>
