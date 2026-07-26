@@ -1,3 +1,17 @@
+# CLA Assistant — DISABLED
+#
+# contributor-assistant/github-action@v2.6.1 was archived on 2026-03-23 and has
+# an unfixed runtime bug ("Cannot read properties of undefined (reading 'some')")
+# that crashes regardless of Node version.
+#
+# TODO: Replace with SAP's hosted CLA Assistant (cla-assistant.io) or a custom
+#       lightweight solution before accepting external contributions.
+#
+# Previously configured to:
+# - Skip CLA for org owners (author_association == OWNER)
+# - Allow only dependabot[bot] to bypass
+# - Store signatures in signatures/cla.json
+#
 name: CLA Assistant
 on:
   issue_comment:
@@ -14,17 +28,12 @@ permissions:
 jobs:
   cla:
     runs-on: ubuntu-latest
-    if: |
-      github.event.pull_request.author_association != 'OWNER' &&
-      ((github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') ||
-      github.event_name == 'pull_request_target')
+    # Disabled — action is archived and crashes at runtime.
+    if: false
     steps:
       - name: CLA Assistant
         uses: contributor-assistant/github-action@v2.6.1
         env:
-          # Pin to Node 20 — contributor-assistant/github-action is unmaintained
-          # and crashes on Node 24 (punycode deprecation + undefined 'some' error).
-          # TODO: Replace with a maintained CLA action when available.
           ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PERSONAL_ACCESS_TOKEN: ${{ secrets.CLA_ASSISTANT_PAT }}
