@@ -1,7 +1,7 @@
 package ai.codriverlabs.microvm.operator.controller.aws;
 
-import ai.codriverlabs.microvm.aws.lambdamicrovms.LambdaMicrovmsAsyncClient;
-import ai.codriverlabs.microvm.aws.lambdamicrovms.model.*;
+import software.amazon.awssdk.services.lambdamicrovms.LambdaMicrovmsAsyncClient;
+import software.amazon.awssdk.services.lambdamicrovms.model.*;
 import java.net.URI;
 import java.util.Optional;
 import jakarta.annotation.PreDestroy;
@@ -114,7 +114,7 @@ public class DefaultMicroVMClient implements MicroVMClient {
     }
 
     @Override
-    public CompletableFuture<java.util.List<ai.codriverlabs.microvm.aws.lambdamicrovms.model.MicrovmItem>> listMicroVMs(
+    public CompletableFuture<java.util.List<software.amazon.awssdk.services.lambdamicrovms.model.MicrovmItem>> listMicroVMs(
             String imageIdentifier) {
         var builder = ListMicrovmsRequest.builder();
         if (imageIdentifier != null) builder.imageIdentifier(imageIdentifier);

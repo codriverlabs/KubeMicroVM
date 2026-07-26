@@ -1,7 +1,7 @@
 package ai.codriverlabs.microvm.operator.controller.aws;
 
-import ai.codriverlabs.microvm.aws.lambdamicrovms.LambdaMicrovmsAsyncClient;
-import ai.codriverlabs.microvm.aws.lambdamicrovms.model.*;
+import software.amazon.awssdk.services.lambdamicrovms.LambdaMicrovmsAsyncClient;
+import software.amazon.awssdk.services.lambdamicrovms.model.*;
 import java.util.List;
 import java.util.Optional;
 import java.net.URI;
@@ -151,7 +151,7 @@ public class MicroVMImageClient {
     /**
      * Lists the most recent build summaries for the image (all versions).
      */
-    public CompletableFuture<List<ai.codriverlabs.microvm.aws.lambdamicrovms.model.MicrovmImageBuildSummary>> listBuilds(
+    public CompletableFuture<List<software.amazon.awssdk.services.lambdamicrovms.model.MicrovmImageBuildSummary>> listBuilds(
             String imageIdentifier) {
         return sdk.listMicrovmImageBuilds(ListMicrovmImageBuildsRequest.builder()
                 .imageIdentifier(imageIdentifier)

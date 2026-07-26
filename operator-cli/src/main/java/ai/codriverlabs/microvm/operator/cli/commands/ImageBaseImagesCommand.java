@@ -1,7 +1,7 @@
 package ai.codriverlabs.microvm.operator.cli.commands;
 
-import ai.codriverlabs.microvm.aws.lambdamicrovms.LambdaMicrovmsClient;
-import ai.codriverlabs.microvm.aws.lambdamicrovms.model.*;
+import software.amazon.awssdk.services.lambdamicrovms.LambdaMicrovmsClient;
+import software.amazon.awssdk.services.lambdamicrovms.model.*;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;

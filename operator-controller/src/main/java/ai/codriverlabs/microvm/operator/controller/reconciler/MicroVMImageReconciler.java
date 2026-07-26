@@ -1,8 +1,8 @@
 package ai.codriverlabs.microvm.operator.controller.reconciler;
 
-import ai.codriverlabs.microvm.aws.lambdamicrovms.model.GetMicrovmImageResponse;
-import ai.codriverlabs.microvm.aws.lambdamicrovms.model.MicrovmImageState;
-import ai.codriverlabs.microvm.aws.lambdamicrovms.model.MicrovmImageVersionState;
+import software.amazon.awssdk.services.lambdamicrovms.model.GetMicrovmImageResponse;
+import software.amazon.awssdk.services.lambdamicrovms.model.MicrovmImageState;
+import software.amazon.awssdk.services.lambdamicrovms.model.MicrovmImageVersionState;
 import ai.codriverlabs.microvm.operator.controller.aws.AwsApiException;
 import ai.codriverlabs.microvm.operator.controller.aws.MicroVMImageClient;
 import ai.codriverlabs.microvm.operator.controller.health.AwsIdentity;

@@ -1,7 +1,7 @@
 package ai.codriverlabs.microvm.operator.controller.aws;
 
-import ai.codriverlabs.microvm.aws.lambdacore.LambdaCoreAsyncClient;
-import ai.codriverlabs.microvm.aws.lambdacore.model.*;
+import software.amazon.awssdk.services.lambdacore.LambdaCoreAsyncClient;
+import software.amazon.awssdk.services.lambdacore.model.*;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMNetworkSpec;
 import java.net.URI;
 import java.util.Optional;

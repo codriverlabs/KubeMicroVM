@@ -1,14 +1,14 @@
 package ai.codriverlabs.microvm.operator.controller.reconciler;
 
-import ai.codriverlabs.microvm.aws.lambdacore.model.GetNetworkConnectorResponse;
-import ai.codriverlabs.microvm.aws.lambdacore.model.NetworkConnectorState;
+import software.amazon.awssdk.services.lambdacore.model.GetNetworkConnectorResponse;
+import software.amazon.awssdk.services.lambdacore.model.NetworkConnectorState;
 import ai.codriverlabs.microvm.operator.controller.aws.MicroVMNetworkClient;
 import ai.codriverlabs.microvm.operator.core.model.*;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.*;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
-import ai.codriverlabs.microvm.aws.lambdacore.model.ResourceNotFoundException;
+import software.amazon.awssdk.services.lambdacore.model.ResourceNotFoundException;
 
 import java.time.Duration;
 import java.util.List;

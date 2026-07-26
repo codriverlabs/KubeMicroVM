@@ -1,6 +1,6 @@
 package ai.codriverlabs.microvm.operator.controller.aws;
 
-import ai.codriverlabs.microvm.aws.lambdamicrovms.model.MicrovmItem;
+import software.amazon.awssdk.services.lambdamicrovms.model.MicrovmItem;
 
 import java.util.List;
 import java.util.Map;

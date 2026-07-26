@@ -1,7 +1,7 @@
 package ai.codriverlabs.microvm.operator.cli.commands;
 
-import ai.codriverlabs.microvm.aws.lambdamicrovms.LambdaMicrovmsClient;
-import ai.codriverlabs.microvm.aws.lambdamicrovms.model.*;
+import software.amazon.awssdk.services.lambdamicrovms.LambdaMicrovmsClient;
+import software.amazon.awssdk.services.lambdamicrovms.model.*;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMImage;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import jakarta.inject.Inject;

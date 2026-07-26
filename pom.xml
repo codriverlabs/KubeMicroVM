@@ -16,8 +16,6 @@
         <module>operator-core</module>
         <module>operator-spi</module>
         <module>operator-auth-agent</module>
-        <module>operator-aws-client</module>
-        <module>operator-aws-client-core</module>
         <module>operator-controller</module>
         <module>operator-webhook</module>
         <module>operator-cli</module>
@@ -30,7 +28,7 @@
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.version>3.37.4</quarkus.platform.version>
-        <aws.sdk.version>2.44.6</aws.sdk.version>
+        <aws.sdk.version>2.49.3</aws.sdk.version>
         <fabric8.version>7.8.0</fabric8.version>
         <josdk.version>5.5.0</josdk.version>
         <josdk-webhooks.version>3.0.3</josdk-webhooks.version>
@@ -43,6 +41,15 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- AWS SDK BOM first — must win over Quarkus-managed SDK core versions
+                 so that lambdamicrovms/lambdacore 2.49.x gets matching core classes -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws.sdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <!-- BOM imports -->
             <dependency>
                 <groupId>io.quarkus.platform</groupId>
@@ -62,13 +69,6 @@
                 <groupId>io.quarkus.platform</groupId>
                 <artifactId>quarkus-operator-sdk-bom</artifactId>
                 <version>${quarkus.platform.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>software.amazon.awssdk</groupId>
-                <artifactId>bom</artifactId>
-                <version>${aws.sdk.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -105,6 +105,24 @@
                 <groupId>io.javaoperatorsdk</groupId>
                 <artifactId>kubernetes-webhooks-framework-core</artifactId>
                 <version>${josdk-webhooks.version}</version>
+            </dependency>
+            <!-- commons-compress optional deps: required on classpath for GraalVM native-image
+                 because Quarkus deployment extensions register CompressorStreamFactory for linking,
+                 which references these classes in bytecode even though they're optional at runtime. -->
+            <dependency>
+                <groupId>org.tukaani</groupId>
+                <artifactId>xz</artifactId>
+                <version>1.10</version>
+            </dependency>
+            <dependency>
+                <groupId>org.brotli</groupId>
+                <artifactId>dec</artifactId>
+                <version>0.1.2</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.luben</groupId>
+                <artifactId>zstd-jni</artifactId>
+                <version>1.5.7-3</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
