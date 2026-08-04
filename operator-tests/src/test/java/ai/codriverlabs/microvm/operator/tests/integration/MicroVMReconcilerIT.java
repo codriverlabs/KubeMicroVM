@@ -139,6 +139,103 @@ class MicroVMReconcilerIT {
     }
 
     @Test
+    @DisplayName("DELETE: cleanup removes finalizer when terminate throws ResourceNotFoundException (VM already gone)")
+    void delete_resourceNotFound_removesFinalizer() throws Exception {
+        var vm = testMicroVM("test-vm-gone", MicroVMState.RUNNING);
+        vm.getStatus().setMicroVmId("mvm-gone123");
+
+        when(mockClient.terminateMicroVM("mvm-gone123")).thenReturn(
+                CompletableFuture.failedFuture(
+                        software.amazon.awssdk.services.lambdamicrovms.model.ResourceNotFoundException
+                                .builder().message("MicroVM mvm-gone123 not found").build()));
+
+        var deleteControl = reconciler.cleanup(vm, mockContext());
+
+        assertTrue(deleteControl.isRemoveFinalizer(),
+                "Finalizer should be removed when VM is not found in AWS");
+        assertEquals(MicroVMState.TERMINATED, vm.getStatus().getState());
+    }
+
+    @Test
+    @DisplayName("DELETE: cleanup removes finalizer when terminate throws ConflictException (VM already terminated)")
+    void delete_conflictAlreadyTerminated_removesFinalizer() throws Exception {
+        var vm = testMicroVM("test-vm-conflict", MicroVMState.RUNNING);
+        vm.getStatus().setMicroVmId("mvm-conflict123");
+
+        when(mockClient.terminateMicroVM("mvm-conflict123")).thenReturn(
+                CompletableFuture.failedFuture(
+                        software.amazon.awssdk.services.lambdamicrovms.model.ConflictException
+                                .builder().message("MicroVM is in TERMINATED state").build()));
+
+        var deleteControl = reconciler.cleanup(vm, mockContext());
+
+        assertTrue(deleteControl.isRemoveFinalizer(),
+                "Finalizer should be removed when VM is already terminated (conflict)");
+        assertEquals(MicroVMState.TERMINATED, vm.getStatus().getState());
+    }
+
+    @Test
+    @DisplayName("DELETE: cleanup removes finalizer when terminate throws ResourceConflictException")
+    void delete_resourceConflict_removesFinalizer() throws Exception {
+        var vm = testMicroVM("test-vm-resconflict", MicroVMState.RUNNING);
+        vm.getStatus().setMicroVmId("mvm-resconflict123");
+
+        when(mockClient.terminateMicroVM("mvm-resconflict123")).thenReturn(
+                CompletableFuture.failedFuture(
+                        software.amazon.awssdk.services.lambdamicrovms.model.ResourceConflictException
+                                .builder().message("Resource in conflicting state").build()));
+
+        var deleteControl = reconciler.cleanup(vm, mockContext());
+
+        assertTrue(deleteControl.isRemoveFinalizer(),
+                "Finalizer should be removed when VM has resource conflict (already terminated)");
+        assertEquals(MicroVMState.TERMINATED, vm.getStatus().getState());
+    }
+
+    @Test
+    @DisplayName("DELETE: cleanup retries on transient error (throttling)")
+    void delete_transientError_retries() throws Exception {
+        var vm = testMicroVM("test-vm-throttle", MicroVMState.RUNNING);
+        vm.getStatus().setMicroVmId("mvm-throttle123");
+
+        when(mockClient.terminateMicroVM("mvm-throttle123")).thenReturn(
+                CompletableFuture.failedFuture(
+                        software.amazon.awssdk.services.lambdamicrovms.model.TooManyRequestsException
+                                .builder().message("Rate exceeded").build()));
+
+        var deleteControl = reconciler.cleanup(vm, mockContext());
+
+        assertFalse(deleteControl.isRemoveFinalizer(),
+                "Finalizer should NOT be removed on transient errors — must retry");
+    }
+
+    @Test
+    @DisplayName("DELETE: cleanup removes finalizer when CR already in TERMINATED state")
+    void delete_alreadyTerminatedState_removesFinalizer() {
+        var vm = testMicroVM("test-vm-terminated", MicroVMState.TERMINATED);
+        vm.getStatus().setMicroVmId("mvm-terminated123");
+
+        var deleteControl = reconciler.cleanup(vm, mockContext());
+
+        assertTrue(deleteControl.isRemoveFinalizer(),
+                "Finalizer should be removed immediately when CR state is already TERMINATED");
+        verify(mockClient, never()).terminateMicroVM(any());
+    }
+
+    @Test
+    @DisplayName("DELETE: cleanup removes finalizer when status has no vmId (never provisioned)")
+    void delete_noVmId_removesFinalizer() {
+        var vm = testMicroVM("test-vm-noid", MicroVMState.PENDING);
+        // vmId is null — MicroVM was never successfully created in AWS
+
+        var deleteControl = reconciler.cleanup(vm, mockContext());
+
+        assertTrue(deleteControl.isRemoveFinalizer(),
+                "Finalizer should be removed when VM was never provisioned (no vmId)");
+        verify(mockClient, never()).terminateMicroVM(any());
+    }
+
+    @Test
     @DisplayName("PENDING with networkRef: resolves MicroVMNetwork CR to connector ARN")
     void pending_withNetworkRef_resolvesConnectorArn() throws Exception {
         // Create MicroVMNetwork with ACTIVE state

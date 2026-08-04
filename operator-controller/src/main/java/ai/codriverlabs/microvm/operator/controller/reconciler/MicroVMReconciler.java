@@ -162,41 +162,56 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
             status.setState(MicroVMState.TERMINATING);
             status.setLastTransitionTime(Instant.now());
             emitEvent(resource, "Terminating", "MicroVM deletion initiated");
+        }
 
-            // Call AWS destroy
+        // Attempt termination (covers both fresh transition and already-Terminating)
+        if (status.getState() == MicroVMState.TERMINATING || currentState == MicroVMState.TERMINATING) {
             try {
                 String vmId = status.getMicroVmId();
                 if (vmId != null) {
                     quotaGuard.terminateMicrovm(() -> microVMClient.terminateMicroVM(vmId))
                         .get(AWS_TIMEOUT_SECONDS, TimeUnit.SECONDS);
                 }
-                status.setState(MicroVMState.TERMINATED);
-                status.setLastTransitionTime(Instant.now());
-                metrics.recordStateTransition(MicroVMState.TERMINATING, MicroVMState.TERMINATED);
-                emitEvent(resource, "Terminated", "MicroVM successfully destroyed");
-                return DeleteControl.defaultDelete();
+                return terminationComplete(resource, status, namespace, name);
             } catch (Exception e) {
+                if (isAlreadyTerminatedOrGone(e)) {
+                    LOG.infof("MicroVM %s/%s already terminated or not found in AWS, removing finalizer",
+                            namespace, name);
+                    return terminationComplete(resource, status, namespace, name);
+                }
                 LOG.warnf(e, "Error destroying MicroVM %s/%s, retrying", namespace, name);
                 return DeleteControl.noFinalizerRemoval().rescheduleAfter(Duration.ofSeconds(10));
             }
         }
 
-        // If transition to Terminating is not valid (e.g., already Terminating)
-        if (currentState == MicroVMState.TERMINATING) {
-            try {
-                String vmId = status.getMicroVmId();
-                if (vmId != null) {
-                    quotaGuard.terminateMicrovm(() -> microVMClient.terminateMicroVM(vmId))
-                        .get(AWS_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-                }
-                status.setState(MicroVMState.TERMINATED);
-                return DeleteControl.defaultDelete();
-            } catch (Exception e) {
-                return DeleteControl.noFinalizerRemoval().rescheduleAfter(Duration.ofSeconds(10));
-            }
-        }
-
         return DeleteControl.defaultDelete();
+    }
+
+    private DeleteControl terminationComplete(MicroVM resource, MicroVMStatus status,
+                                              String namespace, String name) {
+        status.setState(MicroVMState.TERMINATED);
+        status.setLastTransitionTime(Instant.now());
+        metrics.recordStateTransition(MicroVMState.TERMINATING, MicroVMState.TERMINATED);
+        emitEvent(resource, "Terminated", "MicroVM successfully destroyed");
+        return DeleteControl.defaultDelete();
+    }
+
+    /**
+     * Checks whether a terminate exception indicates the MicroVM is already terminated
+     * or no longer exists — both are the desired end state for cleanup.
+     */
+    public static boolean isAlreadyTerminatedOrGone(Throwable t) {
+        Throwable cause = t;
+        // Unwrap ExecutionException / CompletionException from CompletableFuture.get()
+        while (cause.getCause() != null && (cause instanceof java.util.concurrent.ExecutionException
+                || cause instanceof java.util.concurrent.CompletionException)) {
+            cause = cause.getCause();
+        }
+        String className = cause.getClass().getSimpleName();
+        return className.contains("ResourceNotFoundException")
+                || className.contains("ConflictException")
+                || className.contains("ResourceConflictException")
+                || (cause instanceof AwsApiException ae && ae.isNotFound());
     }
 
     private void ensureStatusInitialized(MicroVM resource) {
