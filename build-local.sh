@@ -130,17 +130,21 @@ fi
 if should_build "agent"; then
   echo "--- [3] operator-auth-agent"
   if $NATIVE; then
-    AGENT_IMAGE_FLAGS="-Dquarkus.container-image.build=true -Dquarkus.container-image.push=${PUSH}"
-    AGENT_IMAGE_FLAGS+=" -Dquarkus.container-image.tag=${IMAGE_TAG}"
-    [[ -n "${REGISTRY:-}" ]] && AGENT_IMAGE_FLAGS+=" -Dquarkus.container-image.registry=${REGISTRY%%/*}"
     ./mvnw -B -pl operator-auth-agent package $SKIP_FLAG -Dnative \
-      -Dquarkus.native.container-build=false \
-      $AGENT_IMAGE_FLAGS
+      -Dquarkus.native.container-build=false
+    if $PUSH; then
+      AGENT_REPO="${REGISTRY:+${REGISTRY}/}codriverlabs/kube-microvm-auth-agent"
+      AGENT_IMAGE="${AGENT_REPO}:${IMAGE_TAG}"
+      echo "==> Building auth-agent native image: ${AGENT_IMAGE}"
+      docker build -t "${AGENT_IMAGE}" -f operator-auth-agent/Dockerfile.native operator-auth-agent/
+      docker push "${AGENT_IMAGE}"
+      echo "==> Auth-agent image pushed: ${AGENT_IMAGE}"
+    fi
   else
     ./mvnw -B -pl operator-auth-agent package $SKIP_FLAG
     if $PUSH; then
       # JVM mode: build and push via Dockerfile
-      AGENT_REPO="${REGISTRY:+${REGISTRY}/}codriverlabs/microvm-auth-agent"
+      AGENT_REPO="${REGISTRY:+${REGISTRY}/}codriverlabs/kube-microvm-auth-agent"
       AGENT_IMAGE="${AGENT_REPO}:${IMAGE_TAG}"
       echo "==> Building auth-agent image: ${AGENT_IMAGE}"
       docker build -t "${AGENT_IMAGE}" -f operator-auth-agent/Dockerfile operator-auth-agent/

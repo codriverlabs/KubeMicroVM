@@ -1,0 +1,16 @@
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4
+
+WORKDIR /deployments
+
+COPY --chown=1001:root target/*-runner /deployments/application
+
+RUN chmod 775 /deployments/application
+
+USER 1001
+
+EXPOSE 8090
+
+LABEL org.opencontainers.image.source="https://github.com/codriverlabs/KubeMicroVM" \
+      org.opencontainers.image.description="KubeMicroVM Auth Agent - sidecar for auto-refreshing MicroVM auth tokens"
+
+ENTRYPOINT ["./application"]

@@ -16,6 +16,7 @@ set -euo pipefail
 SKIP_BUILD=false
 FROM_REGISTRY=false
 DRY_RUN=false
+CLEAN=false
 REGION="${AWS_REGION:-us-east-1}"
 CLUSTER=""
 AWS_PROFILE=""
@@ -29,6 +30,7 @@ while [[ $# -gt 0 ]]; do
       echo "Usage: ./deploy-local.sh [OPTIONS]"
       echo ""
       echo "Options:"
+      echo "  --clean               Full dev cleanup: delete webhooks, patch finalizers, uninstall chart"
       echo "  --skip-build          Skip Maven build; use existing chart tarball"
       echo "  --from-registry       Deploy from GHCR OCI (ignores local build)"
       echo "  --region <region>     AWS region (default: \$AWS_REGION or us-east-1)"
@@ -40,12 +42,13 @@ while [[ $# -gt 0 ]]; do
       echo "  --help                Show this help"
       echo ""
       echo "Examples:"
-      echo "  ./deploy-local.sh --region us-east-1 --cluster my-cluster"
-      echo "  ./deploy-local.sh --skip-build --dry-run"
+      echo "  ./deploy-local.sh --clean --region us-east-1 --cluster my-cluster"
+      echo "  ./deploy-local.sh --clean --skip-build"
       echo "  ./deploy-local.sh --from-registry --region us-east-2"
       echo "  ./deploy-local.sh --set 'app.envs.microvm\\.aws\\.region=us-west-2'"
       exit 0
       ;;
+    --clean)         CLEAN=true ;;
     --skip-build)    SKIP_BUILD=true ;;
     --from-registry) FROM_REGISTRY=true; SKIP_BUILD=true ;;
     --dry-run)       DRY_RUN=true ;;
@@ -172,16 +175,33 @@ print(json.dumps(doc))
   fi
 fi
 
-# Helm upgrade --install
-echo "==> helm upgrade --install ${RELEASE} (namespace: ${NAMESPACE}, dry-run: ${DRY_RUN})"
-helm upgrade --install "$RELEASE" "$CHART" \
-  --namespace "$NAMESPACE" \
-  --create-namespace \
-  --set "app.envs.AWS_REGION=${REGION}" \
-  $EXTRA_SET_ARGS \
-  $DRY_RUN_FLAG \
-  --wait \
-  --timeout 5m
+# Clean deploy: full teardown before install (per eks-deployment.md steering)
+if $CLEAN && ! $DRY_RUN; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  "${SCRIPT_DIR}/cleanup-operator.sh" --namespace "$NAMESPACE" --release "$RELEASE"
+fi
+
+# Helm install (clean) or upgrade --install (incremental)
+if $CLEAN && ! $DRY_RUN; then
+  echo "==> helm install ${RELEASE} (namespace: ${NAMESPACE})"
+  helm install "$RELEASE" "$CHART" \
+    --namespace "$NAMESPACE" \
+    --create-namespace \
+    --set "app.envs.AWS_REGION=${REGION}" \
+    $EXTRA_SET_ARGS \
+    --wait \
+    --timeout 5m
+else
+  echo "==> helm upgrade --install ${RELEASE} (namespace: ${NAMESPACE}, dry-run: ${DRY_RUN})"
+  helm upgrade --install "$RELEASE" "$CHART" \
+    --namespace "$NAMESPACE" \
+    --create-namespace \
+    --set "app.envs.AWS_REGION=${REGION}" \
+    $EXTRA_SET_ARGS \
+    $DRY_RUN_FLAG \
+    --wait \
+    --timeout 5m
+fi
 
 if ! $DRY_RUN; then
   echo ""
