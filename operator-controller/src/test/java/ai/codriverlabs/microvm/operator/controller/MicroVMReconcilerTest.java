@@ -172,6 +172,56 @@ class MicroVMReconcilerTest {
         assertTrue(ex.isAuthFailure());
     }
 
+    @Test
+    @DisplayName("isAlreadyTerminatedOrGone: ResourceNotFoundException → true")
+    void isAlreadyTerminatedOrGone_resourceNotFound() {
+        var ex = new java.util.concurrent.ExecutionException(
+                software.amazon.awssdk.services.lambdamicrovms.model.ResourceNotFoundException
+                        .builder().message("not found").build());
+        assertTrue(MicroVMReconciler.isAlreadyTerminatedOrGone(ex));
+    }
+
+    @Test
+    @DisplayName("isAlreadyTerminatedOrGone: ConflictException → true")
+    void isAlreadyTerminatedOrGone_conflict() {
+        var ex = new java.util.concurrent.ExecutionException(
+                software.amazon.awssdk.services.lambdamicrovms.model.ConflictException
+                        .builder().message("already terminated").build());
+        assertTrue(MicroVMReconciler.isAlreadyTerminatedOrGone(ex));
+    }
+
+    @Test
+    @DisplayName("isAlreadyTerminatedOrGone: ResourceConflictException → true")
+    void isAlreadyTerminatedOrGone_resourceConflict() {
+        var ex = new java.util.concurrent.ExecutionException(
+                software.amazon.awssdk.services.lambdamicrovms.model.ResourceConflictException
+                        .builder().message("conflict").build());
+        assertTrue(MicroVMReconciler.isAlreadyTerminatedOrGone(ex));
+    }
+
+    @Test
+    @DisplayName("isAlreadyTerminatedOrGone: AwsApiException NOT_FOUND → true")
+    void isAlreadyTerminatedOrGone_awsApiNotFound() {
+        var ex = new AwsApiException("not found", AwsApiException.ErrorType.NOT_FOUND, "req-1", 404);
+        assertTrue(MicroVMReconciler.isAlreadyTerminatedOrGone(ex));
+    }
+
+    @Test
+    @DisplayName("isAlreadyTerminatedOrGone: TooManyRequestsException → false (transient)")
+    void isAlreadyTerminatedOrGone_throttling_false() {
+        var ex = new java.util.concurrent.ExecutionException(
+                software.amazon.awssdk.services.lambdamicrovms.model.TooManyRequestsException
+                        .builder().message("rate exceeded").build());
+        assertFalse(MicroVMReconciler.isAlreadyTerminatedOrGone(ex));
+    }
+
+    @Test
+    @DisplayName("isAlreadyTerminatedOrGone: generic RuntimeException → false")
+    void isAlreadyTerminatedOrGone_generic_false() {
+        var ex = new RuntimeException("network timeout");
+        assertFalse(MicroVMReconciler.isAlreadyTerminatedOrGone(ex));
+    }
+
     private MicroVM createMicroVM(String name, MicroVMState state) {
         MicroVM vm = new MicroVM();
         ObjectMeta meta = new ObjectMeta();
