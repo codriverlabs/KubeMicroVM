@@ -8,7 +8,7 @@ exactly as documented.
 UAT runs against **release candidate (rc) versions** built and published by GitHub
 Actions. The workflow is:
 
-1. Push a tag: `git tag v1.0.7-rc2 && git push origin v1.0.7-rc2`
+1. Push a tag: `git tag v1.0.12-rc1 && git push origin v1.0.12-rc1`
 2. GitHub Actions builds native binaries, container images, and Helm chart → publishes
    to `ghcr.io/codriverlabs/helm/kube-microvm-operator`
 3. Update `CHART_VERSION` in `resources/variables.robot` to match the rc tag (without `v` prefix)
