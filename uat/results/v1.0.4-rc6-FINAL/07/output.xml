@@ -1,0 +1,1960 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 7.4.2 (Python 3.12.3 on linux)" generated="2026-07-09T16:43:32.920322" rpa="false" schemaversion="5">
+<suite id="s1" name="07 Drift Autosuspend" source="/home/ubuntu/projects/pl-cloud/KubeMicroVM/uat/tests/07_drift_autosuspend.robot">
+<kw name="Run Keywords" owner="BuiltIn" type="SETUP">
+<kw name="Verify Cluster Ready" owner="cluster_setup">
+<kw name="Verify Operator Running" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:32.965808" level="INFO">Starting process:
+kubectl get deploy kube-microvm-operator -n kube-microvm -o jsonpath={.status.readyReplicas}</msg>
+<msg time="2026-07-09T16:43:32.966307" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:33.622822" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:43:33.623037" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>deploy</arg>
+<arg>kube-microvm-operator</arg>
+<arg>-n</arg>
+<arg>${OPERATOR_NS}</arg>
+<arg>-o</arg>
+<arg>jsonpath\={.status.readyReplicas}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:32.965561" elapsed="0.657499"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-09T16:43:33.624057" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>kubectl failed: ${result.stderr}</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-09T16:43:33.623240" elapsed="0.000866"/>
+</kw>
+<kw name="Should Be Equal" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>1</arg>
+<arg>Operator not running — install with: helm install kube-microvm-operator oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator --version ${CHART_VERSION} --namespace ${OPERATOR_NS} --create-namespace --set app.envs.AWS_REGION=${REGION}</arg>
+<doc>Fails if the given objects are unequal.</doc>
+<status status="PASS" start="2026-07-09T16:43:33.624187" elapsed="0.000475"/>
+</kw>
+<status status="PASS" start="2026-07-09T16:43:32.965464" elapsed="0.659256"/>
+</kw>
+<kw name="Verify CRDs Installed" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:33.625136" level="INFO">Starting process:
+kubectl get crd microvms.lambda.aws.amazon.com</msg>
+<msg time="2026-07-09T16:43:33.625551" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:34.282873" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:43:34.283072" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>crd</arg>
+<arg>microvms.lambda.aws.amazon.com</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:33.624964" elapsed="0.658128"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-09T16:43:34.283828" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>CRDs not installed — operator Helm chart should install them</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-09T16:43:34.283252" elapsed="0.000619"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:34.284136" level="INFO">Starting process:
+kubectl get crd microvmimages.lambda.aws.amazon.com</msg>
+<msg time="2026-07-09T16:43:34.284535" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:34.983101" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:43:34.983283" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>crd</arg>
+<arg>microvmimages.lambda.aws.amazon.com</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:34.283965" elapsed="0.699338"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-09T16:43:34.984075" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>MicroVMImage CRD missing</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-09T16:43:34.983467" elapsed="0.000652"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:34.984365" level="INFO">Starting process:
+kubectl get crd microvmclasses.lambda.aws.amazon.com</msg>
+<msg time="2026-07-09T16:43:34.984758" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:35.681334" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:43:35.681516" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>crd</arg>
+<arg>microvmclasses.lambda.aws.amazon.com</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:34.984195" elapsed="0.697342"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-09T16:43:35.682331" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>MicroVMClass CRD missing</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-09T16:43:35.681703" elapsed="0.000673"/>
+</kw>
+<status status="PASS" start="2026-07-09T16:43:33.624832" elapsed="2.057601"/>
+</kw>
+<kw name="Verify Namespace Labelled" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:35.682973" level="INFO">Starting process:
+kubectl get namespace default -o jsonpath={.metadata.labels.lambda\.aws\.amazon\.com/manage-microvms}</msg>
+<msg time="2026-07-09T16:43:35.683378" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:36.350782" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:43:36.350981" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>namespace</arg>
+<arg>${NAMESPACE}</arg>
+<arg>-o</arg>
+<arg>jsonpath\={.metadata.labels.lambda\\.aws\\.amazon\\.com/manage-microvms}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:35.682721" elapsed="0.668281"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${result.stdout}&quot; != &quot;true&quot;">
+<kw name="Run Process" owner="Process">
+<arg>kubectl</arg>
+<arg>label</arg>
+<arg>namespace</arg>
+<arg>${NAMESPACE}</arg>
+<arg>lambda.aws.amazon.com/manage-microvms\=true</arg>
+<arg>--overwrite</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="NOT RUN" start="2026-07-09T16:43:36.351612" elapsed="0.000018"/>
+</kw>
+<kw name="Log" owner="BuiltIn">
+<arg>Labelled namespace ${NAMESPACE} for MicroVM management</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="NOT RUN" start="2026-07-09T16:43:36.351694" elapsed="0.000010"/>
+</kw>
+<status status="NOT RUN" start="2026-07-09T16:43:36.351138" elapsed="0.000580"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:43:36.351103" elapsed="0.000635"/>
+</if>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:36.352125" level="INFO">Starting process:
+kubectl get namespace default -o jsonpath={.metadata.labels.lambda\.microvm\.auth/inject}</msg>
+<msg time="2026-07-09T16:43:36.352732" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:37.012209" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:43:37.012398" level="INFO">${inject} = &lt;result object with rc 0&gt;</msg>
+<var>${inject}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>namespace</arg>
+<arg>${NAMESPACE}</arg>
+<arg>-o</arg>
+<arg>jsonpath\={.metadata.labels.lambda\\.microvm\\.auth/inject}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:36.351787" elapsed="0.660632"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${inject.stdout}&quot; != &quot;enabled&quot;">
+<kw name="Run Process" owner="Process">
+<arg>kubectl</arg>
+<arg>label</arg>
+<arg>namespace</arg>
+<arg>${NAMESPACE}</arg>
+<arg>lambda.microvm.auth/inject\=enabled</arg>
+<arg>--overwrite</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="NOT RUN" start="2026-07-09T16:43:37.013098" elapsed="0.000017"/>
+</kw>
+<status status="NOT RUN" start="2026-07-09T16:43:37.012605" elapsed="0.000537"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:43:37.012574" elapsed="0.000589"/>
+</if>
+<status status="PASS" start="2026-07-09T16:43:35.682606" elapsed="1.330597"/>
+</kw>
+<kw name="Verify S3 Fixtures Uploaded" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:37.013733" level="INFO">Starting process:
+aws s3 ls s3://kube-microvm-test-864899852480-us-east-1/test-fixtures/microvm-hello-node.zip</msg>
+<msg time="2026-07-09T16:43:37.014221" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:37.706756" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:43:37.706938" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>aws</arg>
+<arg>s3</arg>
+<arg>ls</arg>
+<arg>s3://${S3_BUCKET}/test-fixtures/microvm-hello-node.zip</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:37.013472" elapsed="0.693500"/>
+</kw>
+<if>
+<branch type="IF" condition="${result.rc} != 0">
+<kw name="Log" owner="BuiltIn">
+<arg>Uploading test fixtures to S3...</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="NOT RUN" start="2026-07-09T16:43:37.707582" elapsed="0.000017"/>
+</kw>
+<kw name="Upload Test Fixtures" owner="cluster_setup">
+<status status="NOT RUN" start="2026-07-09T16:43:37.707721" elapsed="0.000015"/>
+</kw>
+<status status="NOT RUN" start="2026-07-09T16:43:37.707085" elapsed="0.000665"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:43:37.707057" elapsed="0.000711"/>
+</if>
+<status status="PASS" start="2026-07-09T16:43:37.013347" elapsed="0.694460"/>
+</kw>
+<doc>Validates that the cluster has operator running, CRDs installed,
+namespace labelled, and S3 test fixtures uploaded. Fails fast if not ready.</doc>
+<status status="PASS" start="2026-07-09T16:43:32.965315" elapsed="4.742517"/>
+</kw>
+<kw name="Create Drift Resources">
+<kw name="Evaluate" owner="BuiltIn">
+<msg time="2026-07-09T16:43:37.708347" level="INFO">${id} = 164337</msg>
+<var>${id}</var>
+<arg>__import__('time').strftime('%H%M%S')</arg>
+<doc>Evaluates the given expression in Python and returns the result.</doc>
+<status status="PASS" start="2026-07-09T16:43:37.708084" elapsed="0.000278"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-09T16:43:37.708630" level="INFO">${RUN_ID} = 164337</msg>
+<arg>${RUN_ID}</arg>
+<arg>${id}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-09T16:43:37.708436" elapsed="0.000215"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-09T16:43:37.708863" level="INFO">${DRIFT_VM} = drift-vm-164337</msg>
+<arg>${DRIFT_VM}</arg>
+<arg>drift-vm-${id}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-09T16:43:37.708711" elapsed="0.000171"/>
+</kw>
+<kw name="Ensure Shared Image Ready" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:37.709351" level="INFO">Starting process:
+kubectl get microvmimage uat-shared-app -n default</msg>
+<msg time="2026-07-09T16:43:37.709766" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:38.369061" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:43:38.369240" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>microvmimage</arg>
+<arg>${SHARED_IMAGE}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:37.709145" elapsed="0.660115"/>
+</kw>
+<if>
+<branch type="IF" condition="${result.rc} == 0">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:38.370245" level="INFO">Starting process:
+kubectl get microvmimage uat-shared-app -n default -o jsonpath={.status.imageState}</msg>
+<msg time="2026-07-09T16:43:38.370648" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:39.023645" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:43:39.023830" level="INFO">${state} = &lt;result object with rc 0&gt;</msg>
+<var>${state}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>microvmimage</arg>
+<arg>${SHARED_IMAGE}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<arg>-o</arg>
+<arg>jsonpath\={.status.imageState}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:38.369882" elapsed="0.653968"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state.stdout}&quot; == &quot;CREATED&quot;">
+<kw name="Log" owner="BuiltIn">
+<msg time="2026-07-09T16:43:39.024696" level="INFO">Shared image uat-shared-app already built</msg>
+<arg>Shared image ${SHARED_IMAGE} already built</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.024452" elapsed="0.000272"/>
+</kw>
+<return>
+<status status="PASS" start="2026-07-09T16:43:39.024758" elapsed="0.000043"/>
+</return>
+<status status="PASS" start="2026-07-09T16:43:39.023982" elapsed="0.000843"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:43:39.023956" elapsed="0.000884"/>
+</if>
+<kw name="Wait For Image Ready" owner="common">
+<arg>${SHARED_IMAGE}</arg>
+<status status="NOT RUN" start="2026-07-09T16:43:39.025047" elapsed="0.000017"/>
+</kw>
+<status status="PASS" start="2026-07-09T16:43:38.369372" elapsed="0.655710"/>
+</branch>
+<branch type="ELSE">
+<kw name="Log" owner="BuiltIn">
+<arg>Creating shared image ${SHARED_IMAGE}...</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="NOT RUN" start="2026-07-09T16:43:39.025156" elapsed="0.000010"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<arg>${NAME}</arg>
+<arg>${SHARED_IMAGE}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="NOT RUN" start="2026-07-09T16:43:39.025224" elapsed="0.000008"/>
+</kw>
+<kw name="Apply Template" owner="common">
+<arg>shared/microvm-image.yaml</arg>
+<doc>Reads a YAML template file, resolves Robot Framework variables, and applies via kubectl.
+Variables must be set via Set Suite Variable or Set Test Variable before calling.</doc>
+<status status="NOT RUN" start="2026-07-09T16:43:39.025304" elapsed="0.000010"/>
+</kw>
+<kw name="Wait For Image Ready" owner="common">
+<arg>${SHARED_IMAGE}</arg>
+<status status="NOT RUN" start="2026-07-09T16:43:39.025409" elapsed="0.000010"/>
+</kw>
+<status status="NOT RUN" start="2026-07-09T16:43:39.025096" elapsed="0.000335"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:43:38.369347" elapsed="0.656096"/>
+</if>
+<doc>Creates the shared MicroVMImage if it doesn't exist, waits for build.
+Called by suites that depend on Quick Start having run first.</doc>
+<status status="PASS" start="2026-07-09T16:43:37.709054" elapsed="1.316427"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-09T16:43:39.026051" level="INFO">${NAME} = drift-vm-164337</msg>
+<arg>${NAME}</arg>
+<arg>${DRIFT_VM}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.025532" elapsed="0.000546"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-09T16:43:39.026616" level="INFO">${IMAGE_REF} = uat-shared-app</msg>
+<arg>${IMAGE_REF}</arg>
+<arg>${SHARED_IMAGE}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.026142" elapsed="0.000496"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-09T16:43:39.027216" level="INFO">${MAX_IDLE} = 60</msg>
+<arg>${MAX_IDLE}</arg>
+<arg>60</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.026695" elapsed="0.000545"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-09T16:43:39.027697" level="INFO">${SUSPENDED_DURATION} = 300</msg>
+<arg>${SUSPENDED_DURATION}</arg>
+<arg>300</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.027301" elapsed="0.000417"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-09T16:43:39.028260" level="INFO">${AUTO_RESUME} = true</msg>
+<arg>${AUTO_RESUME}</arg>
+<arg>true</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.027775" elapsed="0.000507"/>
+</kw>
+<kw name="Apply Template" owner="common">
+<kw name="Get File" owner="OperatingSystem">
+<msg time="2026-07-09T16:43:39.028590" level="INFO" html="true">Getting file '&lt;a href="file:///home/ubuntu/projects/pl-cloud/KubeMicroVM/uat/templates/drift/vm-with-idle-policy.yaml"&gt;/home/ubuntu/projects/pl-cloud/KubeMicroVM/uat/templates/drift/vm-with-idle-policy.yaml&lt;/a&gt;'.</msg>
+<msg time="2026-07-09T16:43:39.028704" level="INFO">${content} = apiVersion: lambda.aws.amazon.com/v1alpha1
+kind: MicroVM
+metadata:
+  name: ${NAME}
+  namespace: ${NAMESPACE}
+spec:
+  imageRef: ${IMAGE_REF}
+  desiredState: Running
+  maxIdleDurationSeconds: ${MAX_IDLE...</msg>
+<var>${content}</var>
+<arg>${TEMPLATES}/${template_path}</arg>
+<doc>Returns the contents of a specified file.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.028492" elapsed="0.000225"/>
+</kw>
+<kw name="Replace Variables" owner="BuiltIn">
+<msg time="2026-07-09T16:43:39.029008" level="INFO">${resolved} = apiVersion: lambda.aws.amazon.com/v1alpha1
+kind: MicroVM
+metadata:
+  name: drift-vm-164337
+  namespace: default
+spec:
+  imageRef: uat-shared-app
+  desiredState: Running
+  maxIdleDurationSeconds: 60
+  ...</msg>
+<var>${resolved}</var>
+<arg>${content}</arg>
+<doc>Replaces variables in the given text with their current values.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.028776" elapsed="0.000249"/>
+</kw>
+<kw name="Kubectl Apply" owner="common">
+<kw name="Set Variable" owner="BuiltIn">
+<msg time="2026-07-09T16:43:39.029490" level="INFO">${tmpfile} = /tmp/robot-kubectl-apply.yaml</msg>
+<var>${tmpfile}</var>
+<arg>/tmp/robot-kubectl-apply.yaml</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.029228" elapsed="0.000275"/>
+</kw>
+<kw name="Create File" owner="OperatingSystem">
+<msg time="2026-07-09T16:43:39.029744" level="INFO" html="true">Created file '&lt;a href="file:///tmp/robot-kubectl-apply.yaml"&gt;/tmp/robot-kubectl-apply.yaml&lt;/a&gt;'.</msg>
+<arg>${tmpfile}</arg>
+<arg>${yaml}</arg>
+<doc>Creates a file with the given content and encoding.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.029562" elapsed="0.000214"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:39.030041" level="INFO">Starting process:
+kubectl apply -f /tmp/robot-kubectl-apply.yaml</msg>
+<msg time="2026-07-09T16:43:39.030441" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:39.715954" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:43:39.716142" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>apply</arg>
+<arg>-f</arg>
+<arg>${tmpfile}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.029838" elapsed="0.686324"/>
+</kw>
+<kw name="Remove File" owner="OperatingSystem">
+<msg time="2026-07-09T16:43:39.716557" level="INFO" html="true">Removed file '&lt;a href="file:///tmp/robot-kubectl-apply.yaml"&gt;/tmp/robot-kubectl-apply.yaml&lt;/a&gt;'.</msg>
+<arg>${tmpfile}</arg>
+<doc>Removes a file with the given path.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.716326" elapsed="0.000314"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-09T16:43:39.717491" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>kubectl apply failed: ${result.stderr}</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.716708" elapsed="0.000824"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:43:39.717571" elapsed="0.000040"/>
+</return>
+<arg>${resolved}</arg>
+<status status="PASS" start="2026-07-09T16:43:39.029116" elapsed="0.688760"/>
+</kw>
+<arg>drift/vm-with-idle-policy.yaml</arg>
+<doc>Reads a YAML template file, resolves Robot Framework variables, and applies via kubectl.
+Variables must be set via Set Suite Variable or Set Test Variable before calling.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.028368" elapsed="0.689543"/>
+</kw>
+<kw name="Wait For VM Running" owner="common">
+<for flavor="IN RANGE">
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:39.719213" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:43:39.719621" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:40.379361" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:43:40.379549" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:39.718924" elapsed="0.660644"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:43:40.379644" elapsed="0.000047"/>
+</return>
+<msg time="2026-07-09T16:43:40.380131" level="INFO">${state} = Running</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:43:39.718746" elapsed="0.661402"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;Running&quot;">
+<return>
+<status status="PASS" start="2026-07-09T16:43:40.380297" elapsed="0.000014"/>
+</return>
+<status status="PASS" start="2026-07-09T16:43:40.380219" elapsed="0.000107"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:43:40.380202" elapsed="0.000137"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="NOT RUN" start="2026-07-09T16:43:40.380444" elapsed="0.000016"/>
+</kw>
+<var name="${i}">0</var>
+<status status="PASS" start="2026-07-09T16:43:39.718666" elapsed="0.661812"/>
+</iter>
+<var>${i}</var>
+<value>${{int($timeout) // 5}}</value>
+<status status="PASS" start="2026-07-09T16:43:39.718284" elapsed="0.662225"/>
+</for>
+<kw name="Fail" owner="BuiltIn">
+<arg>MicroVM ${name} did not reach Running within ${timeout}s</arg>
+<doc>Fails the test with the given message and optionally alters its tags.</doc>
+<status status="NOT RUN" start="2026-07-09T16:43:40.380574" elapsed="0.000009"/>
+</kw>
+<arg>${DRIFT_VM}</arg>
+<status status="PASS" start="2026-07-09T16:43:39.718109" elapsed="0.662507"/>
+</kw>
+<status status="PASS" start="2026-07-09T16:43:37.707960" elapsed="2.672684"/>
+</kw>
+<arg>Verify Cluster Ready</arg>
+<arg>AND</arg>
+<arg>Create Drift Resources</arg>
+<doc>Executes all the given keywords in a sequence.</doc>
+<status status="PASS" start="2026-07-09T16:43:32.964907" elapsed="7.415765"/>
+</kw>
+<test id="s1-t1" name="DRIFT-01 External Termination Detected" line="15">
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:40.381660" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.microVmId}</msg>
+<msg time="2026-07-09T16:43:40.382136" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:41.036310" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:43:41.036492" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:40.381337" elapsed="0.655175"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:43:41.036593" elapsed="0.000045"/>
+</return>
+<msg time="2026-07-09T16:43:41.037078" level="INFO">${vm_id} = microvm-258513de-9e87-33b6-870c-0dd3af595abc</msg>
+<var>${vm_id}</var>
+<arg>microvm</arg>
+<arg>${DRIFT_VM}</arg>
+<arg>{.status.microVmId}</arg>
+<status status="PASS" start="2026-07-09T16:43:40.381111" elapsed="0.655984"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:41.037519" level="INFO">Starting process:
+aws lambda-microvms terminate-microvm --microvm-identifier microvm-258513de-9e87-33b6-870c-0dd3af595abc</msg>
+<msg time="2026-07-09T16:43:41.038010" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:41.783146" level="INFO">Process completed.</msg>
+<arg>aws</arg>
+<arg>lambda-microvms</arg>
+<arg>terminate-microvm</arg>
+<arg>--microvm-identifier</arg>
+<arg>${vm_id}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:41.037220" elapsed="0.746043"/>
+</kw>
+<kw name="Wait For VM State" owner="common">
+<for flavor="IN RANGE">
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:41.785010" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:43:41.785434" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:42.459839" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:43:42.460038" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:41.784683" elapsed="0.675375"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:43:42.460132" elapsed="0.000047"/>
+</return>
+<msg time="2026-07-09T16:43:42.460589" level="INFO">${state} = Running</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:43:41.784464" elapsed="0.676140"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;${expected_state}&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:43:42.460765" elapsed="0.000007"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:43:42.460674" elapsed="0.000111"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:43:42.460657" elapsed="0.000141"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:43:52.461548" level="INFO">Slept 10 seconds.</msg>
+<arg>10s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:43:42.460901" elapsed="10.000784"/>
+</kw>
+<var name="${i}">0</var>
+<status status="PASS" start="2026-07-09T16:43:41.784379" elapsed="10.677361"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:43:52.462797" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:43:52.463323" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:43:53.126607" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:43:53.126799" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:43:52.462449" elapsed="0.664370"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:43:53.126899" elapsed="0.000063"/>
+</return>
+<msg time="2026-07-09T16:43:53.127399" level="INFO">${state} = Running</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:43:52.462137" elapsed="0.665277"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;${expected_state}&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:43:53.127582" elapsed="0.000007"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:43:53.127486" elapsed="0.000118"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:43:53.127470" elapsed="0.000146"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:44:03.128133" level="INFO">Slept 10 seconds.</msg>
+<arg>10s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:43:53.127718" elapsed="10.000550"/>
+</kw>
+<var name="${i}">1</var>
+<status status="PASS" start="2026-07-09T16:43:52.461969" elapsed="10.666354"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:44:03.129392" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:44:03.129890" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:44:03.792033" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:44:03.792213" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:44:03.129028" elapsed="0.663205"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:44:03.792306" elapsed="0.000046"/>
+</return>
+<msg time="2026-07-09T16:44:03.792799" level="INFO">${state} = Running</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:44:03.128691" elapsed="0.664126"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;${expected_state}&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:44:03.793005" elapsed="0.000007"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:44:03.792889" elapsed="0.000137"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:44:03.792872" elapsed="0.000166"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:44:13.793514" level="INFO">Slept 10 seconds.</msg>
+<arg>10s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:44:03.793143" elapsed="10.000506"/>
+</kw>
+<var name="${i}">2</var>
+<status status="PASS" start="2026-07-09T16:44:03.128523" elapsed="10.665178"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:44:13.794779" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:44:13.795309" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:44:14.481765" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:44:14.481972" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:44:13.794436" elapsed="0.687613"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:44:14.482125" elapsed="0.000048"/>
+</return>
+<msg time="2026-07-09T16:44:14.482577" level="INFO">${state} = Running</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:44:13.794110" elapsed="0.688482"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;${expected_state}&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:44:14.482758" elapsed="0.000006"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:44:14.482663" elapsed="0.000116"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:44:14.482647" elapsed="0.000145"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:44:24.483280" level="INFO">Slept 10 seconds.</msg>
+<arg>10s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:44:14.482895" elapsed="10.000527"/>
+</kw>
+<var name="${i}">3</var>
+<status status="PASS" start="2026-07-09T16:44:13.793916" elapsed="10.689558"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:44:24.484530" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:44:24.485033" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:44:25.147801" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:44:25.148001" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:44:24.484187" elapsed="0.663835"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:44:25.148098" elapsed="0.000045"/>
+</return>
+<msg time="2026-07-09T16:44:25.148554" level="INFO">${state} = Running</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:44:24.483835" elapsed="0.664734"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;${expected_state}&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:44:25.148737" elapsed="0.000007"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:44:25.148643" elapsed="0.000114"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:44:25.148626" elapsed="0.000143"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:44:35.149259" level="INFO">Slept 10 seconds.</msg>
+<arg>10s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:44:25.148872" elapsed="10.000521"/>
+</kw>
+<var name="${i}">4</var>
+<status status="PASS" start="2026-07-09T16:44:24.483670" elapsed="10.665777"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:44:35.150530" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:44:35.151237" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:44:35.816021" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:44:35.816204" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:44:35.150180" elapsed="0.666044"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:44:35.816301" elapsed="0.000046"/>
+</return>
+<msg time="2026-07-09T16:44:35.816764" level="INFO">${state} = Running</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:44:35.149811" elapsed="0.666969"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;${expected_state}&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:44:35.816963" elapsed="0.000008"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:44:35.816851" elapsed="0.000134"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:44:35.816834" elapsed="0.000163"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:44:45.817484" level="INFO">Slept 10 seconds.</msg>
+<arg>10s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:44:35.817102" elapsed="10.000524"/>
+</kw>
+<var name="${i}">5</var>
+<status status="PASS" start="2026-07-09T16:44:35.149645" elapsed="10.668038"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:44:45.818743" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:44:45.819274" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:44:46.481216" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:44:46.481403" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:44:45.818393" elapsed="0.663030"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:44:46.481501" elapsed="0.000046"/>
+</return>
+<msg time="2026-07-09T16:44:46.482003" level="INFO">${state} = Pending</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:44:45.818079" elapsed="0.663941"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;${expected_state}&quot;">
+<return>
+<status status="PASS" start="2026-07-09T16:44:46.482192" elapsed="0.000016"/>
+</return>
+<status status="PASS" start="2026-07-09T16:44:46.482094" elapsed="0.000130"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:44:46.482076" elapsed="0.000163"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<arg>10s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="NOT RUN" start="2026-07-09T16:44:46.482346" elapsed="0.000014"/>
+</kw>
+<var name="${i}">6</var>
+<status status="PASS" start="2026-07-09T16:44:45.817881" elapsed="0.664498"/>
+</iter>
+<var>${i}</var>
+<value>${{int($timeout) // 10}}</value>
+<status status="PASS" start="2026-07-09T16:43:41.783907" elapsed="64.698495"/>
+</for>
+<kw name="Fail" owner="BuiltIn">
+<arg>MicroVM ${name} did not reach ${expected_state} within ${timeout}s</arg>
+<doc>Fails the test with the given message and optionally alters its tags.</doc>
+<status status="NOT RUN" start="2026-07-09T16:44:46.482466" elapsed="0.000009"/>
+</kw>
+<arg>${DRIFT_VM}</arg>
+<arg>Pending</arg>
+<arg>timeout=120</arg>
+<status status="PASS" start="2026-07-09T16:43:41.783577" elapsed="64.698933"/>
+</kw>
+<kw name="Log" owner="BuiltIn">
+<msg time="2026-07-09T16:44:46.482774" level="INFO">Drift detected — VM transitioned to Pending</msg>
+<arg>Drift detected — VM transitioned to Pending</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="PASS" start="2026-07-09T16:44:46.482565" elapsed="0.000237"/>
+</kw>
+<tag>destructive</tag>
+<tag>drift</tag>
+<tag>smoke</tag>
+<status status="PASS" start="2026-07-09T16:43:40.380734" elapsed="66.102204"/>
+</test>
+<test id="s1-t2" name="DRIFT-02 Operator Re-Creates VM With New ID" line="22">
+<kw name="Wait For VM Running" owner="common">
+<for flavor="IN RANGE">
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:44:46.484527" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:44:46.484957" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:44:47.148775" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:44:47.148975" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:44:46.484254" elapsed="0.664741"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:44:47.149077" elapsed="0.000046"/>
+</return>
+<msg time="2026-07-09T16:44:47.149538" level="INFO">${state} = Pending</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:44:46.484067" elapsed="0.665487"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;Running&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:44:47.149718" elapsed="0.000007"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:44:47.149626" elapsed="0.000114"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:44:47.149609" elapsed="0.000143"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:44:52.150263" level="INFO">Slept 5 seconds.</msg>
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:44:47.149860" elapsed="5.000539"/>
+</kw>
+<var name="${i}">0</var>
+<status status="PASS" start="2026-07-09T16:44:46.483991" elapsed="5.666463"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:44:52.151524" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:44:52.152051" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:44:52.810759" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:44:52.810956" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:44:52.151179" elapsed="0.659797"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:44:52.811055" elapsed="0.000046"/>
+</return>
+<msg time="2026-07-09T16:44:52.811559" level="INFO">${state} = Pending</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:44:52.150836" elapsed="0.660738"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;Running&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:44:52.811728" elapsed="0.000006"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:44:52.811648" elapsed="0.000100"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:44:52.811632" elapsed="0.000127"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:44:57.812254" level="INFO">Slept 5 seconds.</msg>
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:44:52.811864" elapsed="5.000525"/>
+</kw>
+<var name="${i}">1</var>
+<status status="PASS" start="2026-07-09T16:44:52.150652" elapsed="5.661794"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:44:57.813759" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:44:57.814308" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:44:58.483680" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:44:58.483867" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:44:57.813181" elapsed="0.670706"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:44:58.483982" elapsed="0.000045"/>
+</return>
+<msg time="2026-07-09T16:44:58.484446" level="INFO">${state} = Pending</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:44:57.812829" elapsed="0.671634"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;Running&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:44:58.484615" elapsed="0.000007"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:44:58.484535" elapsed="0.000101"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:44:58.484517" elapsed="0.000132"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:45:03.485148" level="INFO">Slept 5 seconds.</msg>
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:44:58.484755" elapsed="5.000528"/>
+</kw>
+<var name="${i}">2</var>
+<status status="PASS" start="2026-07-09T16:44:57.812642" elapsed="5.672699"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:45:03.486417" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:45:03.486936" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:45:04.147256" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:45:04.147442" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:45:03.486069" elapsed="0.661393"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:45:04.147541" elapsed="0.000044"/>
+</return>
+<msg time="2026-07-09T16:45:04.148028" level="INFO">${state} = Pending</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:45:03.485722" elapsed="0.662322"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;Running&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:45:04.148195" elapsed="0.000006"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:45:04.148114" elapsed="0.000101"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:45:04.148098" elapsed="0.000129"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:45:09.148701" level="INFO">Slept 5 seconds.</msg>
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:45:04.148336" elapsed="5.000492"/>
+</kw>
+<var name="${i}">3</var>
+<status status="PASS" start="2026-07-09T16:45:03.485540" elapsed="5.663339"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:45:09.149972" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:45:09.150425" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:45:09.826491" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:45:09.826684" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:45:09.149606" elapsed="0.677098"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:45:09.826787" elapsed="0.000045"/>
+</return>
+<msg time="2026-07-09T16:45:09.827274" level="INFO">${state} = Pending</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:45:09.149300" elapsed="0.677991"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;Running&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:45:09.827503" elapsed="0.000006"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:45:09.827419" elapsed="0.000105"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:45:09.827400" elapsed="0.000136"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:45:14.828016" level="INFO">Slept 5 seconds.</msg>
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:45:09.827644" elapsed="5.000511"/>
+</kw>
+<var name="${i}">4</var>
+<status status="PASS" start="2026-07-09T16:45:09.149140" elapsed="5.679070"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:45:14.829298" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:45:14.829796" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:45:15.500787" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:45:15.500986" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:45:14.828914" elapsed="0.672092"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:45:15.501084" elapsed="0.000045"/>
+</return>
+<msg time="2026-07-09T16:45:15.501538" level="INFO">${state} = Pending</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:45:14.828579" elapsed="0.672975"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;Running&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:45:15.501701" elapsed="0.000007"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:45:15.501624" elapsed="0.000098"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:45:15.501608" elapsed="0.000126"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:45:20.502241" level="INFO">Slept 5 seconds.</msg>
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:45:15.501841" elapsed="5.000553"/>
+</kw>
+<var name="${i}">5</var>
+<status status="PASS" start="2026-07-09T16:45:14.828410" elapsed="5.674037"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:45:20.503507" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:45:20.504024" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:45:21.180938" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:45:21.181136" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:45:20.503161" elapsed="0.677995"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:45:21.181234" elapsed="0.000045"/>
+</return>
+<msg time="2026-07-09T16:45:21.181695" level="INFO">${state} = Pending</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:45:20.502816" elapsed="0.678895"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;Running&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:45:21.181862" elapsed="0.000007"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:45:21.181782" elapsed="0.000101"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:45:21.181765" elapsed="0.000130"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:45:26.182395" level="INFO">Slept 5 seconds.</msg>
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:45:21.182025" elapsed="5.000504"/>
+</kw>
+<var name="${i}">6</var>
+<status status="PASS" start="2026-07-09T16:45:20.502644" elapsed="5.679937"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:45:26.183854" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:45:26.184380" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:45:26.846517" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:45:26.846699" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:45:26.183514" elapsed="0.663207"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:45:26.846802" elapsed="0.000046"/>
+</return>
+<msg time="2026-07-09T16:45:26.847293" level="INFO">${state} = Pending</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:45:26.182996" elapsed="0.664314"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;Running&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:45:26.847464" elapsed="0.000007"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:45:26.847383" elapsed="0.000101"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:45:26.847366" elapsed="0.000131"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:45:31.847999" level="INFO">Slept 5 seconds.</msg>
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:45:26.847603" elapsed="5.000535"/>
+</kw>
+<var name="${i}">7</var>
+<status status="PASS" start="2026-07-09T16:45:26.182782" elapsed="5.665409"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:45:31.849268" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:45:31.849784" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:45:32.515668" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:45:32.515855" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:45:31.848893" elapsed="0.666984"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:45:32.515971" elapsed="0.000053"/>
+</return>
+<msg time="2026-07-09T16:45:32.516446" level="INFO">${state} = Pending</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:45:31.848560" elapsed="0.667903"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;Running&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:45:32.516620" elapsed="0.000007"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:45:32.516539" elapsed="0.000102"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:45:32.516521" elapsed="0.000133"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:45:37.517155" level="INFO">Slept 5 seconds.</msg>
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:45:32.516760" elapsed="5.000541"/>
+</kw>
+<var name="${i}">8</var>
+<status status="PASS" start="2026-07-09T16:45:31.848391" elapsed="5.668964"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:45:37.518421" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:45:37.518958" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:45:38.182482" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:45:38.182663" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:45:37.518076" elapsed="0.664608"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:45:38.182763" elapsed="0.000046"/>
+</return>
+<msg time="2026-07-09T16:45:38.183239" level="INFO">${state} = Pending</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:45:37.517727" elapsed="0.665529"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;Running&quot;">
+<return>
+<status status="NOT RUN" start="2026-07-09T16:45:38.183406" elapsed="0.000017"/>
+</return>
+<status status="NOT RUN" start="2026-07-09T16:45:38.183328" elapsed="0.000110"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:45:38.183311" elapsed="0.000139"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:45:43.183926" level="INFO">Slept 5 seconds.</msg>
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:45:38.183556" elapsed="5.000520"/>
+</kw>
+<var name="${i}">9</var>
+<status status="PASS" start="2026-07-09T16:45:37.517557" elapsed="5.666573"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:45:43.185156" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:45:43.185662" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:45:43.845903" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:45:43.846100" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:45:43.184796" elapsed="0.661324"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:45:43.846196" elapsed="0.000046"/>
+</return>
+<msg time="2026-07-09T16:45:43.846662" level="INFO">${state} = Running</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:45:43.184490" elapsed="0.662188"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;Running&quot;">
+<return>
+<status status="PASS" start="2026-07-09T16:45:43.846826" elapsed="0.000014"/>
+</return>
+<status status="PASS" start="2026-07-09T16:45:43.846749" elapsed="0.000107"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:45:43.846732" elapsed="0.000139"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="NOT RUN" start="2026-07-09T16:45:43.846998" elapsed="0.000016"/>
+</kw>
+<var name="${i}">10</var>
+<status status="PASS" start="2026-07-09T16:45:43.184324" elapsed="0.662708"/>
+</iter>
+<var>${i}</var>
+<value>${{int($timeout) // 5}}</value>
+<status status="PASS" start="2026-07-09T16:44:46.483619" elapsed="57.363436"/>
+</for>
+<kw name="Fail" owner="BuiltIn">
+<arg>MicroVM ${name} did not reach Running within ${timeout}s</arg>
+<doc>Fails the test with the given message and optionally alters its tags.</doc>
+<status status="NOT RUN" start="2026-07-09T16:45:43.847115" elapsed="0.000009"/>
+</kw>
+<arg>${DRIFT_VM}</arg>
+<arg>timeout=120</arg>
+<status status="PASS" start="2026-07-09T16:44:46.483430" elapsed="57.363730"/>
+</kw>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:45:43.847859" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.microVmId}</msg>
+<msg time="2026-07-09T16:45:43.848286" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:45:44.517380" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:45:44.517567" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:45:43.847521" elapsed="0.670066"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:45:44.517665" elapsed="0.000043"/>
+</return>
+<msg time="2026-07-09T16:45:44.518154" level="INFO">${new_id} = microvm-d9969196-0a55-381b-9a6c-05c8c0c8bac5</msg>
+<var>${new_id}</var>
+<arg>microvm</arg>
+<arg>${DRIFT_VM}</arg>
+<arg>{.status.microVmId}</arg>
+<status status="PASS" start="2026-07-09T16:45:43.847290" elapsed="0.670882"/>
+</kw>
+<kw name="Log" owner="BuiltIn">
+<msg time="2026-07-09T16:45:44.518548" level="INFO">New VM ID: microvm-d9969196-0a55-381b-9a6c-05c8c0c8bac5</msg>
+<arg>New VM ID: ${new_id}</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="PASS" start="2026-07-09T16:45:44.518299" elapsed="0.000277"/>
+</kw>
+<kw name="Should Not Be Empty" owner="BuiltIn">
+<msg time="2026-07-09T16:45:44.519166" level="INFO">Length is 44.</msg>
+<arg>${new_id}</arg>
+<doc>Verifies that the given item is not empty.</doc>
+<status status="PASS" start="2026-07-09T16:45:44.518641" elapsed="0.000554"/>
+</kw>
+<tag>drift</tag>
+<status status="PASS" start="2026-07-09T16:44:46.483106" elapsed="58.036168"/>
+</test>
+<test id="s1-t3" name="AUTO-01 VM Suspends After Idle Duration" line="28">
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:47:14.519911" level="INFO">Slept 1 minute 30 seconds.</msg>
+<msg time="2026-07-09T16:47:14.520010" level="INFO">Wait for 60s idle + reconcile cycle</msg>
+<arg>90s</arg>
+<arg>Wait for 60s idle + reconcile cycle</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:45:44.519614" elapsed="90.000536"/>
+</kw>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:47:14.521078" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:47:14.521573" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:47:15.185715" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:47:15.185898" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:47:14.520714" elapsed="0.665205"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:47:15.186022" elapsed="0.000048"/>
+</return>
+<msg time="2026-07-09T16:47:15.186501" level="INFO">${state} = Running</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${DRIFT_VM}</arg>
+<arg>{.status.state}</arg>
+<status status="PASS" start="2026-07-09T16:47:14.520397" elapsed="0.666120"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; != &quot;Suspended&quot;">
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:48:15.187157" level="INFO">Slept 1 minute.</msg>
+<msg time="2026-07-09T16:48:15.187248" level="INFO">Extra wait for suspend</msg>
+<arg>60s</arg>
+<arg>Extra wait for suspend</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:47:15.186755" elapsed="60.000559"/>
+</kw>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:48:15.188297" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:48:15.188816" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:48:15.843302" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:48:15.843488" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:48:15.187908" elapsed="0.655600"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:48:15.843592" elapsed="0.000045"/>
+</return>
+<msg time="2026-07-09T16:48:15.844085" level="INFO">${state} = Suspended</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${DRIFT_VM}</arg>
+<arg>{.status.state}</arg>
+<status status="PASS" start="2026-07-09T16:48:15.187577" elapsed="0.656525"/>
+</kw>
+<status status="PASS" start="2026-07-09T16:47:15.186590" elapsed="60.657540"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:47:15.186573" elapsed="60.657581"/>
+</if>
+<kw name="Should Be Equal" owner="BuiltIn">
+<arg>${state}</arg>
+<arg>Suspended</arg>
+<doc>Fails if the given objects are unequal.</doc>
+<status status="PASS" start="2026-07-09T16:48:15.844278" elapsed="0.000280"/>
+</kw>
+<tag>drift</tag>
+<tag>smoke</tag>
+<status status="PASS" start="2026-07-09T16:45:44.519415" elapsed="151.325212"/>
+</test>
+<test id="s1-t4" name="AUTO-02 Auto-Resume On Traffic" line="38">
+<kw name="Get MicroVM Endpoint" owner="common">
+<for flavor="IN RANGE">
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:48:15.846189" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.endpointUrl}</msg>
+<msg time="2026-07-09T16:48:15.846595" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:48:16.544434" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:48:16.544617" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:48:15.845889" elapsed="0.698749"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:48:16.544714" elapsed="0.000045"/>
+</return>
+<msg time="2026-07-09T16:48:16.545237" level="INFO">${ep} = d2cfa3e2-a5f3-cd7c-b933-ba6f7d759a49.lambda-microvm.us-east-1.on.aws</msg>
+<var>${ep}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.endpointUrl}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-09T16:48:15.845698" elapsed="0.699557"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${ep}&quot; != &quot;PENDING&quot; and &quot;${ep}&quot; != &quot;&quot;">
+<return>
+<value>${ep}</value>
+<status status="PASS" start="2026-07-09T16:48:16.545434" elapsed="0.000014"/>
+</return>
+<status status="PASS" start="2026-07-09T16:48:16.545330" elapsed="0.000137"/>
+</branch>
+<status status="PASS" start="2026-07-09T16:48:16.545312" elapsed="0.000169"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="NOT RUN" start="2026-07-09T16:48:16.545588" elapsed="0.000015"/>
+</kw>
+<var name="${i}">0</var>
+<status status="PASS" start="2026-07-09T16:48:15.845621" elapsed="0.699999"/>
+</iter>
+<var>${i}</var>
+<value>${{int($timeout) // 5}}</value>
+<status status="PASS" start="2026-07-09T16:48:15.845255" elapsed="0.700389"/>
+</for>
+<kw name="Fail" owner="BuiltIn">
+<arg>Endpoint for ${name} did not resolve within ${timeout}s</arg>
+<doc>Fails the test with the given message and optionally alters its tags.</doc>
+<status status="NOT RUN" start="2026-07-09T16:48:16.545699" elapsed="0.000009"/>
+</kw>
+<msg time="2026-07-09T16:48:16.545779" level="INFO">${endpoint} = d2cfa3e2-a5f3-cd7c-b933-ba6f7d759a49.lambda-microvm.us-east-1.on.aws</msg>
+<var>${endpoint}</var>
+<arg>${DRIFT_VM}</arg>
+<status status="PASS" start="2026-07-09T16:48:15.845087" elapsed="0.700705"/>
+</kw>
+<kw name="Get MicroVM Token" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:48:16.546429" level="INFO">Starting process:
+microvm token --name drift-vm-164337 --direct -n default</msg>
+<msg time="2026-07-09T16:48:16.546853" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:48:17.918279" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:48:17.918468" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>microvm</arg>
+<arg>token</arg>
+<arg>--name</arg>
+<arg>${name}</arg>
+<arg>--direct</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:48:16.546159" elapsed="1.372328"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-09T16:48:17.919787" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>Failed to get token: ${result.stderr}</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-09T16:48:17.918666" elapsed="0.001165"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:48:17.919869" elapsed="0.000031"/>
+</return>
+<msg time="2026-07-09T16:48:17.920204" level="INFO">${token} = eyJraWQiOiIxN2ZmODMwMC0xMzgzLTRiOTEtOTE1ZC0zOWQ5YzIxOGFmMzQiLCJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..9H5LmSwdl86TCVd4.R4035FmAo5Gaanzw34HAOPvoAVRow4G1YEe5qgWwM2UWpl8uAt9Wyfbpl7SQR-goSq_1E-QeTpXahXBUya...</msg>
+<var>${token}</var>
+<arg>${DRIFT_VM}</arg>
+<status status="PASS" start="2026-07-09T16:48:16.545926" elapsed="1.374292"/>
+</kw>
+<kw name="Call MicroVM Endpoint" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:48:17.920853" level="INFO">Starting process:
+curl -sk -H "X-aws-proxy-auth: eyJraWQiOiIxN2ZmODMwMC0xMzgzLTRiOTEtOTE1ZC0zOWQ5YzIxOGFmMzQiLCJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..9H5LmSwdl86TCVd4.R4035FmAo5Gaanzw34HAOPvoAVRow4G1YEe5qgWwM2UWpl8uAt9Wyfbpl7SQR-goSq_1E-QeTpXahXBUyaVwQ6__eSrx7Lx5NSx3moqTxdYVs0ONbeyX6vGZDYjLiCpo3uHT06j3UgzfzEPDhtbvygIxu0GoTcJ5LQoauhuu6MHLn_HviG7kKZ9vEoJZ8TfCAaVBKN71OvO5KrSq7sXaZvyBNqrzqwy88Q0r7Vhf6T1H_33o4VXshzselox7fWe3tZg9-DRrscNZILP33a4rv1Nc65O0b0ujyObQ6cf29OF1BH2tTd1MBNjDKPBDwUMMk5Hfmgbr7TTXpwSEQtA0tgdKw0dYb7oRaNuRoZBgFpxfEExE9jSHyxxRkbuNBzs09ranvW-Kl4_ZlJiYs2DFZvuWZBOMXIqzW7TWyDaz8Gd-Tsr5w5f_LlFpIEdDI5wmkKDK7jq0YmUwZ4q0XmczeeXgPKIGBTQ9HD4fowgEsgbLx1h5ZySS7YakAHQAAtldGuAXkreL-my4wimszVshi_tI2T8v3i7pVYxCMzVp8soPkHlmQ_9kB-JZ-f3QGCLw-DAwE8MqXrgybx2z-lReXrTnk6sH4yaL.fBajYzvkGrdj9bjY65KeyA" https://d2cfa3e2-a5f3-cd7c-b933-ba6f7d759a49.lambda-microvm.us-east-1.on.aws/</msg>
+<msg time="2026-07-09T16:48:17.921323" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:48:19.376233" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:48:19.376405" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>curl</arg>
+<arg>-sk</arg>
+<arg>-H</arg>
+<arg>X-aws-proxy-auth: ${token}</arg>
+<arg>https://${endpoint}${path}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:48:17.920587" elapsed="1.455837"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-09T16:48:19.377468" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>curl failed: ${result.stderr}</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-09T16:48:19.376605" elapsed="0.000908"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:48:19.377551" elapsed="0.000034"/>
+</return>
+<msg time="2026-07-09T16:48:19.377878" level="INFO">${response} = {"status":"ok","path":"/","ts":"2026-07-09T16:48:19.370Z"}</msg>
+<var>${response}</var>
+<arg>${endpoint}</arg>
+<arg>${token}</arg>
+<status status="PASS" start="2026-07-09T16:48:17.920391" elapsed="1.457503"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${response}</arg>
+<arg>"status":"ok"</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-07-09T16:48:19.377998" elapsed="0.000203"/>
+</kw>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-09T16:49:19.378534" level="INFO">Slept 1 minute.</msg>
+<msg time="2026-07-09T16:49:19.378618" level="INFO">Wait for operator to update status</msg>
+<arg>60s</arg>
+<arg>Wait for operator to update status</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-09T16:48:19.378262" elapsed="60.000413"/>
+</kw>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:49:19.379592" level="INFO">Starting process:
+kubectl get microvm drift-vm-164337 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-09T16:49:19.380063" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:49:20.048124" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:49:20.048305" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:49:19.379253" elapsed="0.669073"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-09T16:49:20.048401" elapsed="0.000046"/>
+</return>
+<msg time="2026-07-09T16:49:20.048879" level="INFO">${state} = Running</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${DRIFT_VM}</arg>
+<arg>{.status.state}</arg>
+<status status="PASS" start="2026-07-09T16:49:19.378916" elapsed="0.669979"/>
+</kw>
+<kw name="Should Be Equal" owner="BuiltIn">
+<arg>${state}</arg>
+<arg>Running</arg>
+<doc>Fails if the given objects are unequal.</doc>
+<status status="PASS" start="2026-07-09T16:49:20.049034" elapsed="0.000268"/>
+</kw>
+<tag>drift</tag>
+<status status="PASS" start="2026-07-09T16:48:15.844756" elapsed="64.204614"/>
+</test>
+<test id="s1-t5" name="AUTO-03 Operator Does Not Fight Idle Policy" line="47">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:49:20.049928" level="INFO">Starting process:
+kubectl logs -n kube-microvm deploy/kube-microvm-operator --tail=30</msg>
+<msg time="2026-07-09T16:49:20.050355" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:49:20.735276" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T16:49:20.735461" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>logs</arg>
+<arg>-n</arg>
+<arg>${OPERATOR_NS}</arg>
+<arg>deploy/kube-microvm-operator</arg>
+<arg>--tail\=30</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:49:20.049703" elapsed="0.685778"/>
+</kw>
+<kw name="Get Lines Containing String" owner="String">
+<msg time="2026-07-09T16:49:20.736161" level="INFO">0 out of 30 lines matched.</msg>
+<msg time="2026-07-09T16:49:20.736213" level="INFO">${resume_lines} = </msg>
+<var>${resume_lines}</var>
+<arg>${result.stdout}</arg>
+<arg>RESUME</arg>
+<doc>Returns lines of the given ``string`` that contain the ``pattern``.</doc>
+<status status="PASS" start="2026-07-09T16:49:20.735653" elapsed="0.000572"/>
+</kw>
+<kw name="Get Lines Containing String" owner="String">
+<msg time="2026-07-09T16:49:20.736388" level="INFO">0 out of 0 lines matched.</msg>
+<msg time="2026-07-09T16:49:20.736430" level="INFO">${drift_lines} = </msg>
+<var>${drift_lines}</var>
+<arg>${resume_lines}</arg>
+<arg>${DRIFT_VM}</arg>
+<doc>Returns lines of the given ``string`` that contain the ``pattern``.</doc>
+<status status="PASS" start="2026-07-09T16:49:20.736293" elapsed="0.000150"/>
+</kw>
+<kw name="Should Be Empty" owner="BuiltIn">
+<msg time="2026-07-09T16:49:20.736723" level="INFO">Length is 0.</msg>
+<arg>${drift_lines}</arg>
+<arg>Operator should not issue spurious RESUME calls</arg>
+<doc>Verifies that the given item is empty.</doc>
+<status status="PASS" start="2026-07-09T16:49:20.736499" elapsed="0.000248"/>
+</kw>
+<tag>drift</tag>
+<status status="PASS" start="2026-07-09T16:49:20.049495" elapsed="0.687315"/>
+</test>
+<kw name="Cleanup Drift Resources" type="TEARDOWN">
+<kw name="Run Keyword And Ignore Error" owner="BuiltIn">
+<kw name="Kubectl Delete Force" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:49:20.737957" level="INFO">Starting process:
+kubectl patch microvm drift-vm-164337 -n default --type=json -p=[{\"op\":\"remove\",\"path\":\"/metadata/finalizers\"}] --request-timeout=10s</msg>
+<msg time="2026-07-09T16:49:20.738384" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:49:21.440044" level="INFO">Process completed.</msg>
+<arg>kubectl</arg>
+<arg>patch</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>--type\=json</arg>
+<arg>-p\=[{"op":"remove","path":"/metadata/finalizers"}]</arg>
+<arg>--request-timeout\=10s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:49:20.737678" elapsed="0.702493"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T16:49:21.440801" level="INFO">Starting process:
+kubectl delete microvm drift-vm-164337 -n default --force --grace-period=0 --timeout=30s</msg>
+<msg time="2026-07-09T16:49:21.441239" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T16:49:22.265491" level="INFO">Process completed.</msg>
+<arg>kubectl</arg>
+<arg>delete</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>--force</arg>
+<arg>--grace-period\=0</arg>
+<arg>--timeout\=30s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T16:49:21.440361" elapsed="0.825257"/>
+</kw>
+<arg>microvm</arg>
+<arg>${DRIFT_VM}</arg>
+<status status="PASS" start="2026-07-09T16:49:20.737534" elapsed="1.528241"/>
+</kw>
+<arg>Kubectl Delete Force</arg>
+<arg>microvm</arg>
+<arg>${DRIFT_VM}</arg>
+<doc>Runs the given keyword with the given arguments and ignores possible error.</doc>
+<status status="PASS" start="2026-07-09T16:49:20.737335" elapsed="1.528476"/>
+</kw>
+<status status="PASS" start="2026-07-09T16:49:20.737212" elapsed="1.528633"/>
+</kw>
+<doc>UAT: Drift Detection &amp; Auto-Suspend Guide</doc>
+<status status="PASS" start="2026-07-09T16:43:32.921082" elapsed="349.344784"/>
+</suite>
+<statistics>
+<total>
+<stat pass="5" fail="0" skip="0">All Tests</stat>
+</total>
+<tag>
+<stat pass="1" fail="0" skip="0">destructive</stat>
+<stat pass="5" fail="0" skip="0">drift</stat>
+<stat pass="2" fail="0" skip="0">smoke</stat>
+</tag>
+<suite>
+<stat name="07 Drift Autosuspend" id="s1" pass="5" fail="0" skip="0">07 Drift Autosuspend</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>

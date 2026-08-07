@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 7.4.2 (Python 3.12.3 on linux)" generated="2026-07-10T04:27:43.167701" rpa="false" schemaversion="5">
+<suite id="s1" name="00 Cluster Setup" source="/home/ubuntu/projects/pl-cloud/KubeMicroVM/uat/tests/00_cluster_setup.robot">
+<test id="s1-t1" name="Operator Is Deployed And Running" line="10">
+<kw name="Verify Operator Running" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T04:27:43.213156" level="INFO">Starting process:
+kubectl get deploy kube-microvm-operator -n kube-microvm -o jsonpath={.status.readyReplicas}</msg>
+<msg time="2026-07-10T04:27:43.213635" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T04:27:43.876982" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T04:27:43.877181" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>deploy</arg>
+<arg>kube-microvm-operator</arg>
+<arg>-n</arg>
+<arg>${OPERATOR_NS}</arg>
+<arg>-o</arg>
+<arg>jsonpath\={.status.readyReplicas}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T04:27:43.212827" elapsed="0.664376"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T04:27:43.878331" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>kubectl failed: ${result.stderr}</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T04:27:43.877405" elapsed="0.000974"/>
+</kw>
+<kw name="Should Be Equal" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>1</arg>
+<arg>Operator not running — install with: helm install kube-microvm-operator oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator --version ${CHART_VERSION} --namespace ${OPERATOR_NS} --create-namespace --set app.envs.AWS_REGION=${REGION}</arg>
+<doc>Fails if the given objects are unequal.</doc>
+<status status="PASS" start="2026-07-10T04:27:43.878461" elapsed="0.000476"/>
+</kw>
+<status status="PASS" start="2026-07-10T04:27:43.212416" elapsed="0.666598"/>
+</kw>
+<tag>critical</tag>
+<tag>setup</tag>
+<tag>smoke</tag>
+<status status="PASS" start="2026-07-10T04:27:43.211927" elapsed="0.667167"/>
+</test>
+<test id="s1-t2" name="CRDs Are Installed" line="14">
+<kw name="Verify CRDs Installed" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T04:27:43.879848" level="INFO">Starting process:
+kubectl get crd microvms.lambda.aws.amazon.com</msg>
+<msg time="2026-07-10T04:27:43.880278" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T04:27:44.540058" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T04:27:44.540252" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>crd</arg>
+<arg>microvms.lambda.aws.amazon.com</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T04:27:43.879662" elapsed="0.660610"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T04:27:44.541070" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>CRDs not installed — operator Helm chart should install them</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T04:27:44.540443" elapsed="0.000670"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T04:27:44.541359" level="INFO">Starting process:
+kubectl get crd microvmimages.lambda.aws.amazon.com</msg>
+<msg time="2026-07-10T04:27:44.541770" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T04:27:45.199518" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T04:27:45.199695" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>crd</arg>
+<arg>microvmimages.lambda.aws.amazon.com</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T04:27:44.541190" elapsed="0.658525"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T04:27:45.200485" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>MicroVMImage CRD missing</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T04:27:45.199884" elapsed="0.000641"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T04:27:45.200764" level="INFO">Starting process:
+kubectl get crd microvmclasses.lambda.aws.amazon.com</msg>
+<msg time="2026-07-10T04:27:45.201169" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T04:27:45.858128" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T04:27:45.858309" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>crd</arg>
+<arg>microvmclasses.lambda.aws.amazon.com</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T04:27:45.200598" elapsed="0.657730"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T04:27:45.859108" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>MicroVMClass CRD missing</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T04:27:45.858492" elapsed="0.000656"/>
+</kw>
+<status status="PASS" start="2026-07-10T04:27:43.879517" elapsed="1.979688"/>
+</kw>
+<tag>critical</tag>
+<tag>setup</tag>
+<tag>smoke</tag>
+<status status="PASS" start="2026-07-10T04:27:43.879242" elapsed="1.980044"/>
+</test>
+<test id="s1-t3" name="Namespace Is Labelled For MicroVMs" line="18">
+<kw name="Verify Namespace Labelled" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T04:27:45.860143" level="INFO">Starting process:
+kubectl get namespace default -o jsonpath={.metadata.labels.lambda\.aws\.amazon\.com/manage-microvms}</msg>
+<msg time="2026-07-10T04:27:45.860512" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T04:27:46.519366" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T04:27:46.519549" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>namespace</arg>
+<arg>${NAMESPACE}</arg>
+<arg>-o</arg>
+<arg>jsonpath\={.metadata.labels.lambda\\.aws\\.amazon\\.com/manage-microvms}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T04:27:45.859891" elapsed="0.659680"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${result.stdout}&quot; != &quot;true&quot;">
+<kw name="Run Process" owner="Process">
+<arg>kubectl</arg>
+<arg>label</arg>
+<arg>namespace</arg>
+<arg>${NAMESPACE}</arg>
+<arg>lambda.aws.amazon.com/manage-microvms\=true</arg>
+<arg>--overwrite</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="NOT RUN" start="2026-07-10T04:27:46.520202" elapsed="0.000017"/>
+</kw>
+<kw name="Log" owner="BuiltIn">
+<arg>Labelled namespace ${NAMESPACE} for MicroVM management</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="NOT RUN" start="2026-07-10T04:27:46.520288" elapsed="0.000011"/>
+</kw>
+<status status="NOT RUN" start="2026-07-10T04:27:46.519707" elapsed="0.000607"/>
+</branch>
+<status status="PASS" start="2026-07-10T04:27:46.519671" elapsed="0.000663"/>
+</if>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T04:27:46.520709" level="INFO">Starting process:
+kubectl get namespace default -o jsonpath={.metadata.labels.lambda\.microvm\.auth/inject}</msg>
+<msg time="2026-07-10T04:27:46.521133" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T04:27:47.177664" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T04:27:47.177918" level="INFO">${inject} = &lt;result object with rc 0&gt;</msg>
+<var>${inject}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>namespace</arg>
+<arg>${NAMESPACE}</arg>
+<arg>-o</arg>
+<arg>jsonpath\={.metadata.labels.lambda\\.microvm\\.auth/inject}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T04:27:46.520387" elapsed="0.657575"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${inject.stdout}&quot; != &quot;enabled&quot;">
+<kw name="Run Process" owner="Process">
+<arg>kubectl</arg>
+<arg>label</arg>
+<arg>namespace</arg>
+<arg>${NAMESPACE}</arg>
+<arg>lambda.microvm.auth/inject\=enabled</arg>
+<arg>--overwrite</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="NOT RUN" start="2026-07-10T04:27:47.178553" elapsed="0.000017"/>
+</kw>
+<status status="NOT RUN" start="2026-07-10T04:27:47.178088" elapsed="0.000509"/>
+</branch>
+<status status="PASS" start="2026-07-10T04:27:47.178056" elapsed="0.000561"/>
+</if>
+<status status="PASS" start="2026-07-10T04:27:45.859748" elapsed="1.318911"/>
+</kw>
+<tag>setup</tag>
+<tag>smoke</tag>
+<status status="PASS" start="2026-07-10T04:27:45.859428" elapsed="1.319299"/>
+</test>
+<test id="s1-t4" name="S3 Test Fixtures Are Uploaded" line="21">
+<kw name="Verify S3 Fixtures Uploaded" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T04:27:47.179792" level="INFO">Starting process:
+aws s3 ls s3://kube-microvm-test-864899852480-us-east-1/test-fixtures/microvm-hello-node.zip</msg>
+<msg time="2026-07-10T04:27:47.180286" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T04:27:47.869014" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T04:27:47.869198" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>aws</arg>
+<arg>s3</arg>
+<arg>ls</arg>
+<arg>s3://${S3_BUCKET}/test-fixtures/microvm-hello-node.zip</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T04:27:47.179523" elapsed="0.689696"/>
+</kw>
+<if>
+<branch type="IF" condition="${result.rc} != 0">
+<kw name="Log" owner="BuiltIn">
+<arg>Uploading test fixtures to S3...</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="NOT RUN" start="2026-07-10T04:27:47.869836" elapsed="0.000017"/>
+</kw>
+<kw name="Upload Test Fixtures" owner="cluster_setup">
+<status status="NOT RUN" start="2026-07-10T04:27:47.870003" elapsed="0.000018"/>
+</kw>
+<status status="NOT RUN" start="2026-07-10T04:27:47.869337" elapsed="0.000698"/>
+</branch>
+<status status="PASS" start="2026-07-10T04:27:47.869309" elapsed="0.000746"/>
+</if>
+<status status="PASS" start="2026-07-10T04:27:47.179162" elapsed="0.690934"/>
+</kw>
+<tag>setup</tag>
+<tag>smoke</tag>
+<status status="PASS" start="2026-07-10T04:27:47.178860" elapsed="0.691300"/>
+</test>
+<test id="s1-t5" name="Operator Can Reach AWS API" line="24">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T04:27:47.870869" level="INFO">Starting process:
+kubectl logs -n kube-microvm deploy/kube-microvm-operator --tail=5</msg>
+<msg time="2026-07-10T04:27:47.871311" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T04:27:48.566546" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T04:27:48.566731" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>logs</arg>
+<arg>-n</arg>
+<arg>${OPERATOR_NS}</arg>
+<arg>deploy/kube-microvm-operator</arg>
+<arg>--tail\=5</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T04:27:47.870566" elapsed="0.696184"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>UnknownHostException</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-07-10T04:27:48.566924" elapsed="0.000760"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>connection timed out</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-07-10T04:27:48.567758" elapsed="0.000384"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>SSLHandshakeException</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-07-10T04:27:48.568208" elapsed="0.000329"/>
+</kw>
+<doc>Verifies the operator can call the Lambda MicroVMs API
+by checking operator logs for successful reconciliation (no connection errors).</doc>
+<tag>setup</tag>
+<tag>smoke</tag>
+<status status="PASS" start="2026-07-10T04:27:47.870288" elapsed="0.698313"/>
+</test>
+<test id="s1-t6" name="Webhook Endpoints Are Active" line="32">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T04:27:48.569117" level="INFO">Starting process:
+kubectl get validatingwebhookconfiguration kube-microvm-operator-validating</msg>
+<msg time="2026-07-10T04:27:48.569528" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T04:27:49.220967" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T04:27:49.221146" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>validatingwebhookconfiguration</arg>
+<arg>kube-microvm-operator-validating</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T04:27:48.568931" elapsed="0.652234"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T04:27:49.221989" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>Validating webhook not found</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T04:27:49.221335" elapsed="0.000699"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T04:27:49.222298" level="INFO">Starting process:
+kubectl get mutatingwebhookconfiguration kube-microvm-operator-mutating</msg>
+<msg time="2026-07-10T04:27:49.222704" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T04:27:49.882192" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T04:27:49.882371" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>mutatingwebhookconfiguration</arg>
+<arg>kube-microvm-operator-mutating</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T04:27:49.222118" elapsed="0.660273"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T04:27:49.883173" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>Mutating webhook not found</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T04:27:49.882562" elapsed="0.000653"/>
+</kw>
+<tag>setup</tag>
+<tag>smoke</tag>
+<status status="PASS" start="2026-07-10T04:27:48.568726" elapsed="1.314564"/>
+</test>
+<test id="s1-t7" name="Pod Identity Association Exists" line="38">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T04:27:49.883933" level="INFO">Starting process:
+aws eks list-pod-identity-associations --cluster-name ecp-us1 --namespace kube-microvm --service-account kube-microvm-operator</msg>
+<msg time="2026-07-10T04:27:49.884424" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T04:27:50.705872" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T04:27:50.706084" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>aws</arg>
+<arg>eks</arg>
+<arg>list-pod-identity-associations</arg>
+<arg>--cluster-name</arg>
+<arg>ecp-us1</arg>
+<arg>--namespace</arg>
+<arg>${OPERATOR_NS}</arg>
+<arg>--service-account</arg>
+<arg>kube-microvm-operator</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T04:27:49.883691" elapsed="0.822414"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>podidentityassociation</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-07-10T04:27:50.706351" elapsed="0.000625"/>
+</kw>
+<doc>Verifies that EKS Pod Identity is configured for the operator SA.</doc>
+<tag>setup</tag>
+<tag>smoke</tag>
+<status status="PASS" start="2026-07-10T04:27:49.883420" elapsed="0.823638"/>
+</test>
+<doc>Cluster prerequisite validation — run this first to verify your cluster
+is ready for UAT. If any test fails, follow the error message to fix.</doc>
+<status status="PASS" start="2026-07-10T04:27:43.168319" elapsed="7.539041"/>
+</suite>
+<statistics>
+<total>
+<stat pass="7" fail="0" skip="0">All Tests</stat>
+</total>
+<tag>
+<stat pass="2" fail="0" skip="0">critical</stat>
+<stat pass="7" fail="0" skip="0">setup</stat>
+<stat pass="7" fail="0" skip="0">smoke</stat>
+</tag>
+<suite>
+<stat name="00 Cluster Setup" id="s1" pass="7" fail="0" skip="0">00 Cluster Setup</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 7.4.2 (Python 3.12.3 on linux)" generated="2026-07-09T15:57:53.754028" rpa="false" schemaversion="5">
+<suite id="s1" name="99 Final Cleanup" source="/home/ubuntu/projects/pl-cloud/KubeMicroVM/uat/tests/99_final_cleanup.robot">
+<test id="s1-t1" name="Cleanup Shared Image" line="9">
+<kw name="Kubectl Delete Force" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T15:57:53.796860" level="INFO">Starting process:
+kubectl patch microvmimage uat-shared-app -n default --type=json -p=[{\"op\":\"remove\",\"path\":\"/metadata/finalizers\"}] --request-timeout=10s</msg>
+<msg time="2026-07-09T15:57:53.797366" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T15:57:54.481658" level="INFO">Process completed.</msg>
+<arg>kubectl</arg>
+<arg>patch</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>--type\=json</arg>
+<arg>-p\=[{"op":"remove","path":"/metadata/finalizers"}]</arg>
+<arg>--request-timeout\=10s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T15:57:53.796524" elapsed="0.685272"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T15:57:54.482485" level="INFO">Starting process:
+kubectl delete microvmimage uat-shared-app -n default --force --grace-period=0 --timeout=30s</msg>
+<msg time="2026-07-09T15:57:54.482924" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T15:57:55.251025" level="INFO">Process completed.</msg>
+<arg>kubectl</arg>
+<arg>delete</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>--force</arg>
+<arg>--grace-period\=0</arg>
+<arg>--timeout\=30s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T15:57:54.482021" elapsed="0.769141"/>
+</kw>
+<arg>microvmimage</arg>
+<arg>${SHARED_IMAGE}</arg>
+<status status="PASS" start="2026-07-09T15:57:53.796042" elapsed="1.455239"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T15:57:55.251803" level="INFO">Starting process:
+kubectl get microvmimage uat-shared-app -n default</msg>
+<msg time="2026-07-09T15:57:55.252258" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T15:57:55.914966" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T15:57:55.915168" level="INFO">${result} = &lt;result object with rc 1&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>microvmimage</arg>
+<arg>${SHARED_IMAGE}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T15:57:55.251431" elapsed="0.663758"/>
+</kw>
+<kw name="Should Not Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-09T15:57:55.916055" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>Shared image should be deleted</arg>
+<doc>Fails if objects are equal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-09T15:57:55.915362" elapsed="0.000743"/>
+</kw>
+<doc>Removes the shared MicroVMImage used across all suites</doc>
+<tag>teardown</tag>
+<status status="PASS" start="2026-07-09T15:57:53.795562" elapsed="2.120639"/>
+</test>
+<test id="s1-t2" name="Verify No Resources Remaining" line="15">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T15:57:55.916861" level="INFO">Starting process:
+kubectl get microvms -n default --no-headers</msg>
+<msg time="2026-07-09T15:57:55.917266" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T15:57:56.571556" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T15:57:56.571748" level="INFO">${vms} = &lt;result object with rc 0&gt;</msg>
+<var>${vms}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>microvms</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<arg>--no-headers</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T15:57:55.916627" elapsed="0.655142"/>
+</kw>
+<kw name="Should Be Empty" owner="BuiltIn">
+<msg time="2026-07-09T15:57:56.572916" level="INFO">Length is 0.</msg>
+<arg>${vms.stdout.strip()}</arg>
+<arg>MicroVMs still exist: ${vms.stdout}</arg>
+<doc>Verifies that the given item is empty.</doc>
+<status status="PASS" start="2026-07-09T15:57:56.571930" elapsed="0.001036"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T15:57:56.573261" level="INFO">Starting process:
+kubectl get microvmimages -n default --no-headers</msg>
+<msg time="2026-07-09T15:57:56.573655" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T15:57:57.239427" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T15:57:57.239618" level="INFO">${images} = &lt;result object with rc 0&gt;</msg>
+<var>${images}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>microvmimages</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<arg>--no-headers</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T15:57:56.573047" elapsed="0.666591"/>
+</kw>
+<kw name="Should Be Empty" owner="BuiltIn">
+<msg time="2026-07-09T15:57:57.240617" level="INFO">Length is 0.</msg>
+<arg>${images.stdout.strip()}</arg>
+<arg>MicroVMImages still exist: ${images.stdout}</arg>
+<doc>Verifies that the given item is empty.</doc>
+<status status="PASS" start="2026-07-09T15:57:57.239804" elapsed="0.000843"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-09T15:57:57.240925" level="INFO">Starting process:
+kubectl get microvmnetworks -n default --no-headers</msg>
+<msg time="2026-07-09T15:57:57.241352" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-09T15:57:57.897987" level="INFO">Process completed.</msg>
+<msg time="2026-07-09T15:57:57.898183" level="INFO">${networks} = &lt;result object with rc 0&gt;</msg>
+<var>${networks}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>microvmnetworks</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<arg>--no-headers</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-09T15:57:57.240721" elapsed="0.657483"/>
+</kw>
+<kw name="Should Be Empty" owner="BuiltIn">
+<msg time="2026-07-09T15:57:57.899219" level="INFO">Length is 0.</msg>
+<arg>${networks.stdout.strip()}</arg>
+<arg>MicroVMNetworks still exist: ${networks.stdout}</arg>
+<doc>Verifies that the given item is empty.</doc>
+<status status="PASS" start="2026-07-09T15:57:57.898378" elapsed="0.000873"/>
+</kw>
+<doc>Confirms all UAT resources have been cleaned up</doc>
+<tag>teardown</tag>
+<status status="PASS" start="2026-07-09T15:57:55.916359" elapsed="1.982976"/>
+</test>
+<doc>Final cleanup — removes shared resources created during UAT.
+Run this last (or it runs last alphabetically in the tests/ directory).</doc>
+<status status="PASS" start="2026-07-09T15:57:53.754687" elapsed="4.144944"/>
+</suite>
+<statistics>
+<total>
+<stat pass="2" fail="0" skip="0">All Tests</stat>
+</total>
+<tag>
+<stat pass="2" fail="0" skip="0">teardown</stat>
+</tag>
+<suite>
+<stat name="99 Final Cleanup" id="s1" pass="2" fail="0" skip="0">99 Final Cleanup</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>

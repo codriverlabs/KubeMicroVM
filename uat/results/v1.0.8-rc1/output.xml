@@ -1,0 +1,701 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 7.4.2 (Python 3.12.3 on linux)" generated="2026-07-21T16:31:15.949835" rpa="false" schemaversion="5">
+<suite id="s1" name="Tests" source="/home/ubuntu/projects/pl-cloud/microvm/KubeMicroVM/uat/tests">
+<kw name="Setup Cluster If Needed" owner="cluster_setup" type="SETUP">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-21T16:31:15.994408" level="INFO">Starting process:
+kubectl get deploy kube-microvm-operator -n kube-microvm</msg>
+<msg time="2026-07-21T16:31:15.994887" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-21T16:31:16.678244" level="INFO">Process completed.</msg>
+<msg time="2026-07-21T16:31:16.678467" level="INFO">${op_check} = &lt;result object with rc 1&gt;</msg>
+<var>${op_check}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>deploy</arg>
+<arg>kube-microvm-operator</arg>
+<arg>-n</arg>
+<arg>${OPERATOR_NS}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-21T16:31:15.994118" elapsed="0.684372"/>
+</kw>
+<if>
+<branch type="IF" condition="${op_check.rc} != 0">
+<kw name="Log" owner="BuiltIn">
+<msg time="2026-07-21T16:31:16.679457" level="INFO">Operator not found — installing...</msg>
+<arg>Operator not found — installing...</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="PASS" start="2026-07-21T16:31:16.679194" elapsed="0.000298"/>
+</kw>
+<kw name="Install Operator" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-21T16:31:16.680102" level="INFO">Starting process:
+helm install kube-microvm-operator oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator --version 1.0.8-rc1 --namespace kube-microvm --create-namespace --set app.envs.AWS_REGION=us-east-1 --timeout 4m --wait</msg>
+<msg time="2026-07-21T16:31:16.680646" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-21T16:31:17.778961" level="INFO">Process completed.</msg>
+<msg time="2026-07-21T16:31:17.779153" level="INFO">${result} = &lt;result object with rc 1&gt;</msg>
+<var>${result}</var>
+<arg>helm</arg>
+<arg>install</arg>
+<arg>kube-microvm-operator</arg>
+<arg>oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator</arg>
+<arg>--version</arg>
+<arg>${CHART_VERSION}</arg>
+<arg>--namespace</arg>
+<arg>${OPERATOR_NS}</arg>
+<arg>--create-namespace</arg>
+<arg>--set</arg>
+<arg>app.envs.AWS_REGION\=${REGION}</arg>
+<arg>--timeout</arg>
+<arg>4m</arg>
+<arg>--wait</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-21T16:31:16.679753" elapsed="1.099420"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-21T16:31:17.780186" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<msg time="2026-07-21T16:31:17.780301" level="FAIL">Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>Helm install failed: ${result.stderr}</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="FAIL" start="2026-07-21T16:31:17.779355" elapsed="0.001098">Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</kw>
+<kw name="Log" owner="BuiltIn">
+<arg>Operator installed successfully</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="NOT RUN" start="2026-07-21T16:31:17.780547" elapsed="0.000012"/>
+</kw>
+<status status="FAIL" start="2026-07-21T16:31:16.679623" elapsed="1.101021">Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</kw>
+<status status="FAIL" start="2026-07-21T16:31:16.678637" elapsed="1.102045">Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</branch>
+<status status="FAIL" start="2026-07-21T16:31:16.678604" elapsed="1.102109">Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</if>
+<kw name="Verify Cluster Ready" owner="cluster_setup">
+<doc>Validates that the cluster has operator running, CRDs installed,
+namespace labelled, and S3 test fixtures uploaded. Fails fast if not ready.</doc>
+<status status="NOT RUN" start="2026-07-21T16:31:17.780833" elapsed="0.000018"/>
+</kw>
+<doc>Full setup: installs operator if not present, labels namespace, uploads fixtures.
+Call this for CI/CD environments where cluster may be fresh.</doc>
+<status status="FAIL" start="2026-07-21T16:31:15.993742" elapsed="1.787156">Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</kw>
+<suite id="s1-s1" name="00 Cluster Setup" source="/home/ubuntu/projects/pl-cloud/microvm/KubeMicroVM/uat/tests/00_cluster_setup.robot">
+<test id="s1-s1-t1" name="Operator Is Deployed And Running" line="10">
+<tag>critical</tag>
+<tag>setup</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.781350" elapsed="0.000232">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s1-t2" name="CRDs Are Installed" line="14">
+<tag>critical</tag>
+<tag>setup</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.781700" elapsed="0.000138">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s1-t3" name="Namespace Is Labelled For MicroVMs" line="18">
+<tag>setup</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.781929" elapsed="0.000287">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s1-t4" name="S3 Test Fixtures Are Uploaded" line="21">
+<tag>setup</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.782304" elapsed="0.000142">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s1-t5" name="Operator Can Reach AWS API" line="24">
+<doc>Verifies the operator can call the Lambda MicroVMs API
+by checking operator logs for successful reconciliation (no connection errors).</doc>
+<tag>setup</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.782529" elapsed="0.000200">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s1-t6" name="Webhook Endpoints Are Active" line="32">
+<tag>setup</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.782856" elapsed="0.000121">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s1-t7" name="Pod Identity Association Exists" line="38">
+<doc>Verifies that EKS Pod Identity is configured for the operator SA.</doc>
+<tag>setup</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.783059" elapsed="0.000157">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<doc>Cluster prerequisite validation — run this first to verify your cluster
+is ready for UAT. If any test fails, follow the error message to fix.</doc>
+<status status="FAIL" start="2026-07-21T16:31:17.780950" elapsed="0.002523">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</suite>
+<suite id="s1-s2" name="01 Quick Start" source="/home/ubuntu/projects/pl-cloud/microvm/KubeMicroVM/uat/tests/01_quick_start.robot">
+<test id="s1-s2-t1" name="QS-00 Installer Download And Checksum Verification" line="16">
+<doc>Validates Step 1: download installer from release, verify SHA256, confirm executable</doc>
+<tag>quick-start</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.784059" elapsed="0.000204">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s2-t2" name="QS-01 Operator Running" line="40">
+<tag>quick-start</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.784350" elapsed="0.000144">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s2-t3" name="QS-02 Namespace Labelled For MicroVMs" line="45">
+<tag>quick-start</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.784578" elapsed="0.000120">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s2-t4" name="QS-03 MicroVMImage Created And Built" line="49">
+<doc>Builds the shared image used by all subsequent suites</doc>
+<tag>quick-start</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.784774" elapsed="0.000141">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s2-t5" name="QS-04 MicroVM Created And Running" line="53">
+<tag>quick-start</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.784991" elapsed="0.000117">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s2-t6" name="QS-05 MicroVM List Shows VM" line="57">
+<tag>quick-start</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.785181" elapsed="0.000104">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s2-t7" name="QS-06 Token Via Direct Flag" line="62">
+<tag>quick-start</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.785373" elapsed="0.000115">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s2-t8" name="QS-07 Curl Endpoint Returns OK" line="68">
+<tag>quick-start</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.785563" elapsed="0.000107">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s2-t9" name="QS-08 Teardown Delete VM" line="75">
+<doc>Follows the guide's graceful teardown for the VM (image kept for other suites)</doc>
+<tag>quick-start</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.785742" elapsed="0.000150">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<doc>UAT: Quick Start Guide — prerequisite for all other suites.
+Builds the shared image used by subsequent guides.</doc>
+<status status="FAIL" start="2026-07-21T16:31:17.783796" elapsed="0.002209">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</suite>
+<suite id="s1-s3" name="02 Rbac" source="/home/ubuntu/projects/pl-cloud/microvm/KubeMicroVM/uat/tests/02_rbac.robot">
+<test id="s1-s3-t1" name="RBAC-01 ServiceAccount Created" line="15">
+<tag>rbac</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.786463" elapsed="0.000118">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s3-t2" name="RBAC-02 Role With ResourceNames Created" line="19">
+<tag>rbac</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.786660" elapsed="0.000113">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s3-t3" name="RBAC-03 RoleBinding Created" line="23">
+<tag>rbac</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.786852" elapsed="0.000109">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s3-t4" name="RBAC-04 Auth Can-I With Subresource" line="27">
+<tag>rbac</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.787060" elapsed="0.000114">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s3-t5" name="RBAC-05 Authorized SA Gets Token Via Operator" line="32">
+<tag>rbac</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.787249" elapsed="0.000128">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s3-t6" name="RBAC-06 Authorized SA Rejected For Different VM" line="45">
+<tag>rbac</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.787452" elapsed="0.000118">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s3-t7" name="RBAC-07 Unauthorized SA Rejected" line="49">
+<tag>rbac</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.787641" elapsed="0.000113">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s3-t8" name="RBAC-08 Unlabelled Namespace Rejects MicroVM" line="57">
+<tag>rbac</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.787826" elapsed="0.000112">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<doc>UAT: RBAC Guide</doc>
+<status status="FAIL" start="2026-07-21T16:31:17.786268" elapsed="0.001778">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</suite>
+<suite id="s1-s4" name="03 Networking" source="/home/ubuntu/projects/pl-cloud/microvm/KubeMicroVM/uat/tests/03_networking.robot">
+<test id="s1-s4-t1" name="NET-01 Internet Egress Connects To Public Internet" line="22">
+<tag>networking</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.788486" elapsed="0.000144">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s4-t2" name="NET-02 Default Egress Has Internet Access" line="30">
+<tag>networking</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.788710" elapsed="0.000114">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s4-t3" name="NET-03 MicroVMNetwork Becomes Active" line="37">
+<tag>networking</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.788896" elapsed="0.000113">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s4-t4" name="NET-04 VPC Egress VM Connects" line="40">
+<tag>networking</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.789081" elapsed="0.000106">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s4-t5" name="NET-05 Network List Shows Connector" line="47">
+<tag>networking</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.789262" elapsed="0.000124">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<doc>UAT: Networking Guide</doc>
+<status status="FAIL" start="2026-07-21T16:31:17.788230" elapsed="0.001262">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</suite>
+<suite id="s1-s5" name="04 Pod Token Injection" source="/home/ubuntu/projects/pl-cloud/microvm/KubeMicroVM/uat/tests/04_pod_token_injection.robot">
+<test id="s1-s5-t1" name="INJ-01 Namespace Has Injection Label" line="15">
+<tag>injection</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.789938" elapsed="0.000122">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s5-t2" name="INJ-02 SA And RBAC Created" line="19">
+<tag>injection</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.790141" elapsed="0.000106">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s5-t3" name="INJ-03 Annotated Pod Created" line="23">
+<tag>injection</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.790325" elapsed="0.000124">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s5-t4" name="INJ-04 Sidecar Container Injected" line="27">
+<tag>injection</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.790525" elapsed="0.000111">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s5-t5" name="INJ-05 Token Volume Present" line="33">
+<tag>injection</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.790710" elapsed="0.000103">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s5-t6" name="INJ-06 Token Files Written" line="37">
+<doc>Verifies microvm-auth-agent writes auth-token, endpoint, and expires-at files.</doc>
+<tag>injection</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.790906" elapsed="0.000151">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s5-t7" name="INJ-07 Auth Token Non-Empty" line="45">
+<tag>injection</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.791129" elapsed="0.000102">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s5-t8" name="INJ-08 Token Works To Call MicroVM" line="50">
+<tag>injection</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.791302" elapsed="0.000131">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s5-t9" name="INJ-09 No RBAC Pod Has Empty Token Directory" line="57">
+<tag>injection</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.791507" elapsed="0.000113">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<doc>UAT: Pod Token Injection Guide</doc>
+<status status="FAIL" start="2026-07-21T16:31:17.789670" elapsed="0.002056">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</suite>
+<suite id="s1-s6" name="05 Replicaset" source="/home/ubuntu/projects/pl-cloud/microvm/KubeMicroVM/uat/tests/05_replicaset.robot">
+<test id="s1-s6-t1" name="RS-01 ReplicaSet Creates 3 MicroVMs" line="16">
+<tag>replicaset</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.792098" elapsed="0.000126">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s6-t2" name="RS-02 RS List Shows ReplicaSet" line="23">
+<tag>replicaset</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.792306" elapsed="0.000124">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s6-t3" name="RS-03 Scale Up To 5" line="28">
+<tag>replicaset</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.792507" elapsed="0.000101">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s6-t4" name="RS-04 Scale Down To 2" line="34">
+<tag>replicaset</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.792679" elapsed="0.000099">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s6-t5" name="RS-05 Rolling Update Changes ImageRef" line="40">
+<doc>Verifies rolling update when spec.template.imageRef changes.
+updatedReplicas reaches desired count with no downtime (readyReplicas never drops to 0).</doc>
+<tag>replicaset</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.792850" elapsed="0.000201">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s6-t6" name="RS-06 Delete ReplicaSet Terminates All VMs" line="74">
+<tag>destructive</tag>
+<tag>replicaset</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.793126" elapsed="0.000133">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<doc>UAT: ReplicaSet Guide</doc>
+<status status="FAIL" start="2026-07-21T16:31:17.791918" elapsed="0.001474">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</suite>
+<suite id="s1-s7" name="06 Microvm Class" source="/home/ubuntu/projects/pl-cloud/microvm/KubeMicroVM/uat/tests/06_microvm_class.robot">
+<test id="s1-s7-t1" name="CLASS-01 MicroVMClass Created" line="17">
+<tag>class</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.793770" elapsed="0.000117">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s7-t2" name="CLASS-02 VM Inherits Class Values" line="22">
+<tag>class</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.793967" elapsed="0.000112">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s7-t3" name="CLASS-03 Spec Shows All Inherited Values" line="27">
+<tag>class</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.794151" elapsed="0.000111">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s7-t4" name="CLASS-04 User Override Takes Precedence" line="35">
+<tag>class</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.794333" elapsed="0.000124">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s7-t5" name="CLASS-05 Kubectl Get Lists Class" line="40">
+<tag>class</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.794528" elapsed="0.000111">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s7-t6" name="CLASS-06 Non-Existent Class Rejected" line="44">
+<tag>class</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.794736" elapsed="0.000128">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<doc>UAT: MicroVMClass Guide</doc>
+<status status="FAIL" start="2026-07-21T16:31:17.793579" elapsed="0.001399">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</suite>
+<suite id="s1-s8" name="07 Drift Autosuspend" source="/home/ubuntu/projects/pl-cloud/microvm/KubeMicroVM/uat/tests/07_drift_autosuspend.robot">
+<test id="s1-s8-t1" name="DRIFT-01 External Termination Detected" line="15">
+<tag>destructive</tag>
+<tag>drift</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.795354" elapsed="0.000143">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s8-t2" name="DRIFT-02 Operator Re-Creates VM With New ID" line="22">
+<tag>drift</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.795578" elapsed="0.000123">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s8-t3" name="AUTO-01 VM Suspends After Idle Duration" line="28">
+<tag>drift</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.795777" elapsed="0.000122">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s8-t4" name="AUTO-02 Auto-Resume On Traffic" line="38">
+<tag>drift</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.795971" elapsed="0.000108">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s8-t5" name="AUTO-03 Operator Does Not Fight Idle Policy" line="47">
+<tag>drift</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.796157" elapsed="0.000115">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<doc>UAT: Drift Detection &amp; Auto-Suspend Guide</doc>
+<status status="FAIL" start="2026-07-21T16:31:17.795166" elapsed="0.001231">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</suite>
+<suite id="s1-s9" name="08 Memory Sizing" source="/home/ubuntu/projects/pl-cloud/microvm/KubeMicroVM/uat/tests/08_memory_sizing.robot">
+<test id="s1-s9-t1" name="MEM-01 Image With 4096 MiB Shows Correct Status" line="17">
+<tag>memory</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.796798" elapsed="0.000128">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s9-t2" name="MEM-02 Image Without MemorySizeMiB Defaults To 2048" line="26">
+<tag>memory</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.797003" elapsed="0.000124">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s9-t3" name="MEM-03 Invalid MemorySizeMiB Rejected" line="31">
+<tag>memory</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.797199" elapsed="0.000219">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s9-t4" name="MEM-04 MemorySizeMiB Immutable On Update" line="36">
+<tag>memory</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.797497" elapsed="0.000113">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s9-t5" name="MEM-05 CLI Describe Shows Memory" line="41">
+<tag>memory</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.797682" elapsed="0.000104">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s9-t6" name="MEM-07 Run VM From 4096 MiB Image" line="47">
+<tag>memory</tag>
+<tag>smoke</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.797857" elapsed="0.000111">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<doc>UAT: Memory Sizing Guide</doc>
+<status status="FAIL" start="2026-07-21T16:31:17.796596" elapsed="0.001480">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</suite>
+<suite id="s1-s10" name="99 Final Cleanup" source="/home/ubuntu/projects/pl-cloud/microvm/KubeMicroVM/uat/tests/99_final_cleanup.robot">
+<test id="s1-s10-t1" name="Cleanup Shared Image" line="9">
+<doc>Removes the shared MicroVMImage used across all suites</doc>
+<tag>teardown</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.798516" elapsed="0.000139">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<test id="s1-s10-t2" name="Verify No Resources Remaining" line="15">
+<doc>Confirms all UAT resources have been cleaned up</doc>
+<tag>teardown</tag>
+<status status="FAIL" start="2026-07-21T16:31:17.798752" elapsed="0.000137">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</test>
+<doc>Final cleanup — removes shared resources created during UAT.
+Run this last (or it runs last alphabetically in the tests/ directory).</doc>
+<status status="FAIL" start="2026-07-21T16:31:17.798260" elapsed="0.000732">Parent suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</suite>
+<doc>KubeMicroVM UAT — User Guide Acceptance Tests
+
+Validates that all user guide steps work exactly as documented.
+Requires: operator deployed, namespace labelled, S3 fixtures uploaded.
+
+Run all:  robot --outputdir results --exclude performance tests/
+Run one:  robot --outputdir results tests/01_quick_start.robot
+Smoke:    robot --outputdir results -i smoke tests/
+Perf:     robot --outputdir results -i performance tests/
+
+Performance tests are excluded by default (long-running, account-limit
+dependent). Include explicitly with: -i performance
+
+Each suite verifies cluster prerequisites before running.
+If the operator is not installed, suites will fail with a clear message.</doc>
+<status status="FAIL" start="2026-07-21T16:31:15.950483" elapsed="1.848898">Suite setup failed:
+Helm install failed: Error: INSTALLATION FAILED: kube-microvm-operator/templates/NOTES.txt:10:18
+  executing "kube-microvm-operator/templates/NOTES.txt" at &lt;.Values.serviceAccount.irsaRoleArn&gt;:
+    nil pointer evaluating interface {}.irsaRoleArn: 1 != 0</status>
+</suite>
+<statistics>
+<total>
+<stat pass="0" fail="63" skip="0">All Tests</stat>
+</total>
+<tag>
+<stat pass="0" fail="6" skip="0">class</stat>
+<stat pass="0" fail="2" skip="0">critical</stat>
+<stat pass="0" fail="2" skip="0">destructive</stat>
+<stat pass="0" fail="5" skip="0">drift</stat>
+<stat pass="0" fail="9" skip="0">injection</stat>
+<stat pass="0" fail="6" skip="0">memory</stat>
+<stat pass="0" fail="5" skip="0">networking</stat>
+<stat pass="0" fail="9" skip="0">quick-start</stat>
+<stat pass="0" fail="8" skip="0">rbac</stat>
+<stat pass="0" fail="6" skip="0">replicaset</stat>
+<stat pass="0" fail="7" skip="0">setup</stat>
+<stat pass="0" fail="20" skip="0">smoke</stat>
+<stat pass="0" fail="2" skip="0">teardown</stat>
+</tag>
+<suite>
+<stat name="Tests" id="s1" pass="0" fail="63" skip="0">Tests</stat>
+<stat name="00 Cluster Setup" id="s1-s1" pass="0" fail="7" skip="0">Tests.00 Cluster Setup</stat>
+<stat name="01 Quick Start" id="s1-s2" pass="0" fail="9" skip="0">Tests.01 Quick Start</stat>
+<stat name="02 Rbac" id="s1-s3" pass="0" fail="8" skip="0">Tests.02 Rbac</stat>
+<stat name="03 Networking" id="s1-s4" pass="0" fail="5" skip="0">Tests.03 Networking</stat>
+<stat name="04 Pod Token Injection" id="s1-s5" pass="0" fail="9" skip="0">Tests.04 Pod Token Injection</stat>
+<stat name="05 Replicaset" id="s1-s6" pass="0" fail="6" skip="0">Tests.05 Replicaset</stat>
+<stat name="06 Microvm Class" id="s1-s7" pass="0" fail="6" skip="0">Tests.06 Microvm Class</stat>
+<stat name="07 Drift Autosuspend" id="s1-s8" pass="0" fail="5" skip="0">Tests.07 Drift Autosuspend</stat>
+<stat name="08 Memory Sizing" id="s1-s9" pass="0" fail="6" skip="0">Tests.08 Memory Sizing</stat>
+<stat name="99 Final Cleanup" id="s1-s10" pass="0" fail="2" skip="0">Tests.99 Final Cleanup</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>

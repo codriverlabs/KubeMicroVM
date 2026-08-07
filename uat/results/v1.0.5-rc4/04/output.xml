@@ -1,0 +1,1562 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 7.4.2 (Python 3.12.3 on linux)" generated="2026-07-10T05:53:17.599642" rpa="false" schemaversion="5">
+<suite id="s1" name="04 Pod Token Injection" source="/home/ubuntu/projects/pl-cloud/KubeMicroVM/uat/tests/04_pod_token_injection.robot">
+<kw name="Run Keywords" owner="BuiltIn" type="SETUP">
+<kw name="Verify Cluster Ready" owner="cluster_setup">
+<kw name="Verify Operator Running" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:17.645463" level="INFO">Starting process:
+kubectl get deploy kube-microvm-operator -n kube-microvm -o jsonpath={.status.readyReplicas}</msg>
+<msg time="2026-07-10T05:53:17.645973" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:18.299561" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:18.299763" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>deploy</arg>
+<arg>kube-microvm-operator</arg>
+<arg>-n</arg>
+<arg>${OPERATOR_NS}</arg>
+<arg>-o</arg>
+<arg>jsonpath\={.status.readyReplicas}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:17.645213" elapsed="0.654573"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T05:53:18.300796" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>kubectl failed: ${result.stderr}</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T05:53:18.299992" elapsed="0.000853"/>
+</kw>
+<kw name="Should Be Equal" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>1</arg>
+<arg>Operator not running — install with: helm install kube-microvm-operator oci://ghcr.io/plasticity-of-cloud/helm/kube-microvm-operator --version ${CHART_VERSION} --namespace ${OPERATOR_NS} --create-namespace --set app.envs.AWS_REGION=${REGION}</arg>
+<doc>Fails if the given objects are unequal.</doc>
+<status status="PASS" start="2026-07-10T05:53:18.300924" elapsed="0.000506"/>
+</kw>
+<status status="PASS" start="2026-07-10T05:53:17.645119" elapsed="0.656371"/>
+</kw>
+<kw name="Verify CRDs Installed" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:18.301902" level="INFO">Starting process:
+kubectl get crd microvms.lambda.aws.amazon.com</msg>
+<msg time="2026-07-10T05:53:18.302344" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:18.967681" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:18.967865" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>crd</arg>
+<arg>microvms.lambda.aws.amazon.com</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:18.301729" elapsed="0.666157"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T05:53:18.968661" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>CRDs not installed — operator Helm chart should install them</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T05:53:18.968070" elapsed="0.000632"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:18.968966" level="INFO">Starting process:
+kubectl get crd microvmimages.lambda.aws.amazon.com</msg>
+<msg time="2026-07-10T05:53:18.969372" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:19.626640" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:19.626821" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>crd</arg>
+<arg>microvmimages.lambda.aws.amazon.com</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:18.968778" elapsed="0.658062"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T05:53:19.627608" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>MicroVMImage CRD missing</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T05:53:19.627021" elapsed="0.000627"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:19.627891" level="INFO">Starting process:
+kubectl get crd microvmclasses.lambda.aws.amazon.com</msg>
+<msg time="2026-07-10T05:53:19.628306" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:20.290766" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:20.290970" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>crd</arg>
+<arg>microvmclasses.lambda.aws.amazon.com</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:19.627724" elapsed="0.663268"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T05:53:20.291780" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>MicroVMClass CRD missing</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T05:53:20.291167" elapsed="0.000655"/>
+</kw>
+<status status="PASS" start="2026-07-10T05:53:18.301606" elapsed="1.990272"/>
+</kw>
+<kw name="Verify Namespace Labelled" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:20.292442" level="INFO">Starting process:
+kubectl get namespace default -o jsonpath={.metadata.labels.lambda\.aws\.amazon\.com/manage-microvms}</msg>
+<msg time="2026-07-10T05:53:20.292856" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:20.950903" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:20.951112" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>namespace</arg>
+<arg>${NAMESPACE}</arg>
+<arg>-o</arg>
+<arg>jsonpath\={.metadata.labels.lambda\\.aws\\.amazon\\.com/manage-microvms}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:20.292206" elapsed="0.658928"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${result.stdout}&quot; != &quot;true&quot;">
+<kw name="Run Process" owner="Process">
+<arg>kubectl</arg>
+<arg>label</arg>
+<arg>namespace</arg>
+<arg>${NAMESPACE}</arg>
+<arg>lambda.aws.amazon.com/manage-microvms\=true</arg>
+<arg>--overwrite</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="NOT RUN" start="2026-07-10T05:53:20.951762" elapsed="0.000017"/>
+</kw>
+<kw name="Log" owner="BuiltIn">
+<arg>Labelled namespace ${NAMESPACE} for MicroVM management</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="NOT RUN" start="2026-07-10T05:53:20.951843" elapsed="0.000010"/>
+</kw>
+<status status="NOT RUN" start="2026-07-10T05:53:20.951276" elapsed="0.000592"/>
+</branch>
+<status status="PASS" start="2026-07-10T05:53:20.951239" elapsed="0.000649"/>
+</if>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:20.952286" level="INFO">Starting process:
+kubectl get namespace default -o jsonpath={.metadata.labels.lambda\.microvm\.auth/inject}</msg>
+<msg time="2026-07-10T05:53:20.952900" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:21.609975" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:21.610167" level="INFO">${inject} = &lt;result object with rc 0&gt;</msg>
+<var>${inject}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>namespace</arg>
+<arg>${NAMESPACE}</arg>
+<arg>-o</arg>
+<arg>jsonpath\={.metadata.labels.lambda\\.microvm\\.auth/inject}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:20.951957" elapsed="0.658231"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${inject.stdout}&quot; != &quot;enabled&quot;">
+<kw name="Run Process" owner="Process">
+<arg>kubectl</arg>
+<arg>label</arg>
+<arg>namespace</arg>
+<arg>${NAMESPACE}</arg>
+<arg>lambda.microvm.auth/inject\=enabled</arg>
+<arg>--overwrite</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="NOT RUN" start="2026-07-10T05:53:21.610866" elapsed="0.000017"/>
+</kw>
+<status status="NOT RUN" start="2026-07-10T05:53:21.610377" elapsed="0.000532"/>
+</branch>
+<status status="PASS" start="2026-07-10T05:53:21.610345" elapsed="0.000584"/>
+</if>
+<status status="PASS" start="2026-07-10T05:53:20.292082" elapsed="1.318908"/>
+</kw>
+<kw name="Verify S3 Fixtures Uploaded" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:21.611548" level="INFO">Starting process:
+aws s3 ls s3://kube-microvm-test-864899852480-us-east-1/test-fixtures/microvm-hello-node.zip</msg>
+<msg time="2026-07-10T05:53:21.612055" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:22.312304" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:22.312500" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>aws</arg>
+<arg>s3</arg>
+<arg>ls</arg>
+<arg>s3://${S3_BUCKET}/test-fixtures/microvm-hello-node.zip</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:21.611272" elapsed="0.701248"/>
+</kw>
+<if>
+<branch type="IF" condition="${result.rc} != 0">
+<kw name="Log" owner="BuiltIn">
+<arg>Uploading test fixtures to S3...</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="NOT RUN" start="2026-07-10T05:53:22.313167" elapsed="0.000017"/>
+</kw>
+<kw name="Upload Test Fixtures" owner="cluster_setup">
+<status status="NOT RUN" start="2026-07-10T05:53:22.313310" elapsed="0.000017"/>
+</kw>
+<status status="NOT RUN" start="2026-07-10T05:53:22.312634" elapsed="0.000706"/>
+</branch>
+<status status="PASS" start="2026-07-10T05:53:22.312607" elapsed="0.000753"/>
+</if>
+<status status="PASS" start="2026-07-10T05:53:21.611140" elapsed="0.702262"/>
+</kw>
+<doc>Validates that the cluster has operator running, CRDs installed,
+namespace labelled, and S3 test fixtures uploaded. Fails fast if not ready.</doc>
+<status status="PASS" start="2026-07-10T05:53:17.644966" elapsed="4.668463"/>
+</kw>
+<kw name="Create Injection Resources">
+<kw name="Evaluate" owner="BuiltIn">
+<msg time="2026-07-10T05:53:22.313983" level="INFO">${id} = 055322</msg>
+<var>${id}</var>
+<arg>__import__('time').strftime('%H%M%S')</arg>
+<doc>Evaluates the given expression in Python and returns the result.</doc>
+<status status="PASS" start="2026-07-10T05:53:22.313692" elapsed="0.000309"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:22.314270" level="INFO">${RUN_ID} = 055322</msg>
+<arg>${RUN_ID}</arg>
+<arg>${id}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:22.314078" elapsed="0.000214"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:22.314503" level="INFO">${INJ_VM} = inject-vm-055322</msg>
+<arg>${INJ_VM}</arg>
+<arg>inject-vm-${id}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:22.314352" elapsed="0.000170"/>
+</kw>
+<kw name="Ensure Shared Image Ready" owner="cluster_setup">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:22.314988" level="INFO">Starting process:
+kubectl get microvmimage uat-shared-app -n default</msg>
+<msg time="2026-07-10T05:53:22.315422" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:22.975536" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:22.975724" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>microvmimage</arg>
+<arg>${SHARED_IMAGE}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:22.314767" elapsed="0.660978"/>
+</kw>
+<if>
+<branch type="IF" condition="${result.rc} == 0">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:22.976747" level="INFO">Starting process:
+kubectl get microvmimage uat-shared-app -n default -o jsonpath={.status.imageState}</msg>
+<msg time="2026-07-10T05:53:22.977173" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:23.656779" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:23.656973" level="INFO">${state} = &lt;result object with rc 0&gt;</msg>
+<var>${state}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>microvmimage</arg>
+<arg>${SHARED_IMAGE}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<arg>-o</arg>
+<arg>jsonpath\={.status.imageState}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:22.976386" elapsed="0.680609"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state.stdout}&quot; == &quot;CREATED&quot;">
+<kw name="Log" owner="BuiltIn">
+<msg time="2026-07-10T05:53:23.657850" level="INFO">Shared image uat-shared-app already built</msg>
+<arg>Shared image ${SHARED_IMAGE} already built</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="PASS" start="2026-07-10T05:53:23.657591" elapsed="0.000291"/>
+</kw>
+<return>
+<status status="PASS" start="2026-07-10T05:53:23.657921" elapsed="0.000076"/>
+</return>
+<status status="PASS" start="2026-07-10T05:53:23.657115" elapsed="0.000909"/>
+</branch>
+<status status="PASS" start="2026-07-10T05:53:23.657090" elapsed="0.000950"/>
+</if>
+<kw name="Wait For Image Ready" owner="common">
+<arg>${SHARED_IMAGE}</arg>
+<status status="NOT RUN" start="2026-07-10T05:53:23.658237" elapsed="0.000017"/>
+</kw>
+<status status="PASS" start="2026-07-10T05:53:22.975863" elapsed="0.682409"/>
+</branch>
+<branch type="ELSE">
+<kw name="Log" owner="BuiltIn">
+<arg>Creating shared image ${SHARED_IMAGE}...</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="NOT RUN" start="2026-07-10T05:53:23.658353" elapsed="0.000011"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<arg>${NAME}</arg>
+<arg>${SHARED_IMAGE}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="NOT RUN" start="2026-07-10T05:53:23.658422" elapsed="0.000009"/>
+</kw>
+<kw name="Apply Template" owner="common">
+<arg>shared/microvm-image.yaml</arg>
+<doc>Reads a YAML template file, resolves Robot Framework variables, and applies via kubectl.
+Variables must be set via Set Suite Variable or Set Test Variable before calling.</doc>
+<status status="NOT RUN" start="2026-07-10T05:53:23.658506" elapsed="0.000010"/>
+</kw>
+<kw name="Wait For Image Ready" owner="common">
+<arg>${SHARED_IMAGE}</arg>
+<status status="NOT RUN" start="2026-07-10T05:53:23.658614" elapsed="0.000010"/>
+</kw>
+<status status="NOT RUN" start="2026-07-10T05:53:23.658287" elapsed="0.000349"/>
+</branch>
+<status status="PASS" start="2026-07-10T05:53:22.975836" elapsed="0.682813"/>
+</if>
+<doc>Creates the shared MicroVMImage if it doesn't exist, waits for build.
+Called by suites that depend on Quick Start having run first.</doc>
+<status status="PASS" start="2026-07-10T05:53:22.314679" elapsed="1.344012"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:23.659291" level="INFO">${NAME} = inject-vm-055322</msg>
+<arg>${NAME}</arg>
+<arg>${INJ_VM}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:23.658744" elapsed="0.000577"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:23.659884" level="INFO">${IMAGE_REF} = uat-shared-app</msg>
+<arg>${IMAGE_REF}</arg>
+<arg>${SHARED_IMAGE}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:23.659391" elapsed="0.000516"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:23.660526" level="INFO">${MAX_IDLE} = 900</msg>
+<arg>${MAX_IDLE}</arg>
+<arg>900</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:23.660004" elapsed="0.000546"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:23.661033" level="INFO">${SUSPENDED_DURATION} = 1800</msg>
+<arg>${SUSPENDED_DURATION}</arg>
+<arg>1800</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:23.660612" elapsed="0.000445"/>
+</kw>
+<kw name="Apply Template" owner="common">
+<kw name="Get File" owner="OperatingSystem">
+<msg time="2026-07-10T05:53:23.661385" level="INFO" html="true">Getting file '&lt;a href="file:///home/ubuntu/projects/pl-cloud/KubeMicroVM/uat/templates/shared/microvm.yaml"&gt;/home/ubuntu/projects/pl-cloud/KubeMicroVM/uat/templates/shared/microvm.yaml&lt;/a&gt;'.</msg>
+<msg time="2026-07-10T05:53:23.661506" level="INFO">${content} = apiVersion: lambda.aws.amazon.com/v1alpha1
+kind: MicroVM
+metadata:
+  name: ${NAME}
+  namespace: ${NAMESPACE}
+spec:
+  imageRef: ${IMAGE_REF}
+  desiredState: Running
+  maxIdleDurationSeconds: ${MAX_IDLE...</msg>
+<var>${content}</var>
+<arg>${TEMPLATES}/${template_path}</arg>
+<doc>Returns the contents of a specified file.</doc>
+<status status="PASS" start="2026-07-10T05:53:23.661280" elapsed="0.000240"/>
+</kw>
+<kw name="Replace Variables" owner="BuiltIn">
+<msg time="2026-07-10T05:53:23.661789" level="INFO">${resolved} = apiVersion: lambda.aws.amazon.com/v1alpha1
+kind: MicroVM
+metadata:
+  name: inject-vm-055322
+  namespace: default
+spec:
+  imageRef: uat-shared-app
+  desiredState: Running
+  maxIdleDurationSeconds: 900
+...</msg>
+<var>${resolved}</var>
+<arg>${content}</arg>
+<doc>Replaces variables in the given text with their current values.</doc>
+<status status="PASS" start="2026-07-10T05:53:23.661580" elapsed="0.000223"/>
+</kw>
+<kw name="Kubectl Apply" owner="common">
+<kw name="Set Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:23.662318" level="INFO">${tmpfile} = /tmp/robot-kubectl-apply.yaml</msg>
+<var>${tmpfile}</var>
+<arg>/tmp/robot-kubectl-apply.yaml</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-07-10T05:53:23.662039" elapsed="0.000293"/>
+</kw>
+<kw name="Create File" owner="OperatingSystem">
+<msg time="2026-07-10T05:53:23.662583" level="INFO" html="true">Created file '&lt;a href="file:///tmp/robot-kubectl-apply.yaml"&gt;/tmp/robot-kubectl-apply.yaml&lt;/a&gt;'.</msg>
+<arg>${tmpfile}</arg>
+<arg>${yaml}</arg>
+<doc>Creates a file with the given content and encoding.</doc>
+<status status="PASS" start="2026-07-10T05:53:23.662388" elapsed="0.000227"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:23.662854" level="INFO">Starting process:
+kubectl apply -f /tmp/robot-kubectl-apply.yaml</msg>
+<msg time="2026-07-10T05:53:23.663281" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:24.380400" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:24.380594" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>apply</arg>
+<arg>-f</arg>
+<arg>${tmpfile}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:23.662677" elapsed="0.717938"/>
+</kw>
+<kw name="Remove File" owner="OperatingSystem">
+<msg time="2026-07-10T05:53:24.381041" level="INFO" html="true">Removed file '&lt;a href="file:///tmp/robot-kubectl-apply.yaml"&gt;/tmp/robot-kubectl-apply.yaml&lt;/a&gt;'.</msg>
+<arg>${tmpfile}</arg>
+<doc>Removes a file with the given path.</doc>
+<status status="PASS" start="2026-07-10T05:53:24.380788" elapsed="0.000293"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T05:53:24.381979" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>kubectl apply failed: ${result.stderr}</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T05:53:24.381171" elapsed="0.000852"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-10T05:53:24.382065" elapsed="0.000047"/>
+</return>
+<arg>${resolved}</arg>
+<status status="PASS" start="2026-07-10T05:53:23.661893" elapsed="0.720498"/>
+</kw>
+<arg>shared/microvm.yaml</arg>
+<doc>Reads a YAML template file, resolves Robot Framework variables, and applies via kubectl.
+Variables must be set via Set Suite Variable or Set Test Variable before calling.</doc>
+<status status="PASS" start="2026-07-10T05:53:23.661146" elapsed="0.721279"/>
+</kw>
+<kw name="Wait For VM Running" owner="common">
+<for flavor="IN RANGE">
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:24.383808" level="INFO">Starting process:
+kubectl get microvm inject-vm-055322 -n default -o jsonpath={.status.state}</msg>
+<msg time="2026-07-10T05:53:24.384244" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:25.041006" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:25.041203" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:24.383519" elapsed="0.657705"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-10T05:53:25.041310" elapsed="0.000049"/>
+</return>
+<msg time="2026-07-10T05:53:25.041769" level="INFO">${state} = Running</msg>
+<var>${state}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.state}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-10T05:53:24.383326" elapsed="0.658459"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${state}&quot; == &quot;Running&quot;">
+<return>
+<status status="PASS" start="2026-07-10T05:53:25.041962" elapsed="0.000015"/>
+</return>
+<status status="PASS" start="2026-07-10T05:53:25.041859" elapsed="0.000135"/>
+</branch>
+<status status="PASS" start="2026-07-10T05:53:25.041840" elapsed="0.000167"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="NOT RUN" start="2026-07-10T05:53:25.042119" elapsed="0.000016"/>
+</kw>
+<var name="${i}">0</var>
+<status status="PASS" start="2026-07-10T05:53:24.383236" elapsed="0.658917"/>
+</iter>
+<var>${i}</var>
+<value>${{int($timeout) // 5}}</value>
+<status status="PASS" start="2026-07-10T05:53:24.382796" elapsed="0.659390"/>
+</for>
+<kw name="Fail" owner="BuiltIn">
+<arg>MicroVM ${name} did not reach Running within ${timeout}s</arg>
+<doc>Fails the test with the given message and optionally alters its tags.</doc>
+<status status="NOT RUN" start="2026-07-10T05:53:25.042245" elapsed="0.000009"/>
+</kw>
+<arg>${INJ_VM}</arg>
+<status status="PASS" start="2026-07-10T05:53:24.382615" elapsed="0.659673"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:25.043021" level="INFO">${SA_NAME} = inject-sa-055322</msg>
+<arg>${SA_NAME}</arg>
+<arg>inject-sa-${RUN_ID}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.042353" elapsed="0.000696"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:25.043636" level="INFO">${ROLE_NAME} = inject-role-055322</msg>
+<arg>${ROLE_NAME}</arg>
+<arg>inject-role-${RUN_ID}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.043116" elapsed="0.000544"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:25.044218" level="INFO">${BINDING_NAME} = inject-binding-055322</msg>
+<arg>${BINDING_NAME}</arg>
+<arg>inject-binding-${RUN_ID}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.043724" elapsed="0.000517"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:25.044861" level="INFO">${VM_NAME} = inject-vm-055322</msg>
+<arg>${VM_NAME}</arg>
+<arg>${INJ_VM}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.044354" elapsed="0.000531"/>
+</kw>
+<kw name="Apply Template" owner="common">
+<kw name="Get File" owner="OperatingSystem">
+<msg time="2026-07-10T05:53:25.045261" level="INFO" html="true">Getting file '&lt;a href="file:///home/ubuntu/projects/pl-cloud/KubeMicroVM/uat/templates/rbac/sa-role-binding.yaml"&gt;/home/ubuntu/projects/pl-cloud/KubeMicroVM/uat/templates/rbac/sa-role-binding.yaml&lt;/a&gt;'.</msg>
+<msg time="2026-07-10T05:53:25.045378" level="INFO">${content} = apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${SA_NAME}
+  namespace: ${NAMESPACE}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ${ROLE_NAME}
+  namespace: ${NAMESPA...</msg>
+<var>${content}</var>
+<arg>${TEMPLATES}/${template_path}</arg>
+<doc>Returns the contents of a specified file.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.045159" elapsed="0.000232"/>
+</kw>
+<kw name="Replace Variables" owner="BuiltIn">
+<msg time="2026-07-10T05:53:25.045710" level="INFO">${resolved} = apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: inject-sa-055322
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: inject-role-055322
+  namespace: de...</msg>
+<var>${resolved}</var>
+<arg>${content}</arg>
+<doc>Replaces variables in the given text with their current values.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.045450" elapsed="0.000273"/>
+</kw>
+<kw name="Kubectl Apply" owner="common">
+<kw name="Set Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:25.046086" level="INFO">${tmpfile} = /tmp/robot-kubectl-apply.yaml</msg>
+<var>${tmpfile}</var>
+<arg>/tmp/robot-kubectl-apply.yaml</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.045928" elapsed="0.000171"/>
+</kw>
+<kw name="Create File" owner="OperatingSystem">
+<msg time="2026-07-10T05:53:25.046335" level="INFO" html="true">Created file '&lt;a href="file:///tmp/robot-kubectl-apply.yaml"&gt;/tmp/robot-kubectl-apply.yaml&lt;/a&gt;'.</msg>
+<arg>${tmpfile}</arg>
+<arg>${yaml}</arg>
+<doc>Creates a file with the given content and encoding.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.046152" elapsed="0.000214"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:25.046600" level="INFO">Starting process:
+kubectl apply -f /tmp/robot-kubectl-apply.yaml</msg>
+<msg time="2026-07-10T05:53:25.047013" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:25.791067" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:25.791256" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>apply</arg>
+<arg>-f</arg>
+<arg>${tmpfile}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.046427" elapsed="0.744849"/>
+</kw>
+<kw name="Remove File" owner="OperatingSystem">
+<msg time="2026-07-10T05:53:25.791683" level="INFO" html="true">Removed file '&lt;a href="file:///tmp/robot-kubectl-apply.yaml"&gt;/tmp/robot-kubectl-apply.yaml&lt;/a&gt;'.</msg>
+<arg>${tmpfile}</arg>
+<doc>Removes a file with the given path.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.791440" elapsed="0.000275"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T05:53:25.792565" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>kubectl apply failed: ${result.stderr}</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.791781" elapsed="0.000824"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-10T05:53:25.792642" elapsed="0.000036"/>
+</return>
+<arg>${resolved}</arg>
+<status status="PASS" start="2026-07-10T05:53:25.045819" elapsed="0.747147"/>
+</kw>
+<arg>rbac/sa-role-binding.yaml</arg>
+<doc>Reads a YAML template file, resolves Robot Framework variables, and applies via kubectl.
+Variables must be set via Set Suite Variable or Set Test Variable before calling.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.045015" elapsed="0.747987"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:25.793662" level="INFO">${POD_NAME} = inject-pod-055322</msg>
+<arg>${POD_NAME}</arg>
+<arg>inject-pod-${RUN_ID}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.793081" elapsed="0.000606"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:25.793917" level="INFO">${SA_NAME} = inject-sa-055322</msg>
+<arg>${SA_NAME}</arg>
+<arg>inject-sa-${RUN_ID}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.793754" elapsed="0.000211"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:25.794169" level="INFO">${VM_NAME} = inject-vm-055322</msg>
+<arg>${VM_NAME}</arg>
+<arg>${INJ_VM}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.794025" elapsed="0.000162"/>
+</kw>
+<kw name="Apply Template" owner="common">
+<kw name="Get File" owner="OperatingSystem">
+<msg time="2026-07-10T05:53:25.794692" level="INFO" html="true">Getting file '&lt;a href="file:///home/ubuntu/projects/pl-cloud/KubeMicroVM/uat/templates/pod-injection/annotated-pod.yaml"&gt;/home/ubuntu/projects/pl-cloud/KubeMicroVM/uat/templates/pod-injection/annotated-pod.yaml&lt;/a&gt;'.</msg>
+<msg time="2026-07-10T05:53:25.794805" level="INFO">${content} = apiVersion: v1
+kind: Pod
+metadata:
+  name: ${POD_NAME}
+  namespace: ${NAMESPACE}
+  annotations:
+    lambda.microvm.auth: ${VM_NAME}
+spec:
+  serviceAccountName: ${SA_NAME}
+  containers:
+  - name: app
+ ...</msg>
+<var>${content}</var>
+<arg>${TEMPLATES}/${template_path}</arg>
+<doc>Returns the contents of a specified file.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.794601" elapsed="0.000217"/>
+</kw>
+<kw name="Replace Variables" owner="BuiltIn">
+<msg time="2026-07-10T05:53:25.795086" level="INFO">${resolved} = apiVersion: v1
+kind: Pod
+metadata:
+  name: inject-pod-055322
+  namespace: default
+  annotations:
+    lambda.microvm.auth: inject-vm-055322
+spec:
+  serviceAccountName: inject-sa-055322
+  containers:
+  ...</msg>
+<var>${resolved}</var>
+<arg>${content}</arg>
+<doc>Replaces variables in the given text with their current values.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.794876" elapsed="0.000228"/>
+</kw>
+<kw name="Kubectl Apply" owner="common">
+<kw name="Set Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:25.795424" level="INFO">${tmpfile} = /tmp/robot-kubectl-apply.yaml</msg>
+<var>${tmpfile}</var>
+<arg>/tmp/robot-kubectl-apply.yaml</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.795306" elapsed="0.000130"/>
+</kw>
+<kw name="Create File" owner="OperatingSystem">
+<msg time="2026-07-10T05:53:25.795647" level="INFO" html="true">Created file '&lt;a href="file:///tmp/robot-kubectl-apply.yaml"&gt;/tmp/robot-kubectl-apply.yaml&lt;/a&gt;'.</msg>
+<arg>${tmpfile}</arg>
+<arg>${yaml}</arg>
+<doc>Creates a file with the given content and encoding.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.795484" elapsed="0.000192"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:25.795904" level="INFO">Starting process:
+kubectl apply -f /tmp/robot-kubectl-apply.yaml</msg>
+<msg time="2026-07-10T05:53:25.796342" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:26.537634" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:26.537831" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>apply</arg>
+<arg>-f</arg>
+<arg>${tmpfile}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.795736" elapsed="0.742115"/>
+</kw>
+<kw name="Remove File" owner="OperatingSystem">
+<msg time="2026-07-10T05:53:26.538351" level="INFO" html="true">Removed file '&lt;a href="file:///tmp/robot-kubectl-apply.yaml"&gt;/tmp/robot-kubectl-apply.yaml&lt;/a&gt;'.</msg>
+<arg>${tmpfile}</arg>
+<doc>Removes a file with the given path.</doc>
+<status status="PASS" start="2026-07-10T05:53:26.538059" elapsed="0.000330"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T05:53:26.539268" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>kubectl apply failed: ${result.stderr}</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T05:53:26.538459" elapsed="0.000851"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-10T05:53:26.539351" elapsed="0.000038"/>
+</return>
+<arg>${resolved}</arg>
+<status status="PASS" start="2026-07-10T05:53:25.795197" elapsed="0.744464"/>
+</kw>
+<arg>pod-injection/annotated-pod.yaml</arg>
+<doc>Reads a YAML template file, resolves Robot Framework variables, and applies via kubectl.
+Variables must be set via Set Suite Variable or Set Test Variable before calling.</doc>
+<status status="PASS" start="2026-07-10T05:53:25.794292" elapsed="0.745403"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:26.539978" level="INFO">${SA_NAME} = inject-norole-sa-055322</msg>
+<arg>${SA_NAME}</arg>
+<arg>inject-norole-sa-${RUN_ID}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:26.539768" elapsed="0.000233"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:26.540209" level="INFO">${POD_NAME} = inject-norole-pod-055322</msg>
+<arg>${POD_NAME}</arg>
+<arg>inject-norole-pod-${RUN_ID}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:26.540060" elapsed="0.000168"/>
+</kw>
+<kw name="Set Suite Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:26.540417" level="INFO">${VM_NAME} = inject-vm-055322</msg>
+<arg>${VM_NAME}</arg>
+<arg>${INJ_VM}</arg>
+<doc>Makes a variable available everywhere within the scope of the current suite.</doc>
+<status status="PASS" start="2026-07-10T05:53:26.540282" elapsed="0.000153"/>
+</kw>
+<kw name="Apply Template" owner="common">
+<kw name="Get File" owner="OperatingSystem">
+<msg time="2026-07-10T05:53:26.540755" level="INFO" html="true">Getting file '&lt;a href="file:///home/ubuntu/projects/pl-cloud/KubeMicroVM/uat/templates/pod-injection/norole-sa-pod.yaml"&gt;/home/ubuntu/projects/pl-cloud/KubeMicroVM/uat/templates/pod-injection/norole-sa-pod.yaml&lt;/a&gt;'.</msg>
+<msg time="2026-07-10T05:53:26.540871" level="INFO">${content} = apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${SA_NAME}
+  namespace: ${NAMESPACE}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ${POD_NAME}
+  namespace: ${NAMESPACE}
+  annotations:
+    lambd...</msg>
+<var>${content}</var>
+<arg>${TEMPLATES}/${template_path}</arg>
+<doc>Returns the contents of a specified file.</doc>
+<status status="PASS" start="2026-07-10T05:53:26.540673" elapsed="0.000211"/>
+</kw>
+<kw name="Replace Variables" owner="BuiltIn">
+<msg time="2026-07-10T05:53:26.541171" level="INFO">${resolved} = apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: inject-norole-sa-055322
+  namespace: default
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: inject-norole-pod-055322
+  namespace: default
+  annota...</msg>
+<var>${resolved}</var>
+<arg>${content}</arg>
+<doc>Replaces variables in the given text with their current values.</doc>
+<status status="PASS" start="2026-07-10T05:53:26.540959" elapsed="0.000225"/>
+</kw>
+<kw name="Kubectl Apply" owner="common">
+<kw name="Set Variable" owner="BuiltIn">
+<msg time="2026-07-10T05:53:26.541514" level="INFO">${tmpfile} = /tmp/robot-kubectl-apply.yaml</msg>
+<var>${tmpfile}</var>
+<arg>/tmp/robot-kubectl-apply.yaml</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-07-10T05:53:26.541393" elapsed="0.000134"/>
+</kw>
+<kw name="Create File" owner="OperatingSystem">
+<msg time="2026-07-10T05:53:26.541754" level="INFO" html="true">Created file '&lt;a href="file:///tmp/robot-kubectl-apply.yaml"&gt;/tmp/robot-kubectl-apply.yaml&lt;/a&gt;'.</msg>
+<arg>${tmpfile}</arg>
+<arg>${yaml}</arg>
+<doc>Creates a file with the given content and encoding.</doc>
+<status status="PASS" start="2026-07-10T05:53:26.541581" elapsed="0.000205"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:26.542049" level="INFO">Starting process:
+kubectl apply -f /tmp/robot-kubectl-apply.yaml</msg>
+<msg time="2026-07-10T05:53:26.542462" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:27.343506" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:27.343705" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>apply</arg>
+<arg>-f</arg>
+<arg>${tmpfile}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:26.541849" elapsed="0.801876"/>
+</kw>
+<kw name="Remove File" owner="OperatingSystem">
+<msg time="2026-07-10T05:53:27.344183" level="INFO" html="true">Removed file '&lt;a href="file:///tmp/robot-kubectl-apply.yaml"&gt;/tmp/robot-kubectl-apply.yaml&lt;/a&gt;'.</msg>
+<arg>${tmpfile}</arg>
+<doc>Removes a file with the given path.</doc>
+<status status="PASS" start="2026-07-10T05:53:27.343909" elapsed="0.000307"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T05:53:27.345108" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>kubectl apply failed: ${result.stderr}</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T05:53:27.344284" elapsed="0.000864"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-10T05:53:27.345187" elapsed="0.000038"/>
+</return>
+<arg>${resolved}</arg>
+<status status="PASS" start="2026-07-10T05:53:26.541282" elapsed="0.804215"/>
+</kw>
+<arg>pod-injection/norole-sa-pod.yaml</arg>
+<doc>Reads a YAML template file, resolves Robot Framework variables, and applies via kubectl.
+Variables must be set via Set Suite Variable or Set Test Variable before calling.</doc>
+<status status="PASS" start="2026-07-10T05:53:26.540545" elapsed="0.804987"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:27.345878" level="INFO">Starting process:
+kubectl wait --for=condition=Ready pod/inject-pod-055322 pod/inject-norole-pod-055322 -n default --timeout=90s</msg>
+<msg time="2026-07-10T05:53:27.346342" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:32.797610" level="INFO">Process completed.</msg>
+<arg>kubectl</arg>
+<arg>wait</arg>
+<arg>--for\=condition\=Ready</arg>
+<arg>pod/inject-pod-${RUN_ID}</arg>
+<arg>pod/inject-norole-pod-${RUN_ID}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<arg>--timeout\=90s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:27.345600" elapsed="5.452136"/>
+</kw>
+<status status="PASS" start="2026-07-10T05:53:22.313568" elapsed="10.484263"/>
+</kw>
+<arg>Verify Cluster Ready</arg>
+<arg>AND</arg>
+<arg>Create Injection Resources</arg>
+<doc>Executes all the given keywords in a sequence.</doc>
+<status status="PASS" start="2026-07-10T05:53:17.644555" elapsed="15.153310"/>
+</kw>
+<test id="s1-t1" name="INJ-01 Namespace Has Injection Label" line="15">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:32.798765" level="INFO">Starting process:
+kubectl get namespace default -o jsonpath={.metadata.labels.lambda\.microvm\.auth/inject}</msg>
+<msg time="2026-07-10T05:53:32.799221" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:33.458703" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:33.458883" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>namespace</arg>
+<arg>${NAMESPACE}</arg>
+<arg>-o</arg>
+<arg>jsonpath\={.metadata.labels.lambda\\.microvm\\.auth/inject}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:32.798430" elapsed="0.660473"/>
+</kw>
+<kw name="Should Be Equal" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>enabled</arg>
+<doc>Fails if the given objects are unequal.</doc>
+<status status="PASS" start="2026-07-10T05:53:33.459097" elapsed="0.000613"/>
+</kw>
+<tag>injection</tag>
+<status status="PASS" start="2026-07-10T05:53:32.798026" elapsed="0.661771"/>
+</test>
+<test id="s1-t2" name="INJ-02 SA And RBAC Created" line="19">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:33.460422" level="INFO">Starting process:
+kubectl get sa inject-sa-055322 -n default</msg>
+<msg time="2026-07-10T05:53:33.460795" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:34.116153" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:34.116328" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>sa</arg>
+<arg>inject-sa-${RUN_ID}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:33.460191" elapsed="0.656158"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T05:53:34.117357" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T05:53:34.116518" elapsed="0.000884"/>
+</kw>
+<tag>injection</tag>
+<status status="PASS" start="2026-07-10T05:53:33.459963" elapsed="0.657523"/>
+</test>
+<test id="s1-t3" name="INJ-03 Annotated Pod Created" line="23">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:34.118105" level="INFO">Starting process:
+kubectl get pod inject-pod-055322 -n default</msg>
+<msg time="2026-07-10T05:53:34.118505" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:34.774807" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:34.775000" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>pod</arg>
+<arg>inject-pod-${RUN_ID}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:34.117834" elapsed="0.657187"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T05:53:34.775816" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T05:53:34.775194" elapsed="0.000665"/>
+</kw>
+<tag>injection</tag>
+<status status="PASS" start="2026-07-10T05:53:34.117626" elapsed="0.658306"/>
+</test>
+<test id="s1-t4" name="INJ-04 Sidecar Container Injected" line="27">
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:34.776852" level="INFO">Starting process:
+kubectl get pod inject-pod-055322 -n default -o jsonpath={.spec.containers[*].name}</msg>
+<msg time="2026-07-10T05:53:34.777275" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:35.430678" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:35.430854" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:34.776561" elapsed="0.654319"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-10T05:53:35.430971" elapsed="0.000048"/>
+</return>
+<msg time="2026-07-10T05:53:35.431444" level="INFO">${containers} = app microvm-auth-agent</msg>
+<var>${containers}</var>
+<arg>pod</arg>
+<arg>inject-pod-${RUN_ID}</arg>
+<arg>{.spec.containers[*].name}</arg>
+<status status="PASS" start="2026-07-10T05:53:34.776347" elapsed="0.655114"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${containers}</arg>
+<arg>app</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-07-10T05:53:35.431583" elapsed="0.000439"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${containers}</arg>
+<arg>microvm-auth-agent</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-07-10T05:53:35.432096" elapsed="0.000163"/>
+</kw>
+<tag>injection</tag>
+<tag>smoke</tag>
+<status status="PASS" start="2026-07-10T05:53:34.776079" elapsed="0.656247"/>
+</test>
+<test id="s1-t5" name="INJ-05 Token Volume Present" line="33">
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:53:35.433184" level="INFO">Starting process:
+kubectl get pod inject-pod-055322 -n default -o jsonpath={.spec.volumes[*].name}</msg>
+<msg time="2026-07-10T05:53:35.433592" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:53:36.090143" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:53:36.090319" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:53:35.432897" elapsed="0.657441"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-10T05:53:36.090420" elapsed="0.000045"/>
+</return>
+<msg time="2026-07-10T05:53:36.090885" level="INFO">${volumes} = kube-api-access-55j78 microvm-token</msg>
+<var>${volumes}</var>
+<arg>pod</arg>
+<arg>inject-pod-${RUN_ID}</arg>
+<arg>{.spec.volumes[*].name}</arg>
+<status status="PASS" start="2026-07-10T05:53:35.432697" elapsed="0.658204"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${volumes}</arg>
+<arg>microvm-token</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-07-10T05:53:36.091045" elapsed="0.000288"/>
+</kw>
+<tag>injection</tag>
+<status status="PASS" start="2026-07-10T05:53:35.432446" elapsed="0.658956"/>
+</test>
+<test id="s1-t6" name="INJ-06 Token Files Written" line="37">
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-10T05:54:21.092126" level="INFO">Slept 45 seconds.</msg>
+<msg time="2026-07-10T05:54:21.092213" level="INFO">Wait for agent to fetch token</msg>
+<arg>45s</arg>
+<arg>Wait for agent to fetch token</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-10T05:53:36.091764" elapsed="45.000509"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:54:21.092890" level="INFO">Starting process:
+kubectl exec inject-pod-055322 -c app -n default -- ls /var/run/microvm/</msg>
+<msg time="2026-07-10T05:54:21.093446" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:54:21.862904" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:54:21.863108" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>exec</arg>
+<arg>inject-pod-${RUN_ID}</arg>
+<arg>-c</arg>
+<arg>app</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<arg>--</arg>
+<arg>ls</arg>
+<arg>/var/run/microvm/</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:54:21.092461" elapsed="0.770728"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>auth-token</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-07-10T05:54:21.863374" elapsed="0.000624"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>endpoint</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-07-10T05:54:21.864072" elapsed="0.000387"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>expires-at</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-07-10T05:54:21.864524" elapsed="0.000357"/>
+</kw>
+<doc>Verifies microvm-auth-agent writes auth-token, endpoint, and expires-at files.</doc>
+<tag>injection</tag>
+<status status="PASS" start="2026-07-10T05:53:36.091525" elapsed="45.773440"/>
+</test>
+<test id="s1-t7" name="INJ-07 Auth Token Non-Empty" line="45">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:54:21.865536" level="INFO">Starting process:
+kubectl exec inject-pod-055322 -c app -n default -- cat /var/run/microvm/auth-token</msg>
+<msg time="2026-07-10T05:54:21.865966" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:54:22.592660" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:54:22.592850" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>exec</arg>
+<arg>inject-pod-${RUN_ID}</arg>
+<arg>-c</arg>
+<arg>app</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<arg>--</arg>
+<arg>cat</arg>
+<arg>/var/run/microvm/auth-token</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:54:21.865289" elapsed="0.727582"/>
+</kw>
+<kw name="Should Not Be Empty" owner="BuiltIn">
+<msg time="2026-07-10T05:54:22.593686" level="INFO">Length is 745.</msg>
+<arg>${result.stdout}</arg>
+<doc>Verifies that the given item is not empty.</doc>
+<status status="PASS" start="2026-07-10T05:54:22.593067" elapsed="0.000650"/>
+</kw>
+<kw name="Length Should Be Greater Than">
+<kw name="Get Length" owner="BuiltIn">
+<msg time="2026-07-10T05:54:22.594763" level="INFO">Length is 745.</msg>
+<msg time="2026-07-10T05:54:22.594808" level="INFO">${length} = 745</msg>
+<var>${length}</var>
+<arg>${string}</arg>
+<doc>Returns and logs the length of the given item as an integer.</doc>
+<status status="PASS" start="2026-07-10T05:54:22.594495" elapsed="0.000325"/>
+</kw>
+<kw name="Should Be True" owner="BuiltIn">
+<arg>${length} &gt; ${min_length}</arg>
+<doc>Fails if the given condition is not true.</doc>
+<status status="PASS" start="2026-07-10T05:54:22.594883" elapsed="0.000206"/>
+</kw>
+<arg>${result.stdout}</arg>
+<arg>100</arg>
+<status status="PASS" start="2026-07-10T05:54:22.593862" elapsed="0.001263"/>
+</kw>
+<tag>injection</tag>
+<status status="PASS" start="2026-07-10T05:54:21.865092" elapsed="0.730093"/>
+</test>
+<test id="s1-t8" name="INJ-08 Token Works To Call MicroVM" line="50">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:54:22.595738" level="INFO">Starting process:
+kubectl exec inject-pod-055322 -c app -n default -- cat /var/run/microvm/auth-token</msg>
+<msg time="2026-07-10T05:54:22.596171" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:54:23.328684" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:54:23.328873" level="INFO">${token} = &lt;result object with rc 0&gt;</msg>
+<var>${token}</var>
+<arg>kubectl</arg>
+<arg>exec</arg>
+<arg>inject-pod-${RUN_ID}</arg>
+<arg>-c</arg>
+<arg>app</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<arg>--</arg>
+<arg>cat</arg>
+<arg>/var/run/microvm/auth-token</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:54:22.595490" elapsed="0.733403"/>
+</kw>
+<kw name="Get MicroVM Endpoint" owner="common">
+<for flavor="IN RANGE">
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:54:23.330641" level="INFO">Starting process:
+kubectl get microvm inject-vm-055322 -n default -o jsonpath={.status.endpointUrl}</msg>
+<msg time="2026-07-10T05:54:23.331076" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:54:23.984744" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:54:23.984925" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:54:23.330318" elapsed="0.654642"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-10T05:54:23.985038" elapsed="0.000048"/>
+</return>
+<msg time="2026-07-10T05:54:23.985522" level="INFO">${ep} = PENDING</msg>
+<var>${ep}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.endpointUrl}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-10T05:54:23.330086" elapsed="0.655453"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${ep}&quot; != &quot;PENDING&quot; and &quot;${ep}&quot; != &quot;&quot;">
+<return>
+<value>${ep}</value>
+<status status="NOT RUN" start="2026-07-10T05:54:23.985711" elapsed="0.000008"/>
+</return>
+<status status="NOT RUN" start="2026-07-10T05:54:23.985609" elapsed="0.000125"/>
+</branch>
+<status status="PASS" start="2026-07-10T05:54:23.985592" elapsed="0.000154"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-10T05:54:28.986268" level="INFO">Slept 5 seconds.</msg>
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-10T05:54:23.985852" elapsed="5.000549"/>
+</kw>
+<var name="${i}">0</var>
+<status status="PASS" start="2026-07-10T05:54:23.330000" elapsed="5.656453"/>
+</iter>
+<iter>
+<kw name="Kubectl Get JsonPath" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:54:28.987531" level="INFO">Starting process:
+kubectl get microvm inject-vm-055322 -n default -o jsonpath={.status.endpointUrl}</msg>
+<msg time="2026-07-10T05:54:28.988053" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:54:29.640167" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:54:29.640355" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>get</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>-o</arg>
+<arg>jsonpath\=${jsonpath}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:54:28.987185" elapsed="0.653190"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-10T05:54:29.640449" elapsed="0.000047"/>
+</return>
+<msg time="2026-07-10T05:54:29.640930" level="INFO">${ep} = b4cfa54b-3f11-efba-53d8-7aea25c4ecd8.lambda-microvm.us-east-1.on.aws</msg>
+<var>${ep}</var>
+<arg>microvm</arg>
+<arg>${name}</arg>
+<arg>{.status.endpointUrl}</arg>
+<arg>${namespace}</arg>
+<status status="PASS" start="2026-07-10T05:54:28.986828" elapsed="0.654139"/>
+</kw>
+<if>
+<branch type="IF" condition="&quot;${ep}&quot; != &quot;PENDING&quot; and &quot;${ep}&quot; != &quot;&quot;">
+<return>
+<value>${ep}</value>
+<status status="PASS" start="2026-07-10T05:54:29.641143" elapsed="0.000016"/>
+</return>
+<status status="PASS" start="2026-07-10T05:54:29.641038" elapsed="0.000140"/>
+</branch>
+<status status="PASS" start="2026-07-10T05:54:29.641021" elapsed="0.000171"/>
+</if>
+<kw name="Sleep" owner="BuiltIn">
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="NOT RUN" start="2026-07-10T05:54:29.641298" elapsed="0.000015"/>
+</kw>
+<var name="${i}">1</var>
+<status status="PASS" start="2026-07-10T05:54:28.986661" elapsed="0.654725"/>
+</iter>
+<var>${i}</var>
+<value>${{int($timeout) // 5}}</value>
+<status status="PASS" start="2026-07-10T05:54:23.329476" elapsed="6.311935"/>
+</for>
+<kw name="Fail" owner="BuiltIn">
+<arg>Endpoint for ${name} did not resolve within ${timeout}s</arg>
+<doc>Fails the test with the given message and optionally alters its tags.</doc>
+<status status="NOT RUN" start="2026-07-10T05:54:29.641478" elapsed="0.000010"/>
+</kw>
+<msg time="2026-07-10T05:54:29.641565" level="INFO">${endpoint} = b4cfa54b-3f11-efba-53d8-7aea25c4ecd8.lambda-microvm.us-east-1.on.aws</msg>
+<var>${endpoint}</var>
+<arg>${INJ_VM}</arg>
+<status status="PASS" start="2026-07-10T05:54:23.329232" elapsed="6.312346"/>
+</kw>
+<kw name="Call MicroVM Endpoint" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:54:29.642505" level="INFO">Starting process:
+curl -sk -H "X-aws-proxy-auth: eyJraWQiOiIzM2ZhNzI4Yi04OGFjLTRlZjYtYTFmMC0xMzliZTk0MGI0ODgiLCJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..TZDBIecZz21VrwOl.JwRp_VqpPOmH7Zs6lzmYlqYl9W3bBoBLPTujaGn9ljFl4_3mcbqOTBJ5QOo0ie0jTaNCWZA5HfHap-nqGskAh1PKj_mQIq_jA-AH1uizXJrsUP4FXBOtxN7JD_W2Jssaf07gAp_lrq9pAXZbgrK0C0yUnqi7Oqaa07WDR1xKK9wA_j7L9tAxLsQh-hVE-oP0hZjK_wyvByqaLGFhFR9XhqDueJoLW7fd7zvOBl5yRVbvFdFNgmcCPCQt4cbEkuE9IwlDht1xYQ812uinaXU5vToL8_wxIzvmRzJpyIeqbJdTMLwgXlyqJqvHzWh2m7zt8XdYMFHw9IdG3bTv9H0d3yIQDNWQ2YWyXA5jotKESCe1yL776vZhdnx4rx1RpD7wmGGdHqhFtaWVriGaeUeaH2wTueZ3U-DrQFHb5HhpssHX6uOzOvgYMchZTyO66-SZ___poKQuIbFjeaK9Noi-hHzKDVsAikdSLk8NMXgghx6KdDorj5qqRh-Px-WK1sUFEUSNfScM3EjDPJV3hh4bjjkINuQOZrhqmvR1M3annE_laKpUC2WFJ1KA9vtYgemPq10lnkIg1sNZTkKPo_q6Ag-U4RNf.TLX9DIcOc239GgvRxF_0ug" https://b4cfa54b-3f11-efba-53d8-7aea25c4ecd8.lambda-microvm.us-east-1.on.aws/</msg>
+<msg time="2026-07-10T05:54:29.642996" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:54:32.629374" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:54:32.629568" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>curl</arg>
+<arg>-sk</arg>
+<arg>-H</arg>
+<arg>X-aws-proxy-auth: ${token}</arg>
+<arg>https://${endpoint}${path}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:54:29.642180" elapsed="2.987409"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<msg time="2026-07-10T05:54:32.630649" level="INFO">Argument types are:
+&lt;class 'int'&gt;
+&lt;class 'str'&gt;</msg>
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<arg>curl failed: ${result.stderr}</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-07-10T05:54:32.629768" elapsed="0.000922"/>
+</kw>
+<return>
+<value>${result.stdout}</value>
+<status status="PASS" start="2026-07-10T05:54:32.630729" elapsed="0.000034"/>
+</return>
+<msg time="2026-07-10T05:54:32.631278" level="INFO">${response} = {"status":"ok","path":"/","ts":"2026-07-10T05:54:32.366Z"}</msg>
+<var>${response}</var>
+<arg>${endpoint}</arg>
+<arg>${token.stdout}</arg>
+<status status="PASS" start="2026-07-10T05:54:29.641705" elapsed="2.989590"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${response}</arg>
+<arg>"status":"ok"</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-07-10T05:54:32.631368" elapsed="0.000194"/>
+</kw>
+<tag>injection</tag>
+<tag>smoke</tag>
+<status status="PASS" start="2026-07-10T05:54:22.595302" elapsed="10.036328"/>
+</test>
+<test id="s1-t9" name="INJ-09 No RBAC Pod Has Empty Token Directory" line="57">
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2026-07-10T05:54:52.632263" level="INFO">Slept 20 seconds.</msg>
+<msg time="2026-07-10T05:54:52.632353" level="INFO">Wait for no-RBAC agent to attempt</msg>
+<arg>20s</arg>
+<arg>Wait for no-RBAC agent to attempt</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2026-07-10T05:54:32.631969" elapsed="20.000442"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:54:52.633056" level="INFO">Starting process:
+kubectl exec inject-norole-pod-055322 -c app -n default -- ls /var/run/microvm/</msg>
+<msg time="2026-07-10T05:54:52.633585" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:54:53.369116" level="INFO">Process completed.</msg>
+<msg time="2026-07-10T05:54:53.369307" level="INFO">${result} = &lt;result object with rc 0&gt;</msg>
+<var>${result}</var>
+<arg>kubectl</arg>
+<arg>exec</arg>
+<arg>inject-norole-pod-${RUN_ID}</arg>
+<arg>-c</arg>
+<arg>app</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<arg>--</arg>
+<arg>ls</arg>
+<arg>/var/run/microvm/</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:54:52.632600" elapsed="0.736728"/>
+</kw>
+<kw name="Should Be Empty" owner="BuiltIn">
+<msg time="2026-07-10T05:54:53.370114" level="INFO">Length is 0.</msg>
+<arg>${result.stdout.strip()}</arg>
+<doc>Verifies that the given item is empty.</doc>
+<status status="PASS" start="2026-07-10T05:54:53.369508" elapsed="0.000637"/>
+</kw>
+<tag>injection</tag>
+<status status="PASS" start="2026-07-10T05:54:32.631756" elapsed="20.738460"/>
+</test>
+<kw name="Cleanup Injection Resources" type="TEARDOWN">
+<kw name="Run Keyword And Ignore Error" owner="BuiltIn">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:54:53.371254" level="INFO">Starting process:
+kubectl delete pod inject-pod-055322 inject-norole-pod-055322 -n default --force --grace-period=0 --timeout=30s</msg>
+<msg time="2026-07-10T05:54:53.371681" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:54:54.073985" level="INFO">Process completed.</msg>
+<arg>kubectl</arg>
+<arg>delete</arg>
+<arg>pod</arg>
+<arg>inject-pod-${RUN_ID}</arg>
+<arg>inject-norole-pod-${RUN_ID}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<arg>--force</arg>
+<arg>--grace-period\=0</arg>
+<arg>--timeout\=30s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:54:53.370977" elapsed="0.703126"/>
+</kw>
+<arg>Run Process</arg>
+<arg>kubectl</arg>
+<arg>delete</arg>
+<arg>pod</arg>
+<arg>inject-pod-${RUN_ID}</arg>
+<arg>inject-norole-pod-${RUN_ID}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<arg>--force</arg>
+<arg>--grace-period\=0</arg>
+<arg>--timeout\=30s</arg>
+<doc>Runs the given keyword with the given arguments and ignores possible error.</doc>
+<status status="PASS" start="2026-07-10T05:54:53.370754" elapsed="0.703425"/>
+</kw>
+<kw name="Run Keyword And Ignore Error" owner="BuiltIn">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:54:54.074958" level="INFO">Starting process:
+kubectl delete sa inject-sa-055322 inject-norole-sa-055322 -n default</msg>
+<msg time="2026-07-10T05:54:54.075380" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:54:54.764239" level="INFO">Process completed.</msg>
+<arg>kubectl</arg>
+<arg>delete</arg>
+<arg>sa</arg>
+<arg>inject-sa-${RUN_ID}</arg>
+<arg>inject-norole-sa-${RUN_ID}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:54:54.074662" elapsed="0.689700"/>
+</kw>
+<arg>Run Process</arg>
+<arg>kubectl</arg>
+<arg>delete</arg>
+<arg>sa</arg>
+<arg>inject-sa-${RUN_ID}</arg>
+<arg>inject-norole-sa-${RUN_ID}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<doc>Runs the given keyword with the given arguments and ignores possible error.</doc>
+<status status="PASS" start="2026-07-10T05:54:54.074345" elapsed="0.690088"/>
+</kw>
+<kw name="Run Keyword And Ignore Error" owner="BuiltIn">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:54:54.765183" level="INFO">Starting process:
+kubectl delete role inject-role-055322 -n default</msg>
+<msg time="2026-07-10T05:54:54.765603" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:54:55.431764" level="INFO">Process completed.</msg>
+<arg>kubectl</arg>
+<arg>delete</arg>
+<arg>role</arg>
+<arg>inject-role-${RUN_ID}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:54:54.764899" elapsed="0.666979"/>
+</kw>
+<arg>Run Process</arg>
+<arg>kubectl</arg>
+<arg>delete</arg>
+<arg>role</arg>
+<arg>inject-role-${RUN_ID}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<doc>Runs the given keyword with the given arguments and ignores possible error.</doc>
+<status status="PASS" start="2026-07-10T05:54:54.764592" elapsed="0.667423"/>
+</kw>
+<kw name="Run Keyword And Ignore Error" owner="BuiltIn">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:54:55.432722" level="INFO">Starting process:
+kubectl delete rolebinding inject-binding-055322 -n default</msg>
+<msg time="2026-07-10T05:54:55.433134" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:54:56.094933" level="INFO">Process completed.</msg>
+<arg>kubectl</arg>
+<arg>delete</arg>
+<arg>rolebinding</arg>
+<arg>inject-binding-${RUN_ID}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:54:55.432470" elapsed="0.662592"/>
+</kw>
+<arg>Run Process</arg>
+<arg>kubectl</arg>
+<arg>delete</arg>
+<arg>rolebinding</arg>
+<arg>inject-binding-${RUN_ID}</arg>
+<arg>-n</arg>
+<arg>${NAMESPACE}</arg>
+<doc>Runs the given keyword with the given arguments and ignores possible error.</doc>
+<status status="PASS" start="2026-07-10T05:54:55.432169" elapsed="0.662963"/>
+</kw>
+<kw name="Run Keyword And Ignore Error" owner="BuiltIn">
+<kw name="Kubectl Delete Force" owner="common">
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:54:56.096194" level="INFO">Starting process:
+kubectl patch microvm inject-vm-055322 -n default --type=json -p=[{\"op\":\"remove\",\"path\":\"/metadata/finalizers\"}] --request-timeout=10s</msg>
+<msg time="2026-07-10T05:54:56.096612" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:54:56.791789" level="INFO">Process completed.</msg>
+<arg>kubectl</arg>
+<arg>patch</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>--type\=json</arg>
+<arg>-p\=[{"op":"remove","path":"/metadata/finalizers"}]</arg>
+<arg>--request-timeout\=10s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:54:56.095876" elapsed="0.696032"/>
+</kw>
+<kw name="Run Process" owner="Process">
+<msg time="2026-07-10T05:54:56.792547" level="INFO">Starting process:
+kubectl delete microvm inject-vm-055322 -n default --force --grace-period=0 --timeout=30s</msg>
+<msg time="2026-07-10T05:54:56.792989" level="INFO">Waiting for process to complete.</msg>
+<msg time="2026-07-10T05:54:57.631799" level="INFO">Process completed.</msg>
+<arg>kubectl</arg>
+<arg>delete</arg>
+<arg>${resource}</arg>
+<arg>${name}</arg>
+<arg>-n</arg>
+<arg>${namespace}</arg>
+<arg>--force</arg>
+<arg>--grace-period\=0</arg>
+<arg>--timeout\=30s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-07-10T05:54:56.792108" elapsed="0.839810"/>
+</kw>
+<arg>microvm</arg>
+<arg>${INJ_VM}</arg>
+<status status="PASS" start="2026-07-10T05:54:56.095651" elapsed="1.536372"/>
+</kw>
+<arg>Kubectl Delete Force</arg>
+<arg>microvm</arg>
+<arg>${INJ_VM}</arg>
+<doc>Runs the given keyword with the given arguments and ignores possible error.</doc>
+<status status="PASS" start="2026-07-10T05:54:56.095289" elapsed="1.536770"/>
+</kw>
+<status status="PASS" start="2026-07-10T05:54:53.370627" elapsed="4.261466"/>
+</kw>
+<doc>UAT: Pod Token Injection Guide</doc>
+<status status="PASS" start="2026-07-10T05:53:17.600260" elapsed="100.031854"/>
+</suite>
+<statistics>
+<total>
+<stat pass="9" fail="0" skip="0">All Tests</stat>
+</total>
+<tag>
+<stat pass="9" fail="0" skip="0">injection</stat>
+<stat pass="2" fail="0" skip="0">smoke</stat>
+</tag>
+<suite>
+<stat name="04 Pod Token Injection" id="s1" pass="9" fail="0" skip="0">04 Pod Token Injection</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>
