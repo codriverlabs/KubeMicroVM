@@ -88,7 +88,17 @@ uat/
 │   ├── 05_replicaset.robot      # ReplicaSet guide (5 tests)
 │   ├── 06_microvm_class.robot   # MicroVMClass guide (6 tests)
 │   ├── 07_drift_autosuspend.robot    # Drift & Auto-Suspend (5 tests)
-│   └── 08_memory_sizing.robot   # Memory Sizing guide (6 tests)
+│   ├── 08_memory_sizing.robot   # Memory Sizing guide (6 tests)
+│   ├── 09_performance_scale.robot    # Performance: 1000 VMs via ReplicaSet (8 tests)
+│   └── 10_burst_quota_warmup.robot   # Burst: 3×500 parallel for quota warmup (8 tests)
+├── templates/
+│   ├── burst/                   # Burst test templates (image + replicaset)
+│   └── ...
+├── fixtures/
+│   ├── microvm-hello-node/      # Simple HTTP server
+│   ├── microvm-net-test/        # Outbound connectivity tester
+│   └── microvm-burst-worker/    # Stateless compute worker
+├── run-burst-warmup.sh          # Loop runner for sustained quota warmup
 └── results/                     # Generated reports (gitignored)
 ```
 
@@ -129,4 +139,41 @@ robot --variable REGION:eu-west-1 \
 | `setup` | Cluster prerequisite checks |
 | `critical` | Must-pass for any testing to proceed |
 | `destructive` | Terminates VMs externally or scales down |
+| `performance` | 1000-VM single ReplicaSet scale test |
+| `burst` | 3×500 parallel burst for quota warmup |
 | `quick-start`, `rbac`, `networking`, etc. | Per-guide tags |
+
+## Burst Quota Warmup
+
+The burst test generates sustained high-throughput `RunMicrovm` API calls to trigger
+AWS's automatic quota increase mechanism (as advised by support ticket).
+
+### Single run
+
+```bash
+robot --outputdir results/burst -i burst tests/10_burst_quota_warmup.robot
+```
+
+### Sustained loop (recommended for quota warmup)
+
+```bash
+# 6 waves, 35 minutes apart (~3.5 hours total)
+./uat/run-burst-warmup.sh
+
+# Custom: 10 waves, 30 minutes apart (~5 hours)
+./uat/run-burst-warmup.sh --waves 10 --interval 30
+```
+
+Each wave creates 3 ReplicaSets × 500 replicas = 1500 `RunMicrovm` API calls,
+observes throughput for ~10 minutes, then drains all VMs before the next wave.
+
+Results are stored in `results/burst-warmup/<timestamp>/` with:
+- `progress.log` — human-readable timeline
+- `summary.csv` — per-wave metrics for trend analysis
+- `wave-N/` — full Robot Framework reports per wave
+
+### What to attach to the support ticket
+
+1. `progress.log` — shows sustained demand over time
+2. `summary.csv` — shows whether throughput improved across waves
+3. Screenshot of the performance summary from any wave's `log.html`
