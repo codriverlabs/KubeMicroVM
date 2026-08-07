@@ -2,11 +2,23 @@
 
 ## Process
 
-Every feature follows this sequence. Do not skip steps or merge without completing all of them.
+Every feature or bug fix follows this sequence. Do not skip steps or merge without completing all of them.
 
 ```
-main → feature branch → develop → test locally → deploy → E2E test → sign off → teardown → merge to main
+main → validate issue → feature branch → develop → test locally → deploy → E2E test → sign off → teardown → merge to main
 ```
+
+### 0. Validate Issue
+
+Before creating a branch, confirm the issue is valid:
+
+- **Reproduce**: Can you trigger the reported behaviour with the current codebase?
+- **Read the code**: Does the code match the reported symptom? (webhook missing check, reconciler wrong state, etc.)
+- **Confirm scope**: Is this the right fix location? Could there be a better layer to fix it?
+- **Check existing tests**: Do existing tests already cover this? If so, why didn't they catch it?
+
+Only proceed to implementation once validated. If the issue cannot be reproduced or
+the reported behaviour is expected, comment on the issue and close it.
 
 ### 1. Document
 
@@ -84,6 +96,7 @@ Only merge after all steps complete successfully.
 
 ## Rules
 
+- **Never start work without validating the issue** — read the code, reproduce if possible, confirm scope
 - **Never push with failing tests** — run the full suite before every push **with code changes**
 - **Skip tests for doc-only changes** — `.md`, `.kiro/`, `docs/`, `uat/fixtures/`, `.github/`
 - **Never use `helm upgrade` during dev** — always uninstall + install
