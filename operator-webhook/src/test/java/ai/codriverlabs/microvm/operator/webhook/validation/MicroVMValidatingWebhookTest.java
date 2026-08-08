@@ -266,4 +266,103 @@ class MicroVMValidatingWebhookTest {
         webhook.validateIdlePolicy(spec, errors);
         assertTrue(errors.isEmpty(), "className + explicit fields should pass: " + errors);
     }
+
+    // ── idlePolicy value constraints ──────────────────────────────────────────
+
+    @Test
+    void maxIdleDurationBelowMinimumRejected() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setMaxIdleDurationSeconds(30);
+        spec.setSuspendedDurationSeconds(1800);
+
+        List<String> errors = webhook.validate(spec, "default");
+        assertFalse(errors.isEmpty(), "maxIdleDurationSeconds=30 should be rejected (min 60)");
+        assertTrue(errors.stream().anyMatch(e -> e.contains(">= 60")));
+    }
+
+    @Test
+    void maxIdleDurationExactMinimumAccepted() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setMaxIdleDurationSeconds(60);
+        spec.setSuspendedDurationSeconds(0);
+
+        List<String> errors = webhook.validate(spec, "default");
+        assertTrue(errors.isEmpty(), "maxIdleDurationSeconds=60 should be accepted: " + errors);
+    }
+
+    @Test
+    void suspendedDurationNegativeRejected() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setMaxIdleDurationSeconds(900);
+        spec.setSuspendedDurationSeconds(-1);
+
+        List<String> errors = webhook.validate(spec, "default");
+        assertFalse(errors.isEmpty(), "suspendedDurationSeconds=-1 should be rejected");
+        assertTrue(errors.stream().anyMatch(e -> e.contains(">= 0")));
+    }
+
+    @Test
+    void suspendedDurationZeroAccepted() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setMaxIdleDurationSeconds(900);
+        spec.setSuspendedDurationSeconds(0);
+
+        List<String> errors = webhook.validate(spec, "default");
+        assertTrue(errors.isEmpty(), "suspendedDurationSeconds=0 should be accepted: " + errors);
+    }
+
+    @Test
+    void maximumDurationTooLowRejected() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setMaxIdleDurationSeconds(900);
+        spec.setSuspendedDurationSeconds(1800);
+        spec.setMaximumDurationSeconds(0);
+
+        List<String> errors = webhook.validate(spec, "default");
+        assertFalse(errors.isEmpty(), "maximumDurationSeconds=0 should be rejected");
+        assertTrue(errors.stream().anyMatch(e -> e.contains("between 1 and 28800")));
+    }
+
+    @Test
+    void maximumDurationTooHighRejected() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setMaxIdleDurationSeconds(900);
+        spec.setSuspendedDurationSeconds(1800);
+        spec.setMaximumDurationSeconds(30000);
+
+        List<String> errors = webhook.validate(spec, "default");
+        assertFalse(errors.isEmpty(), "maximumDurationSeconds=30000 should be rejected");
+        assertTrue(errors.stream().anyMatch(e -> e.contains("between 1 and 28800")));
+    }
+
+    @Test
+    void maximumDurationValidBoundariesAccepted() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setMaxIdleDurationSeconds(900);
+        spec.setSuspendedDurationSeconds(1800);
+        spec.setMaximumDurationSeconds(28800);
+
+        List<String> errors = webhook.validate(spec, "default");
+        assertTrue(errors.isEmpty(), "maximumDurationSeconds=28800 should be accepted: " + errors);
+    }
+
+    @Test
+    void valueConstraintsCheckedEvenWithClassName() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setClassName("my-class");
+        spec.setMaxIdleDurationSeconds(10);  // below minimum, even with className
+
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateIdlePolicy(spec, errors);
+        assertFalse(errors.isEmpty(), "Value constraints apply even with className: " + errors);
+        assertTrue(errors.stream().anyMatch(e -> e.contains(">= 60")));
+    }
 }

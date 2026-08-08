@@ -94,10 +94,17 @@ public class MicroVMValidatingWebhook {
     }
 
     /**
-     * Validates that idle policy durations are resolvable.
-     * AWS requires maxIdleDurationSeconds and suspendedDurationSeconds to be non-null.
-     * These can come from either the spec directly or via a className reference.
-     * If className is absent and either duration field is missing, reject at admission.
+     * Validates that idle policy durations are resolvable and within AWS constraints.
+     * <p>
+     * AWS requires maxIdleDurationSeconds and suspendedDurationSeconds to be non-null
+     * when idlePolicy is provided. These can come from the spec directly or via className.
+     * <p>
+     * Constraints from AWS service model (service-2.json):
+     * <ul>
+     *   <li>maxIdleDurationSeconds: min=60</li>
+     *   <li>suspendedDurationSeconds: min=0</li>
+     *   <li>maximumDurationInSeconds: min=1, max=28800</li>
+     * </ul>
      */
     void validateIdlePolicy(MicroVMSpec spec, List<String> errors) {
         boolean hasClassName = spec.getClassName() != null && !spec.getClassName().isBlank();
@@ -105,16 +112,28 @@ public class MicroVMValidatingWebhook {
         boolean hasSuspended = spec.getSuspendedDurationSeconds() != null;
 
         // If className is set, assume it provides the missing values (already validated by validateClassName)
-        if (hasClassName) return;
+        if (!hasClassName) {
+            if (!hasMaxIdle && !hasSuspended) {
+                errors.add("spec.maxIdleDurationSeconds and spec.suspendedDurationSeconds are required " +
+                        "when spec.className is not set (AWS requires idle policy durations)");
+            } else if (!hasMaxIdle) {
+                errors.add("spec.maxIdleDurationSeconds is required when spec.className is not set");
+            } else if (!hasSuspended) {
+                errors.add("spec.suspendedDurationSeconds is required when spec.className is not set");
+            }
+        }
 
-        // No className — both fields must be present
-        if (!hasMaxIdle && !hasSuspended) {
-            errors.add("spec.maxIdleDurationSeconds and spec.suspendedDurationSeconds are required " +
-                    "when spec.className is not set (AWS requires idle policy durations)");
-        } else if (!hasMaxIdle) {
-            errors.add("spec.maxIdleDurationSeconds is required when spec.className is not set");
-        } else if (!hasSuspended) {
-            errors.add("spec.suspendedDurationSeconds is required when spec.className is not set");
+        // Value constraints (check even when className is set — explicit values override class defaults)
+        if (hasMaxIdle && spec.getMaxIdleDurationSeconds() < 60) {
+            errors.add("spec.maxIdleDurationSeconds must be >= 60 (AWS minimum)");
+        }
+        if (hasSuspended && spec.getSuspendedDurationSeconds() < 0) {
+            errors.add("spec.suspendedDurationSeconds must be >= 0");
+        }
+        if (spec.getMaximumDurationSeconds() != null) {
+            if (spec.getMaximumDurationSeconds() < 1 || spec.getMaximumDurationSeconds() > 28800) {
+                errors.add("spec.maximumDurationSeconds must be between 1 and 28800 (8 hours)");
+            }
         }
     }
 
