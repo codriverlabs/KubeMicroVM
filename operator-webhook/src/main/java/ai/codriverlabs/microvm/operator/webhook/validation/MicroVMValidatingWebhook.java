@@ -72,6 +72,7 @@ public class MicroVMValidatingWebhook {
         if (spec.getImageRef() == null || spec.getImageRef().isBlank()) {
             errors.add("spec.imageRef is required");
         }
+        validateIdlePolicy(spec, errors);
         return errors;
     }
 
@@ -89,6 +90,31 @@ public class MicroVMValidatingWebhook {
             }
         } catch (Exception e) {
             LOG.warnf("Error looking up MicroVMClass %s/%s: %s", namespace, className, e.getMessage());
+        }
+    }
+
+    /**
+     * Validates that idle policy durations are resolvable.
+     * AWS requires maxIdleDurationSeconds and suspendedDurationSeconds to be non-null.
+     * These can come from either the spec directly or via a className reference.
+     * If className is absent and either duration field is missing, reject at admission.
+     */
+    void validateIdlePolicy(MicroVMSpec spec, List<String> errors) {
+        boolean hasClassName = spec.getClassName() != null && !spec.getClassName().isBlank();
+        boolean hasMaxIdle = spec.getMaxIdleDurationSeconds() != null;
+        boolean hasSuspended = spec.getSuspendedDurationSeconds() != null;
+
+        // If className is set, assume it provides the missing values (already validated by validateClassName)
+        if (hasClassName) return;
+
+        // No className — both fields must be present
+        if (!hasMaxIdle && !hasSuspended) {
+            errors.add("spec.maxIdleDurationSeconds and spec.suspendedDurationSeconds are required " +
+                    "when spec.className is not set (AWS requires idle policy durations)");
+        } else if (!hasMaxIdle) {
+            errors.add("spec.maxIdleDurationSeconds is required when spec.className is not set");
+        } else if (!hasSuspended) {
+            errors.add("spec.suspendedDurationSeconds is required when spec.className is not set");
         }
     }
 
@@ -119,6 +145,7 @@ public class MicroVMValidatingWebhook {
                     if (spec.getImageRef() == null || spec.getImageRef().isBlank()) {
                         errors.add("spec.imageRef is required");
                     }
+                    validateIdlePolicy(spec, errors);
                     validateNetworkRef(spec, request.getNamespace(), errors);
                     validateClassName(spec, request.getNamespace(), errors);
                     validateImportMicroVmId(spec, request.getOperation(),

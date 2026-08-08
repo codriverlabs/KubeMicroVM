@@ -142,9 +142,11 @@ class MicroVMValidatingWebhookTest {
     void validImportMicroVmIdAccepted() {
         MicroVMSpec spec = new MicroVMSpec();
         spec.setImageRef("my-image");
+        spec.setMaxIdleDurationSeconds(900);
+        spec.setSuspendedDurationSeconds(1800);
         spec.setImportMicroVmId("microvm-12345678-abcd-ef01-2345-6789abcdef01");
         List<String> errors = webhook.validate(spec, "default");
-        assertTrue(errors.isEmpty(), "Valid importMicroVmId should be accepted");
+        assertTrue(errors.isEmpty(), "Valid importMicroVmId should be accepted: " + errors);
     }
 
     @Test
@@ -189,5 +191,79 @@ class MicroVMValidatingWebhookTest {
         List<String> errors = new java.util.ArrayList<>();
         webhook.validateImportMicroVmId(spec, "CREATE", null, errors);
         assertTrue(errors.isEmpty(), "Null importMicroVmId should be skipped");
+    }
+
+    // ── idlePolicy validation (#59) ───────────────────────────────────────────
+
+    @Test
+    void missingIdlePolicyWithoutClassNameRejected() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        // No className, no maxIdleDurationSeconds, no suspendedDurationSeconds
+
+        List<String> errors = webhook.validate(spec, "default");
+        assertFalse(errors.isEmpty(), "Missing idle policy without className should be rejected");
+        assertTrue(errors.stream().anyMatch(e -> e.contains("maxIdleDurationSeconds")));
+        assertTrue(errors.stream().anyMatch(e -> e.contains("suspendedDurationSeconds")));
+    }
+
+    @Test
+    void missingMaxIdleOnlyRejected() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setSuspendedDurationSeconds(1800);
+        // maxIdleDurationSeconds is null, no className
+
+        List<String> errors = webhook.validate(spec, "default");
+        assertFalse(errors.isEmpty(), "Missing maxIdleDurationSeconds without className should be rejected");
+        assertTrue(errors.stream().anyMatch(e -> e.contains("maxIdleDurationSeconds")));
+    }
+
+    @Test
+    void missingSuspendedOnlyRejected() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setMaxIdleDurationSeconds(900);
+        // suspendedDurationSeconds is null, no className
+
+        List<String> errors = webhook.validate(spec, "default");
+        assertFalse(errors.isEmpty(), "Missing suspendedDurationSeconds without className should be rejected");
+        assertTrue(errors.stream().anyMatch(e -> e.contains("suspendedDurationSeconds")));
+    }
+
+    @Test
+    void classNameBypassesIdlePolicyCheck() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setClassName("my-class");
+        // No idle policy fields — className is expected to provide them
+
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateIdlePolicy(spec, errors);
+        assertTrue(errors.isEmpty(), "className should bypass idle policy validation: " + errors);
+    }
+
+    @Test
+    void bothIdlePolicyFieldsPresentAccepted() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setMaxIdleDurationSeconds(900);
+        spec.setSuspendedDurationSeconds(1800);
+
+        List<String> errors = webhook.validate(spec, "default");
+        assertTrue(errors.isEmpty(), "Both idle fields present should pass: " + errors);
+    }
+
+    @Test
+    void classNamePlusIdlePolicyFieldsAccepted() {
+        MicroVMSpec spec = new MicroVMSpec();
+        spec.setImageRef("my-image");
+        spec.setClassName("my-class");
+        spec.setMaxIdleDurationSeconds(900);
+        spec.setSuspendedDurationSeconds(1800);
+
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateIdlePolicy(spec, errors);
+        assertTrue(errors.isEmpty(), "className + explicit fields should pass: " + errors);
     }
 }

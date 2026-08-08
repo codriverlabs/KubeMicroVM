@@ -21,11 +21,13 @@ class WebhookValidationPropertyTest {
     private static final Set<Integer> ALLOWED_MEMORY = Set.of(512, 1024, 2048, 4096, 8192);
     private final MicroVMValidatingWebhook webhook = new MicroVMValidatingWebhook();
 
-    // Property 1: valid imageRef always passes
+    // Property 1: valid imageRef always passes (with required idle policy)
     @Property(tries = 50)
     void validImageRefAccepted(@ForAll("validImageRef") String imageRef) {
         MicroVMSpec spec = new MicroVMSpec();
         spec.setImageRef(imageRef);
+        spec.setMaxIdleDurationSeconds(900);
+        spec.setSuspendedDurationSeconds(1800);
         List<String> errors = webhook.validate(spec, "default");
         assert errors.isEmpty() : "Valid imageRef '" + imageRef + "' should be accepted, got: " + errors;
     }
