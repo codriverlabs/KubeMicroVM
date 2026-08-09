@@ -96,6 +96,21 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
                 return handlePendingState(resource);
             }
 
+            // If in Failed state with no microVmId, creation was refused.
+            // Only retry if the user changed the spec (generation bump).
+            if (currentState == MicroVMState.FAILED && status.getMicroVmId() == null) {
+                if (isCreationPermanentlyFailed(status) && !specChanged(resource)) {
+                    // Stay in Failed — the spec hasn't changed, retrying is pointless
+                    LOG.debugf("MicroVM %s/%s remains Failed (creation refused, spec unchanged)", namespace, name);
+                    return UpdateControl.<MicroVM>noUpdate().rescheduleAfter(RESYNC_PERIOD);
+                }
+                // Spec changed (generation bump) — user fixed the issue, retry
+                LOG.infof("MicroVM %s/%s spec changed (generation %d), retrying creation",
+                        namespace, name, resource.getMetadata().getGeneration());
+                return transitionState(resource, MicroVMState.PENDING, "Retrying",
+                        "Spec changed, retrying creation");
+            }
+
             // Describe current state from AWS
             DescribeMicroVMResponse awsState = describeFromAws(status.getMicroVmId());
             if (awsState == null) {
@@ -437,10 +452,20 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
     }
 
     private UpdateControl<MicroVM> handleCreationError(MicroVM resource, Exception e) {
-        if (e.getCause() instanceof AwsApiException awsEx && awsEx.isRetryable()) {
+        String namespace = resource.getMetadata().getNamespace();
+        String name = resource.getMetadata().getName();
+        Throwable cause = e.getCause() != null ? e.getCause() : e;
+        String errorMessage = cause.getMessage() != null ? cause.getMessage() : e.getMessage();
+
+        if (cause instanceof AwsApiException awsEx && awsEx.isRetryable()) {
+            LOG.warnf("Retryable creation error for %s/%s: %s", namespace, name, errorMessage);
             return UpdateControl.patchStatus(resource).rescheduleAfter(Duration.ofSeconds(10));
         }
-        return transitionState(resource, MicroVMState.FAILED, "CreationFailed", "Failed to create MicroVM: " + e.getMessage());
+
+        // Non-retryable (400, validation error, permanent refusal)
+        LOG.errorf("MicroVM %s/%s creation refused by AWS (non-retryable): %s", namespace, name, errorMessage);
+        return transitionState(resource, MicroVMState.FAILED, "CreationFailed",
+                "Failed to create MicroVM: " + errorMessage);
     }
 
     private UpdateControl<MicroVM> handleReconcileError(MicroVM resource, String reason) {
@@ -454,6 +479,33 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
 
         status.getConditions().removeIf(c -> "Ready".equals(c.getType()));
         status.getConditions().add(ready);
+    }
+
+    /**
+     * Returns true if the CR is in a permanent creation failure state.
+     * A permanent failure means the AWS API refused the create with a non-retryable error
+     * (e.g. 400 ValidationException). Retrying with the same spec will never succeed.
+     */
+    private boolean isCreationPermanentlyFailed(MicroVMStatus status) {
+        return status.getConditions().stream()
+                .filter(c -> "Ready".equals(c.getType()))
+                .findFirst()
+                .map(c -> "CreationFailed".equals(c.getReason())
+                        || "ImageNotFound".equals(c.getReason())
+                        || "NetworkNotFound".equals(c.getReason())
+                        || "NetworkNotReady".equals(c.getReason())
+                        || "ImportNotFound".equals(c.getReason()))
+                .orElse(false);
+    }
+
+    /**
+     * Returns true if the user has modified the spec since the last reconcile.
+     * Detected by comparing metadata.generation with status.observedGeneration.
+     */
+    private boolean specChanged(MicroVM resource) {
+        Long observed = resource.getStatus().getObservedGeneration();
+        Long current = resource.getMetadata().getGeneration();
+        return observed == null || !observed.equals(current);
     }
 
     private void updateStatusFromAws(MicroVM resource, DescribeMicroVMResponse awsState) {

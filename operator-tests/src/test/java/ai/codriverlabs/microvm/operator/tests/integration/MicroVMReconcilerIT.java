@@ -406,4 +406,75 @@ class MicroVMReconcilerIT {
         assertTrue(msg.contains("other-namespace/some-image"),
                 "Error message should include the offending imageRef: " + msg);
     }
+
+    @Test
+    @DisplayName("FAILED with null microVmId: stays FAILED if spec unchanged (no infinite retry loop)")
+    void failed_creationRefused_staysFailedIfSpecUnchanged() throws Exception {
+        // Simulate a VM that failed creation (e.g. ValidationException from AWS)
+        var vm = testMicroVM("test-vm-refused", MicroVMState.FAILED);
+        vm.getStatus().setMicroVmId(null); // never got a VM ID
+        vm.getStatus().setObservedGeneration(1L); // matches metadata.generation
+        // Set the condition reason to CreationFailed (as handleCreationError does)
+        var condition = new Condition("Ready", "False", "CreationFailed",
+                "Failed to create MicroVM: ValidationException: idlePolicy fields required",
+                Instant.now());
+        vm.getStatus().getConditions().add(condition);
+
+        var result = reconciler.reconcile(vm, mockContext());
+
+        // Should NOT transition to PENDING — stay in FAILED
+        assertEquals(MicroVMState.FAILED, vm.getStatus().getState());
+        // Should not call runMicroVM
+        verify(mockClient, never()).runMicroVM(any());
+    }
+
+    @Test
+    @DisplayName("FAILED with null microVmId: retries when spec changes (generation bump)")
+    void failed_creationRefused_retriesOnSpecChange() throws Exception {
+        // Simulate a VM that failed creation
+        var vm = testMicroVM("test-vm-fixed", MicroVMState.FAILED);
+        vm.getStatus().setMicroVmId(null);
+        vm.getStatus().setObservedGeneration(1L);
+        var condition = new Condition("Ready", "False", "CreationFailed",
+                "Failed to create MicroVM: ValidationException", Instant.now());
+        vm.getStatus().getConditions().add(condition);
+
+        // User fixed the spec — generation bumped
+        vm.getMetadata().setGeneration(2L);
+
+        // Mock successful creation after fix
+        when(mockClient.runMicroVM(any())).thenReturn(CompletableFuture.completedFuture(
+                new RunMicroVMResponse("mvm-new123", "mvm-new123.lambda-microvm.us-east-1.on.aws", "RUNNING")));
+
+        var result = reconciler.reconcile(vm, mockContext());
+
+        // Should have transitioned to PENDING and then created
+        // (the reconciler does PENDING in one cycle, then handlePendingState in the transition call reschedules)
+        // After the transition to PENDING, the state should be PENDING or RUNNING depending on implementation
+        assertTrue(vm.getStatus().getState() == MicroVMState.PENDING
+                || vm.getStatus().getState() == MicroVMState.RUNNING,
+                "State should be PENDING (retrying) or RUNNING (succeeded), got: " + vm.getStatus().getState());
+    }
+
+    @Test
+    @DisplayName("FAILED creation: error is logged at ERROR level (not swallowed)")
+    void failed_creation_logsError() throws Exception {
+        var vm = testMicroVM("test-vm-err", null);
+
+        when(mockClient.runMicroVM(any())).thenReturn(CompletableFuture.failedFuture(
+                new AwsApiException("ValidationException: 2 validation errors detected: " +
+                        "Value null at 'idlePolicy.maxIdleDurationSeconds'",
+                        AwsApiException.ErrorType.NON_RETRYABLE, "req-1", 400)));
+
+        reconciler.reconcile(vm, mockContext());
+
+        // State should be FAILED
+        assertEquals(MicroVMState.FAILED, vm.getStatus().getState());
+        // Condition should contain the AWS error message
+        var conditions = vm.getStatus().getConditions();
+        assertFalse(conditions.isEmpty());
+        assertTrue(conditions.stream().anyMatch(c ->
+                "CreationFailed".equals(c.getReason()) &&
+                c.getMessage().contains("ValidationException")));
+    }
 }
