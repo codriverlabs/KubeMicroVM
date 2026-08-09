@@ -1,5 +1,26 @@
 # EKS Deployment Guidelines
 
+## Running UAT
+
+Before running UAT, **always follow the UAT README** (`uat/README.md`):
+
+1. **Clean the cluster first** — run `./uat/cleanup-cluster.sh` to remove webhooks,
+   CRs, Helm chart, and cert-manager resources from any previous installation
+2. **Let the UAT suite install the operator** — the `__init__.robot` setup will
+   install the correct version from GHCR using `CHART_VERSION` in `resources/variables.robot`
+3. **Never run UAT against a manually-installed operator** — version mismatch
+   between the chart and the tests causes spurious failures
+
+```bash
+# Correct UAT workflow
+cd uat
+./cleanup-cluster.sh
+robot --outputdir results/v1.0.13-rc1 --exclude performance --exclude burst tests/
+```
+
+The suite handles operator installation, namespace labelling, and S3 fixture upload
+automatically. If a previous operator is running, clean it first.
+
 ## Development Testing Workflow
 
 When deploying to the EKS test cluster during development:
