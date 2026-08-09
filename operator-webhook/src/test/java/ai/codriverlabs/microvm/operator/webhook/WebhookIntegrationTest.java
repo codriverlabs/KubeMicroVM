@@ -32,6 +32,8 @@ class WebhookIntegrationTest {
     void fullPipelineMutationThenValidation() {
         MicroVMSpec spec = new MicroVMSpec();
         spec.setImageRef("python-sandbox");
+        spec.setMaxIdleDurationSeconds(900);
+        spec.setSuspendedDurationSeconds(1800);
         // autoResumeEnabled and maximumDurationSeconds are null — should get defaults
 
         // Step 1: Mutate
