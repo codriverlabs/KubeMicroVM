@@ -10,19 +10,23 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.*;
 import java.nio.file.StandardOpenOption;
+import java.security.KeyStore;
 import java.security.SecureRandom;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
 /**
@@ -45,6 +49,7 @@ public class TokenRefreshAgent {
     private static final Logger LOG = Logger.getLogger(TokenRefreshAgent.class);
     private static final int STARTUP_POLL_INTERVAL_S = 5;
     private static final int STARTUP_MAX_WAIT_S = 300;
+    private static final String DEFAULT_CA_CERT_PATH = "/var/run/secrets/microvm/ca.crt";
 
     @ConfigProperty(name = "microvm.agent.operator-url") String operatorUrl;
     @ConfigProperty(name = "microvm.agent.vm-name") String vmName;
@@ -52,39 +57,68 @@ public class TokenRefreshAgent {
     @ConfigProperty(name = "microvm.agent.mount-path") String mountPath;
     @ConfigProperty(name = "microvm.agent.expiry-minutes", defaultValue = "30") int expiryMinutes;
     @ConfigProperty(name = "microvm.agent.sa-token-path") String saTokenPath;
+    @ConfigProperty(name = "microvm.agent.ca-cert-path", defaultValue = DEFAULT_CA_CERT_PATH) String caCertPath;
+    @ConfigProperty(name = "microvm.agent.insecure-skip-verify", defaultValue = "false") boolean insecureSkipVerify;
 
-    private final HttpClient http = buildHttpClient();
     private final ObjectMapper json = new ObjectMapper();
     private volatile boolean running = true;
-
-    private static HttpClient buildHttpClient() {
-        try {
-            // Trust all certs — operator uses a self-signed cert-manager certificate.
-            // The connection is in-cluster (pod → operator service), so TLS provides
-            // encryption; the self-signed cert is acceptable here.
-            TrustManager[] trustAll = new TrustManager[]{
-                new X509TrustManager() {
-                    public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
-                    public void checkClientTrusted(X509Certificate[] c, String a) {}
-                    public void checkServerTrusted(X509Certificate[] c, String a) {}
-                }
-            };
-            SSLContext sslCtx = SSLContext.getInstance("TLS");
-            sslCtx.init(null, trustAll, new SecureRandom());
-            return HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(10))
-                    .sslContext(sslCtx)
-                    .build();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to build HTTP client", e);
-        }
-    }
+    private HttpClient http;
 
     void onStart(@Observes StartupEvent ev) {
+        this.http = buildHttpClient();
         // IMPORTANT: Use platform thread, not virtual thread.
         // java.net.http.HttpClient with TLS pins the carrier thread in GraalVM native images,
         // causing a deadlock when used from a virtual thread. Platform threads don't have this issue.
         Thread.ofPlatform().name("token-refresh-agent").daemon(true).start(this::run);
+    }
+
+    private HttpClient buildHttpClient() {
+        try {
+            SSLContext sslCtx = SSLContext.getInstance("TLS");
+            Path caPath = Path.of(caCertPath);
+
+            if (Files.exists(caPath) && Files.isReadable(caPath)) {
+                // Secure: use the mounted CA certificate to verify the operator's TLS cert
+                LOG.infof("Using CA certificate from %s for TLS verification", caCertPath);
+                CertificateFactory cf = CertificateFactory.getInstance("X.509");
+                X509Certificate caCert;
+                try (InputStream is = Files.newInputStream(caPath)) {
+                    caCert = (X509Certificate) cf.generateCertificate(is);
+                }
+                KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                trustStore.load(null, null);
+                trustStore.setCertificateEntry("operator-ca", caCert);
+                TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                tmf.init(trustStore);
+                sslCtx.init(null, tmf.getTrustManagers(), new SecureRandom());
+            } else if (insecureSkipVerify) {
+                // Insecure fallback: trust all certs (only when explicitly opted in)
+                LOG.warnf("CA cert not found at %s and insecure-skip-verify=true — " +
+                        "disabling TLS verification (NOT recommended for production)", caCertPath);
+                TrustManager[] trustAll = new TrustManager[]{
+                    new X509TrustManager() {
+                        public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                        public void checkClientTrusted(X509Certificate[] c, String a) {}
+                        public void checkServerTrusted(X509Certificate[] c, String a) {}
+                    }
+                };
+                sslCtx.init(null, trustAll, new SecureRandom());
+            } else {
+                // Fail secure: no CA cert and insecure mode not enabled
+                throw new IllegalStateException(
+                        "CA certificate not found at " + caCertPath + " and insecure-skip-verify is false. " +
+                        "Mount the operator CA cert or set microvm.agent.insecure-skip-verify=true for development.");
+            }
+
+            return HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .sslContext(sslCtx)
+                    .build();
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to build HTTP client", e);
+        }
     }
 
     private void run() {
