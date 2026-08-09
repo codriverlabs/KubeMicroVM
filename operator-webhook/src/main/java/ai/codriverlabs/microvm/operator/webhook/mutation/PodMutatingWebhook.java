@@ -38,7 +38,10 @@ public class PodMutatingWebhook {
     public static final String ANNOTATION = "lambda.microvm.auth";
     public static final String SIDECAR_NAME = "microvm-auth-agent";
     public static final String VOLUME_NAME = "microvm-token";
+    public static final String CA_VOLUME_NAME = "microvm-ca";
+    public static final String CA_SECRET_NAME = "kube-microvm-operator-ca";
     public static final String DEFAULT_MOUNT_PATH = "/var/run/microvm";
+    public static final String CA_MOUNT_PATH = "/var/run/secrets/microvm";
 
     @ConfigProperty(name = "microvm.webhook.agent-image",
             defaultValue = "ghcr.io/codriverlabs/microvm-auth-agent:latest")
@@ -95,6 +98,32 @@ public class PodMutatingWebhook {
                 volumePatch.set("value", volumes.isMissingNode()
                         ? mapper.createArrayNode().add(volumeVal) : volumeVal);
                 patch.add(volumePatch);
+            }
+
+            // Add CA volume (Secret-backed) if not already present
+            boolean hasCaVolume = false;
+            if (volumes.isArray()) {
+                for (JsonNode v : volumes) {
+                    if (CA_VOLUME_NAME.equals(v.path("name").asText())) { hasCaVolume = true; break; }
+                }
+            }
+            if (!hasCaVolume) {
+                ObjectNode caVolumePatch = mapper.createObjectNode();
+                caVolumePatch.put("op", "add");
+                caVolumePatch.put("path", "/spec/volumes/-");
+                ObjectNode caVolumeVal = mapper.createObjectNode();
+                caVolumeVal.put("name", CA_VOLUME_NAME);
+                ObjectNode secretRef = mapper.createObjectNode();
+                secretRef.put("secretName", CA_SECRET_NAME);
+                ArrayNode items = mapper.createArrayNode();
+                ObjectNode item = mapper.createObjectNode();
+                item.put("key", "ca.crt");
+                item.put("path", "ca.crt");
+                items.add(item);
+                secretRef.set("items", items);
+                caVolumeVal.set("secret", secretRef);
+                caVolumePatch.set("value", caVolumeVal);
+                patch.add(caVolumePatch);
             }
 
             // Add volumeMount to each existing container
@@ -174,6 +203,11 @@ public class PodMutatingWebhook {
         tokenMnt.put("name", VOLUME_NAME);
         tokenMnt.put("mountPath", mountPath);
         mounts.add(tokenMnt);
+        ObjectNode caMnt = mapper.createObjectNode();
+        caMnt.put("name", CA_VOLUME_NAME);
+        caMnt.put("mountPath", CA_MOUNT_PATH);
+        caMnt.put("readOnly", true);
+        mounts.add(caMnt);
         c.set("volumeMounts", mounts);
 
         // Resource requests — sized for JVM mode; native mode uses much less
