@@ -51,25 +51,13 @@ ADM-03 Maximum Duration Above 28800 Is Rejected
 ADM-04 ClassName Bypasses Idle Policy Requirement
     [Documentation]    A MicroVM with a valid className but no inline idle policy
     ...    should be accepted at admission (class provides the defaults).
-    ...    Note: the VM may fail at reconcile if the class doesn't actually have
-    ...    idle policy, but that's a runtime error, not an admission error.
     [Tags]    admission    webhook
+    Set Suite Variable    ${NAME}    adm-test-class
+    Apply Template    admission/test-class.yaml
+    # Now apply the VM with className — should pass admission
     Set Suite Variable    ${NAME}    adm-class-${ADM_RUN_ID}
     Set Suite Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
     Set Suite Variable    ${CLASS_NAME}    adm-test-class
-    # Create a MicroVMClass first
-    ${class_yaml}=    Catenate    SEPARATOR=\n
-    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
-    ...    kind: MicroVMClass
-    ...    metadata:
-    ...      name: adm-test-class
-    ...      namespace: ${NAMESPACE}
-    ...    spec:
-    ...      maxIdleDurationSeconds: 900
-    ...      suspendedDurationSeconds: 1800
-    ...      description: "UAT admission test class"
-    Kubectl Apply    ${class_yaml}
-    # Now apply the VM with className — should pass admission
     Apply Template    admission/vm-with-classname.yaml
     # Verify it was accepted (CR exists)
     ${result}=    Run Process    kubectl    get    microvm    adm-class-${ADM_RUN_ID}    -n    ${NAMESPACE}
@@ -111,21 +99,16 @@ ADM-06 Failed Creation Stays In Failed State
     Log    Failed state stable. Reason: ${reason}
 
 ADM-07 Failed Creation Retries After Spec Change
-    [Documentation]    After fixing the spec (e.g. correcting the imageRef), the reconciler
-    ...    should detect the generation bump and retry creation.
-    ...    Verifies the recovery path from issue #58 fix.
+    [Documentation]    After fixing the spec (correcting the imageRef), the reconciler
+    ...    detects the generation bump and retries creation.
+    ...    Simulates the real user workflow: edit YAML, re-apply.
     [Tags]    admission    reconciler
-    # The VM from ADM-06 is in Failed state with bad imageRef
-    # Patch it to use the real shared image
-    ${patch}=    Catenate    SEPARATOR=\n
-    ...    spec:
-    ...      imageRef: ${SHARED_IMAGE}
-    ${tmpfile}=    Set Variable    /tmp/robot-adm-patch.yaml
-    Create File    ${tmpfile}    ${patch}
-    ${result}=    Run Process    kubectl    patch    microvm    adm-bad-img-${ADM_RUN_ID}
-    ...    -n    ${NAMESPACE}    --type\=merge    --patch-file\=${tmpfile}
-    Remove File    ${tmpfile}
-    Should Be Equal As Integers    ${result.rc}    0    Patch should succeed: ${result.stderr}
+    # Re-apply the same CR with a valid imageRef (this bumps metadata.generation)
+    Set Suite Variable    ${NAME}    adm-bad-img-${ADM_RUN_ID}
+    Set Suite Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
+    Set Suite Variable    ${MAX_IDLE}    900
+    Set Suite Variable    ${SUSPENDED_DURATION}    1800
+    Apply Template    shared/microvm.yaml
     # Wait for it to leave Failed state (retry triggered by generation bump)
     FOR    ${i}    IN RANGE    12
         Sleep    10s
