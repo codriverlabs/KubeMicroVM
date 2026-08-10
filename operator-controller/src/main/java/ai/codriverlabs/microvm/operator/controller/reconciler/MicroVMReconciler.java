@@ -485,6 +485,9 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
      * Returns true if the CR is in a permanent creation failure state.
      * A permanent failure means the AWS API refused the create with a non-retryable error
      * (e.g. 400 ValidationException). Retrying with the same spec will never succeed.
+     *
+     * Transient failures (NetworkNotReady, retryable AWS errors) are NOT included —
+     * the reconciler should retry those on the next cycle.
      */
     private boolean isCreationPermanentlyFailed(MicroVMStatus status) {
         return status.getConditions().stream()
@@ -493,7 +496,6 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
                 .map(c -> "CreationFailed".equals(c.getReason())
                         || "ImageNotFound".equals(c.getReason())
                         || "NetworkNotFound".equals(c.getReason())
-                        || "NetworkNotReady".equals(c.getReason())
                         || "ImportNotFound".equals(c.getReason()))
                 .orElse(false);
     }
