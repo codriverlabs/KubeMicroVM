@@ -184,3 +184,62 @@ webhooks:
     apiVersions: ["v1alpha1"]
     operations: ["CREATE", "UPDATE"]
     resources: ["microvms", "microvmimages", "microvmnetworks"]
+---
+# CA distribution RBAC — allows the operator to replicate its CA cert
+# to managed namespaces for auth-agent TLS verification.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-microvm-operator-ca-distributor
+rules:
+  # List namespaces to find managed ones (labelled with manage-microvms=true)
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["list"]
+  # Read/update/delete the specific CA Secret by name only
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["kube-microvm-operator-ca"]
+    verbs: ["get", "update", "patch", "delete"]
+  # Create secrets in managed namespaces (resourceNames cannot restrict create)
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-microvm-operator-ca-distributor
+subjects:
+- kind: ServiceAccount
+  name: kube-microvm-operator
+  namespace: kube-microvm
+roleRef:
+  kind: ClusterRole
+  name: kube-microvm-operator-ca-distributor
+  apiGroup: rbac.authorization.k8s.io
+---
+# Leader election RBAC — allows the operator to create and manage Lease objects.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kube-microvm-operator-leader-election
+  namespace: kube-microvm
+rules:
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["create", "update", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kube-microvm-operator-leader-election
+  namespace: kube-microvm
+subjects:
+- kind: ServiceAccount
+  name: kube-microvm-operator
+  namespace: kube-microvm
+roleRef:
+  kind: Role
+  name: kube-microvm-operator-leader-election
+  apiGroup: rbac.authorization.k8s.io
