@@ -97,7 +97,7 @@ Create ReplicaSet Resources
 
 Cleanup ReplicaSet Resources
     Run Keyword And Ignore Error    Run Process    kubectl    delete    microvmreplicaset    ${RS_NAME}    -n    ${NAMESPACE}    --timeout\=60s
-    Run Keyword And Ignore Error    Run Process    kubectl    patch    microvmimage    ${RS_SECOND_IMAGE}
-    ...    -n    ${NAMESPACE}    --type\=json    -p    [{"op":"remove","path":"/metadata/finalizers"}]
+    # Normal delete — operator handles finalizer cleanup (deletes AWS image, removes finalizer).
+    # Do NOT patch out finalizers here: the reconciler re-adds them instantly, causing the delete to hang.
     Run Keyword And Ignore Error    Run Process    kubectl    delete    microvmimage    ${RS_SECOND_IMAGE}
-    ...    -n    ${NAMESPACE}    --timeout\=30s
+    ...    -n    ${NAMESPACE}    --timeout\=120s
