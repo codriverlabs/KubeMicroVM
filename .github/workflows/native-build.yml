@@ -76,8 +76,16 @@ jobs:
         include:
           - arch: amd64
             runner: ubuntu-latest
+            os: linux
           - arch: arm64
             runner: ubuntu-24.04-arm
+            os: linux
+          - arch: amd64
+            runner: macos-13
+            os: darwin
+          - arch: arm64
+            runner: macos-14
+            os: darwin
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
@@ -99,15 +107,15 @@ jobs:
       - name: Rename binary
         run: |
           BINARY=$(find operator-cli/target -name "*-runner" -type f | head -1)
-          cp "$BINARY" microvm-linux-${{ matrix.arch }}
-          chmod +x microvm-linux-${{ matrix.arch }}
-          file microvm-linux-${{ matrix.arch }}
+          cp "$BINARY" microvm-${{ matrix.os }}-${{ matrix.arch }}
+          chmod +x microvm-${{ matrix.os }}-${{ matrix.arch }}
+          file microvm-${{ matrix.os }}-${{ matrix.arch }}
       - name: Smoke test
-        run: timeout 5 ./microvm-linux-${{ matrix.arch }} --help || true
+        run: timeout 5 ./microvm-${{ matrix.os }}-${{ matrix.arch }} --help || true
       - uses: actions/upload-artifact@v7
         with:
-          name: microvm-linux-${{ matrix.arch }}
-          path: microvm-linux-${{ matrix.arch }}
+          name: microvm-${{ matrix.os }}-${{ matrix.arch }}
+          path: microvm-${{ matrix.os }}-${{ matrix.arch }}
           retention-days: 7
 
   # ─── Container images (per arch) ─────────────────────────────────────────
@@ -248,18 +256,17 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          # Quarkus Helm generates the chart with image tag and version baked in
+          # Quarkus Helm generates the chart with image tag and version baked in.
+          # Auth-agent image version is set via quarkus.helm.values.authAgentImage.value.
           ./mvnw -B -pl operator-core,operator-spi,operator-webhook,operator-controller \
             package -DskipTests --no-transfer-progress \
             -Dquarkus.helm.version=${VERSION} \
             -Dquarkus.helm.create-tar-file=true \
             -Dquarkus.container-image.tag=${VERSION} \
-            -Dquarkus.container-image.build=false
-          # Patch auth-agent image tag in generated Helm values (Quarkus can't resolve
-          # cross-property references in env var defaults at chart generation time)
+            -Dquarkus.container-image.build=false \
+            -Dquarkus.helm.values.authAgentImage.value=ghcr.io/codriverlabs/microvm-auth-agent:${VERSION}
           CHART_DIR="operator-controller/target/helm/kubernetes/kube-microvm-operator"
-          sed -i "s|microvm-auth-agent:latest|microvm-auth-agent:${VERSION}|g" "${CHART_DIR}/values.yaml"
-          # Re-package the chart with corrected values
+          # Re-package with correct version metadata
           rm -f "${CHART_DIR}/../kube-microvm-operator-${VERSION}.tar.gz"
           helm package "${CHART_DIR}" --version "${VERSION}" --app-version "${VERSION}" \
             -d operator-controller/target/helm/kubernetes/
@@ -293,17 +300,25 @@ jobs:
           path: dist/
       - uses: actions/download-artifact@v8
         with:
+          name: microvm-darwin-amd64
+          path: dist/
+      - uses: actions/download-artifact@v8
+        with:
+          name: microvm-darwin-arm64
+          path: dist/
+      - uses: actions/download-artifact@v8
+        with:
           name: helm-chart
           path: dist/
       - name: Generate checksums
         working-directory: dist
         run: |
           # Individual .sha256 per artifact
-          for f in microvm-linux-amd64 microvm-linux-arm64 kube-microvm-operator-*.tgz; do
+          for f in microvm-linux-amd64 microvm-linux-arm64 microvm-darwin-amd64 microvm-darwin-arm64 kube-microvm-operator-*.tgz; do
             sha256sum "$f" > "$f.sha256"
           done
           # Combined checksums.sha256
-          sha256sum microvm-linux-amd64 microvm-linux-arm64 kube-microvm-operator-*.tgz > checksums.sha256
+          sha256sum microvm-linux-amd64 microvm-linux-arm64 microvm-darwin-amd64 microvm-darwin-arm64 kube-microvm-operator-*.tgz > checksums.sha256
       - uses: actions/checkout@v7
         with:
           path: repo
@@ -325,6 +340,10 @@ jobs:
             dist/microvm-linux-amd64.sha256
             dist/microvm-linux-arm64
             dist/microvm-linux-arm64.sha256
+            dist/microvm-darwin-amd64
+            dist/microvm-darwin-amd64.sha256
+            dist/microvm-darwin-arm64
+            dist/microvm-darwin-arm64.sha256
             dist/kube-microvm-operator-*.tgz
             dist/kube-microvm-operator-*.tgz.sha256
             dist/checksums.sha256

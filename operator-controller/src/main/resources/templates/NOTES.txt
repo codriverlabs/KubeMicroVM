@@ -20,3 +20,17 @@ AWS IAM Setup:
     kubectl annotate serviceaccount kube-microvm-operator \
       -n {{ .Release.Namespace }} \
       eks.amazonaws.com/role-arn=arn:aws:iam::<ACCOUNT_ID>:role/kube-microvm-operator
+
+Enable MicroVM management in a namespace:
+  The operator only manages namespaces labelled with:
+    lambda.aws.amazon.com/manage-microvms=true
+
+  Label your namespace before creating MicroVM resources:
+    kubectl label namespace <YOUR-NAMESPACE> lambda.aws.amazon.com/manage-microvms=true
+
+  The 'default' namespace is labelled automatically by the installer.
+  Without this label, MicroVM CR creation will be rejected by the webhook.
+
+Custom environment variables:
+  To inject additional env vars into the operator (e.g. for emulator endpoints):
+    helm upgrade kube-microvm-operator ... --set extraEnvs.MY_VAR=value

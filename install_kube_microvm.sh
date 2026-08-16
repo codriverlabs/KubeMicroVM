@@ -182,6 +182,34 @@ check_prerequisites() {
     success "Prerequisites OK (arch: $ARCH_TAG)"
 }
 
+# ─── cert-manager check ───────────────────────────────────────────────────────
+ensure_cert_manager() {
+    step "Checking cert-manager"
+    if kubectl get crd certificates.cert-manager.io &>/dev/null; then
+        success "cert-manager CRDs found"
+        return
+    fi
+
+    warn "cert-manager is not installed — the operator chart requires Certificate and Issuer CRDs."
+    echo ""
+    echo "  Install cert-manager with:"
+    echo "    kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml"
+    echo ""
+    read -rp "  Install cert-manager now? [Y/n] " answer
+    answer="${answer:-Y}"
+    if [[ "$answer" =~ ^[Yy] ]]; then
+        info "Installing cert-manager..."
+        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+        info "Waiting for cert-manager webhook to become ready..."
+        kubectl wait --for=condition=Available deployment/cert-manager-webhook \
+            -n cert-manager --timeout=120s
+        success "cert-manager installed"
+    else
+        error "cert-manager is required. Install it manually and re-run the installer."
+        exit 1
+    fi
+}
+
 # ─── Load/save config ─────────────────────────────────────────────────────────
 load_config() {
     mkdir -p "$CONFIG_DIR"
@@ -561,6 +589,7 @@ main() {
     if ! $CLI_ONLY; then
         import_images
         setup_iam
+        ensure_cert_manager
         discover_quotas
         install_operator
         install_auth_agent

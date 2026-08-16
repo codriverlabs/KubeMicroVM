@@ -132,9 +132,10 @@ aws eks create-pod-identity-association \
 ### CLI
 
 ```bash
-# Detect architecture and install microvm binary
+# Detect OS and architecture, install microvm binary
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
-curl -fsSL "https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/microvm-linux-${ARCH}" \
+curl -fsSL "https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/microvm-${OS}-${ARCH}" \
   -o ~/bin/microvm && chmod +x ~/bin/microvm
 ln -sf ~/bin/microvm ~/bin/kubectl-microvm
 
