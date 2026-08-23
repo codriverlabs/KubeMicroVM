@@ -131,10 +131,17 @@ aws eks create-pod-identity-association \
 
 ### CLI
 
+Supported targets: `linux/amd64`, `linux/arm64`, `darwin/arm64` (Apple Silicon).
+Intel macOS (`darwin/amd64`) is not supported.
+
 ```bash
 # Detect OS and architecture, install microvm binary
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
+if [ "$OS" = "darwin" ] && [ "$ARCH" = "amd64" ]; then
+  echo "Intel macOS is not supported — use Apple Silicon or Linux." >&2
+  exit 1
+fi
 curl -fsSL "https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/microvm-${OS}-${ARCH}" \
   -o ~/bin/microvm && chmod +x ~/bin/microvm
 ln -sf ~/bin/microvm ~/bin/kubectl-microvm

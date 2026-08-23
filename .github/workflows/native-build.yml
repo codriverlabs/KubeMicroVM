@@ -80,9 +80,6 @@ jobs:
           - arch: arm64
             runner: ubuntu-24.04-arm
             os: linux
-          - arch: amd64
-            runner: macos-13
-            os: darwin
           - arch: arm64
             runner: macos-14
             os: darwin
@@ -300,10 +297,6 @@ jobs:
           path: dist/
       - uses: actions/download-artifact@v8
         with:
-          name: microvm-darwin-amd64
-          path: dist/
-      - uses: actions/download-artifact@v8
-        with:
           name: microvm-darwin-arm64
           path: dist/
       - uses: actions/download-artifact@v8
@@ -314,11 +307,11 @@ jobs:
         working-directory: dist
         run: |
           # Individual .sha256 per artifact
-          for f in microvm-linux-amd64 microvm-linux-arm64 microvm-darwin-amd64 microvm-darwin-arm64 kube-microvm-operator-*.tgz; do
+          for f in microvm-linux-amd64 microvm-linux-arm64 microvm-darwin-arm64 kube-microvm-operator-*.tgz; do
             sha256sum "$f" > "$f.sha256"
           done
           # Combined checksums.sha256
-          sha256sum microvm-linux-amd64 microvm-linux-arm64 microvm-darwin-amd64 microvm-darwin-arm64 kube-microvm-operator-*.tgz > checksums.sha256
+          sha256sum microvm-linux-amd64 microvm-linux-arm64 microvm-darwin-arm64 kube-microvm-operator-*.tgz > checksums.sha256
       - uses: actions/checkout@v7
         with:
           path: repo
@@ -340,8 +333,6 @@ jobs:
             dist/microvm-linux-amd64.sha256
             dist/microvm-linux-arm64
             dist/microvm-linux-arm64.sha256
-            dist/microvm-darwin-amd64
-            dist/microvm-darwin-amd64.sha256
             dist/microvm-darwin-arm64
             dist/microvm-darwin-arm64.sha256
             dist/kube-microvm-operator-*.tgz
