@@ -8,11 +8,15 @@ Iterates over app.envs (declared vars) and app.extraEnvs (user-injected vars).
     fieldRef:
       fieldPath: metadata.namespace
 {{- range $key, $val := .Values.app.envs }}
+{{- if ne (toString $val) "" }}
 - name: {{ $key }}
   value: {{ $val | quote }}
 {{- end }}
+{{- end }}
 {{- range $key, $val := .Values.extraEnvs }}
+{{- if ne (toString $val) "" }}
 - name: {{ $key }}
   value: {{ $val | quote }}
+{{- end }}
 {{- end }}
 {{- end }}
