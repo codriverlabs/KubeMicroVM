@@ -45,7 +45,7 @@ Or manually with Helm:
 
 ```bash
 # Pin to a specific version (recommended — find latest at github.com/codriverlabs/KubeMicroVM/releases)
-CHART_VERSION=1.0.14   # replace with the version you want
+CHART_VERSION=1.0.15   # replace with the version you want
 
 helm install kube-microvm-operator \
   oci://ghcr.io/codriverlabs/helm/kube-microvm-operator \
