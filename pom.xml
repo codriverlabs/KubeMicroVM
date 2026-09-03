@@ -37,6 +37,7 @@
         <picocli.version>4.7.6</picocli.version>
         <surefire-plugin.version>3.5.6</surefire-plugin.version>
         <compiler-plugin.version>3.15.0</compiler-plugin.version>
+        <jandex-plugin.version>3.6.0</jandex-plugin.version>
         <quarkus.native.builder-image>quay.io/quarkus/ubi9-quarkus-mandrel-builder-image:jdk-25</quarkus.native.builder-image>
     </properties>
 
@@ -160,6 +161,30 @@
                             <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         </systemPropertyVariables>
                     </configuration>
+                </plugin>
+                <!-- Jandex index — writes META-INF/jandex.idx into the jar so that any
+                     downstream Quarkus application can discover CDI beans in this module.
+                     ArC only scans a dependency jar if it carries an index, a beans.xml
+                     marker, or is named in the consumer's quarkus.index-dependency.*.
+
+                     Required by every module whose classes are consumed as a *dependency*
+                     of another Quarkus app — including operator-controller, which is an
+                     application module here but a plain dependency to KubeMicroVM-PRO's
+                     operator-pro-dist. Without an index there, ArC silently discovers none
+                     of our reconcilers or Default* SPI beans.
+                     See docs/design/pro-artifact-consumability.md -->
+                <plugin>
+                    <groupId>io.smallrye</groupId>
+                    <artifactId>jandex-maven-plugin</artifactId>
+                    <version>${jandex-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>make-index</id>
+                            <goals>
+                                <goal>jandex</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
