@@ -230,6 +230,73 @@ image tag matches the chart version rather than `latest`.
 
 ---
 
+## 3a. Verification results
+
+Run on `feature/pro-consumability` at commit `dd6d474`.
+
+| Check | Result |
+|---|---|
+| `./mvnw install -DskipTests` | green |
+| `./mvnw -pl operator-tests verify` | 90 tests, 0 failures |
+| `./build-local.sh --native --only operator,cli,agent --skip-tests` | all three binaries built (operator 127 MB, CLI 110 MB, agent 55 MB) |
+| `META-INF/jandex.idx` in all four jars | present |
+| Community reconcilers in our own manifest | 4 — `microvmreconciler`, `microvmimagereconciler`, `microvmreplicaset-reconciler`, `microvmnetwork-reconciler` |
+| Chart renders | 827 lines |
+| Build-time pin (`-D...MICROVM_AUTH_AGENT_IMAGE=...:9.9.9`) | renders `9.9.9` in the Deployment |
+| Install-time override (`--set app.envs...=my.registry/agent:5.5.5`) | renders `5.5.5` |
+| Dead `authAgentImage` key in `values.yaml` | gone |
+| `AWS_QUOTA_*` env vars still rendered | 10 of 10, values unchanged |
+| `roleRef` after removing mappings | resolves to `kube-microvm-operator-crd-validating-cluster-role`; no dangling `josdk-crd-validating-cluster-role` |
+| `extraEnvs` injection | still works |
+| CRDs shipped | 5, unchanged |
+
+### The Jandex fix removes PRO's reliance on its workaround
+
+Verified directly rather than inferred. With `quarkus.index-dependency.*` **commented out**
+in `operator-pro-dist/src/main/resources/application.properties`, PRO's dist was built
+against the newly-indexed jars from this branch:
+
+```bash
+mvn -pl operator-pro-dist -am package -DskipTests \
+  -Dcommunity.version=1.1.0-SNAPSHOT -Dquarkus.platform.version=3.39.1
+```
+
+All five reconcilers register:
+
+```
+microvmgatewayreconciler
+microvmimagereconciler
+microvmnetwork-reconciler
+microvmreconciler
+microvmreplicaset-reconciler
+```
+
+and the §7.3 config-inheritance guard (`kube-microvm-operator-webhook-tls` present in the
+generated manifest) still passes. PRO's working tree was restored afterwards.
+
+This confirms PRO can drop the `index-dependency` entries once it bumps
+`<community.version>` past the first release carrying indexes — though keeping them is
+harmless.
+
+### Feedback for PRO: the proposed G0 guard has a regex bug
+
+`build-publish-open-gaps.md` proposes this guard, and `build-and-publish-pipeline.md` §7.4
+a count-based variant of it:
+
+```bash
+FOUND=$(grep -oE 'microvm[a-z]*reconciler' \
+  operator-pro-dist/target/kubernetes/kubernetes.yml | sort -u)
+```
+
+`[a-z]*` does not match a hyphen, so this pattern silently misses
+`microvmreplicaset-reconciler` and `microvmnetwork-reconciler`. The three names the guard
+asserts on (`microvmreconciler`, `microvmimagereconciler`, `microvmgatewayreconciler`)
+happen to be unhyphenated, so the guard does pass — but it covers three of five
+reconcilers, and the count variant (`-ge 3`) would pass with two Community reconcilers
+missing. Use `microvm[a-z-]*reconciler` and assert all five by name.
+
+---
+
 ## 4. Out of scope
 
 - **Quota default values.** §1.2 B2 establishes that the shipped defaults sit at the AWS
