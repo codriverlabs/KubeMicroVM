@@ -37,6 +37,57 @@ jobs:
           cache: maven
       - run: ./mvnw verify -pl operator-core,operator-spi,operator-controller,operator-webhook,operator-cli,operator-tests -am --batch-mode --no-transfer-progress
 
+      # Guards the PRO consumption contract. ArC only scans a dependency jar for CDI
+      # beans if it carries META-INF/jandex.idx. operator-controller in particular is an
+      # application module here but a plain dependency to KubeMicroVM-PRO, and without an
+      # index the PRO operator silently loses every Community reconciler and Default* SPI
+      # bean — with a green build on both sides.
+      # See docs/design/pro-artifact-consumability.md
+      - name: Verify published jars carry a Jandex index
+        run: |
+          status=0
+          for m in operator-core operator-spi operator-controller operator-webhook; do
+            jar=$(find "$m/target" -maxdepth 1 -name "$m-*.jar" ! -name '*-sources.jar' \
+                    ! -name '*-javadoc.jar' | head -1)
+            if [ -z "$jar" ]; then
+              echo "::error::no jar built for $m"; status=1; continue
+            fi
+            if unzip -l "$jar" | grep -q 'META-INF/jandex.idx'; then
+              echo "ok      $m ($(basename "$jar"))"
+            else
+              echo "::error::$m is published without META-INF/jandex.idx"; status=1
+            fi
+          done
+          exit $status
+
+      # Guards the inert-Helm-mapping class of bug (see the same design doc). Asserts the
+      # auth-agent image can actually be pinned at chart build time and overridden at
+      # install time — both were silently broken through v1.0.15.
+      - name: Verify Helm chart pins the auth-agent image
+        run: |
+          ./mvnw -B -q -pl operator-core,operator-spi,operator-webhook,operator-controller \
+            package -DskipTests --no-transfer-progress \
+            -Dquarkus.container-image.build=false \
+            -Dquarkus.kubernetes.env.vars.MICROVM_AUTH_AGENT_IMAGE=ghcr.io/codriverlabs/microvm-auth-agent:9.9.9
+          CHART="operator-controller/target/helm/kubernetes/kube-microvm-operator"
+
+          grep -q 'microvm-auth-agent:9.9.9' "$CHART/values.yaml" \
+            || { echo "::error::build-time pin absent from values.yaml"; \
+                 grep -n 'auth-agent' "$CHART/values.yaml"; exit 1; }
+
+          helm template t "$CHART" | grep -A1 'MICROVM_AUTH_AGENT_IMAGE' | grep -q '9.9.9' \
+            || { echo "::error::build-time pin not rendered into the Deployment"; exit 1; }
+
+          helm template t "$CHART" \
+            --set app.envs.MICROVM_AUTH_AGENT_IMAGE=my.registry/agent:5.5.5 \
+            | grep -q 'my.registry/agent:5.5.5' \
+            || { echo "::error::install-time override does not render"; exit 1; }
+
+          grep -q 'authAgentImage' "$CHART/values.yaml" \
+            && { echo "::error::dead authAgentImage key still emitted"; exit 1; }
+
+          echo "ok: auth-agent image pinned at build time and overridable at install time"
+
   # ─── Native CLI binary (arm64) ────────────────────────────────────────────
 
   native-cli:

@@ -254,15 +254,26 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           # Quarkus Helm generates the chart with image tag and version baked in.
-          # Auth-agent image version is set via quarkus.helm.values.authAgentImage.value.
+          # Auth-agent image is pinned to the release version via the kubernetes env var,
+          # NOT via quarkus.helm.values.* — the latter targets a path inside the container
+          # env array, which quarkus.helm.expressions.0 replaces wholesale, so the override
+          # is silently inert and the chart ships ':latest'.
+          # See docs/design/pro-artifact-consumability.md
           ./mvnw -B -pl operator-core,operator-spi,operator-webhook,operator-controller \
             package -DskipTests --no-transfer-progress \
             -Dquarkus.helm.version=${VERSION} \
             -Dquarkus.helm.create-tar-file=true \
             -Dquarkus.container-image.tag=${VERSION} \
             -Dquarkus.container-image.build=false \
-            -Dquarkus.helm.values.authAgentImage.value=ghcr.io/codriverlabs/microvm-auth-agent:${VERSION}
+            -Dquarkus.kubernetes.env.vars.MICROVM_AUTH_AGENT_IMAGE=ghcr.io/codriverlabs/microvm-auth-agent:${VERSION}
           CHART_DIR="operator-controller/target/helm/kubernetes/kube-microvm-operator"
+          # Guard: the auth-agent sidecar must be pinned to the release version, not ':latest'.
+          # This shipped broken in every release up to v1.0.15 with no signal.
+          if ! grep -q "microvm-auth-agent:${VERSION}" "${CHART_DIR}/values.yaml"; then
+            echo "::error::auth-agent image not pinned to ${VERSION} in chart values.yaml"
+            grep -n 'microvm-auth-agent' "${CHART_DIR}/values.yaml" || true
+            exit 1
+          fi
           # Re-package with correct version metadata
           rm -f "${CHART_DIR}/../kube-microvm-operator-${VERSION}.tar.gz"
           helm package "${CHART_DIR}" --version "${VERSION}" --app-version "${VERSION}" \
