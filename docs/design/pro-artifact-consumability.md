@@ -242,10 +242,7 @@ image tag matches the chart version rather than `latest`.
   bump. Separate change.
 - **`platform-versions.properties` release asset** and the **`notify-pro`
   `repository_dispatch` job**. Separate change; both are additive workflow steps.
-- **`AWS_QUOTA_DISCOVERY` vs `AWS_QUOTA_DISCOVERY_ENABLED`.** Fixed in `feature/pro-release-hooks`.
-  `application.properties` now binds `${AWS_QUOTA_DISCOVERY_ENABLED:false}`, matching
-  `values.yaml`. The install script's `--set quotas.*` args were also corrected to
-  `--set-string app.envs.AWS_QUOTA_*` (the `quotas.*` paths never existed in the chart).
+- **`AWS_QUOTA_DISCOVERY` vs `AWS_QUOTA_DISCOVERY_ENABLED`.** The generated chart emits
   the former; `src/main/helm/values.yaml` documents the latter. Documentation defect,
   noted here so it is not lost.
 
