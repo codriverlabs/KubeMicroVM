@@ -463,13 +463,16 @@ install_operator() {
     [[ -n "$ROLE_ARN" ]] && HELM_ARGS="$HELM_ARGS --set serviceAccount.roleArn=${ROLE_ARN}"
 
     # Quota overrides — only set if explicitly provided (populated by discover_quotas())
-    [[ -n "$QUOTA_RUN_MICROVM_RATE" ]]        && HELM_ARGS="$HELM_ARGS --set quotas.runMicrovmRate=${QUOTA_RUN_MICROVM_RATE}"
-    [[ -n "$QUOTA_TERMINATE_MICROVM_RATE" ]]  && HELM_ARGS="$HELM_ARGS --set quotas.terminateMicrovmRate=${QUOTA_TERMINATE_MICROVM_RATE}"
-    [[ -n "$QUOTA_SUSPEND_MICROVM_RATE" ]]    && HELM_ARGS="$HELM_ARGS --set quotas.suspendMicrovmRate=${QUOTA_SUSPEND_MICROVM_RATE}"
-    [[ -n "$QUOTA_RESUME_MICROVM_RATE" ]]     && HELM_ARGS="$HELM_ARGS --set quotas.resumeMicrovmRate=${QUOTA_RESUME_MICROVM_RATE}"
-    [[ -n "$QUOTA_AUTH_TOKEN_RATE" ]]         && HELM_ARGS="$HELM_ARGS --set quotas.authTokenRate=${QUOTA_AUTH_TOKEN_RATE}"
-    [[ -n "$QUOTA_CONCURRENT_IMAGE_BUILDS" ]] && HELM_ARGS="$HELM_ARGS --set quotas.concurrentImageBuilds=${QUOTA_CONCURRENT_IMAGE_BUILDS}"
-    $QUOTA_DISCOVERY_RUNTIME                  && HELM_ARGS="$HELM_ARGS --set quotas.discoveryEnabled=true"
+    # These inject env vars into the operator container via app.envs.*.
+    # Do NOT use --set quotas.* — those paths were removed; see
+    # docs/design/pro-artifact-consumability.md
+    [[ -n "$QUOTA_RUN_MICROVM_RATE" ]]        && HELM_ARGS="$HELM_ARGS --set-string app.envs.AWS_QUOTA_RUN_MICROVM_RATE=${QUOTA_RUN_MICROVM_RATE}"
+    [[ -n "$QUOTA_TERMINATE_MICROVM_RATE" ]]  && HELM_ARGS="$HELM_ARGS --set-string app.envs.AWS_QUOTA_TERMINATE_MICROVM_RATE=${QUOTA_TERMINATE_MICROVM_RATE}"
+    [[ -n "$QUOTA_SUSPEND_MICROVM_RATE" ]]    && HELM_ARGS="$HELM_ARGS --set-string app.envs.AWS_QUOTA_SUSPEND_MICROVM_RATE=${QUOTA_SUSPEND_MICROVM_RATE}"
+    [[ -n "$QUOTA_RESUME_MICROVM_RATE" ]]     && HELM_ARGS="$HELM_ARGS --set-string app.envs.AWS_QUOTA_RESUME_MICROVM_RATE=${QUOTA_RESUME_MICROVM_RATE}"
+    [[ -n "$QUOTA_AUTH_TOKEN_RATE" ]]         && HELM_ARGS="$HELM_ARGS --set-string app.envs.AWS_QUOTA_AUTH_TOKEN_RATE=${QUOTA_AUTH_TOKEN_RATE}"
+    [[ -n "$QUOTA_CONCURRENT_IMAGE_BUILDS" ]] && HELM_ARGS="$HELM_ARGS --set-string app.envs.AWS_QUOTA_CONCURRENT_IMAGE_BUILDS=${QUOTA_CONCURRENT_IMAGE_BUILDS}"
+    $QUOTA_DISCOVERY_RUNTIME                  && HELM_ARGS="$HELM_ARGS --set-string app.envs.AWS_QUOTA_DISCOVERY_ENABLED=true"
 
     run "helm upgrade --install kube-microvm-operator $CHART $HELM_ARGS"
     success "kube-microvm-operator installed"
