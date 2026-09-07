@@ -218,6 +218,31 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Publish Helm overlay files as a Maven artifact so KubeMicroVM-PRO can
+                 declare a versioned dependency instead of vendoring them manually.
+                 Artifact: ai.codriverlabs:operator-controller:<version>:zip:helm-templates
+                 PRO consumers: use maven-dependency-plugin:unpack to extract.
+                 See docs/design/pro-artifact-consumability.md (PRO G17). -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.7.1</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>src/main/assembly/helm-templates.xml</descriptor>
+                    </descriptors>
+                    <appendAssemblyId>true</appendAssemblyId>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>helm-templates-zip</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 

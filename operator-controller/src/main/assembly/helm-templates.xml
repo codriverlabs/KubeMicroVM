@@ -1,0 +1,33 @@
+<!--
+  Assembly descriptor for the operator-controller helm-templates artifact.
+
+  Packages src/main/helm/ as a zip with classifier "helm-templates":
+    ai.codriverlabs:operator-controller:<version>:zip:helm-templates
+
+  Consumers (KubeMicroVM-PRO) can declare this as a dependency and unpack it
+  with maven-dependency-plugin:unpack instead of vendoring the overlay files
+  directly, eliminating drift on every <community.version> bump.
+
+  Published automatically alongside the jar as part of `mvn deploy`.
+  See docs/design/pro-artifact-consumability.md (PRO G17).
+-->
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0
+                              https://maven.apache.org/xsd/assembly-2.2.0.xsd">
+    <id>helm-templates</id>
+    <formats>
+        <format>zip</format>
+    </formats>
+    <!-- No top-level directory wrapper — contents unpack directly at the target path -->
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <fileSets>
+        <fileSet>
+            <directory>src/main/helm</directory>
+            <outputDirectory>.</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+    </fileSets>
+</assembly>
