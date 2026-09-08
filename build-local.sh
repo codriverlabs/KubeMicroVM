@@ -21,6 +21,7 @@ PUSH=false
 HELM=false
 ONLY=""
 REGISTRY=""
+TAG_OVERRIDE=""
 
 for arg in "$@"; do
   case $arg in
@@ -34,6 +35,8 @@ for arg in "$@"; do
       echo "  --helm                Generate Helm chart tarball into operator-controller/target/helm/"
       echo "  --only <list>         Comma-separated: operator, cli, agent, tests"
       echo "  --registry <url>      Container registry (default: ghcr.io/codriverlabs)"
+      echo "  --tag <value>         Image/chart tag (default: nearest git tag — pass this for dev pushes"
+      echo "                        so you do not overwrite a released image)"
       echo "  --help                Show this help"
       echo ""
       echo "Examples:"
@@ -49,11 +52,14 @@ for arg in "$@"; do
     --helm)       HELM=true ;;
     --only=*)     ONLY="${arg#--only=}" ;;
     --registry=*) REGISTRY="${arg#--registry=}" ;;
+    --tag=*)      TAG_OVERRIDE="${arg#--tag=}" ;;
     --only)       ;;
     --registry)   ;;
+    --tag)        ;;
     *)
       if [[ "${PREV_ARG:-}" == "--only" ]];     then ONLY="$arg"
       elif [[ "${PREV_ARG:-}" == "--registry" ]]; then REGISTRY="$arg"
+      elif [[ "${PREV_ARG:-}" == "--tag" ]];      then TAG_OVERRIDE="$arg"
       fi
       ;;
   esac
@@ -64,8 +70,15 @@ should_build() { [[ -z "$ONLY" ]] || [[ ",$ONLY," == *",$1,"* ]]; }
 
 SKIP_FLAG=""; $SKIP_TESTS && SKIP_FLAG="-DskipTests"
 
-# Resolve image tag from git (strip leading 'v' and dirty suffix)
-IMAGE_TAG=$(git describe --tags 2>/dev/null | sed 's/^v//;s/-[0-9]*-g[0-9a-f]*$//' || echo "dev")
+# Resolve image tag: --tag wins, else derive from git (strip leading 'v' and dirty suffix).
+# NOTE: the git-derived tag is the nearest release tag, so on an unreleased commit it
+# resolves to the LAST RELEASE (e.g. 1.0.15) and a --push would overwrite that released
+# image in the registry. Always pass --tag for development pushes.
+if [[ -n "$TAG_OVERRIDE" ]]; then
+  IMAGE_TAG="$TAG_OVERRIDE"
+else
+  IMAGE_TAG=$(git describe --tags 2>/dev/null | sed 's/^v//;s/-[0-9]*-g[0-9a-f]*$//' || echo "dev")
+fi
 
 # ECR login if pushing to ECR registry
 if $PUSH && [[ "${REGISTRY:-}" =~ \.dkr\.ecr\.([a-z0-9-]+)\.amazonaws\.com ]]; then
@@ -101,7 +114,16 @@ echo "--- [0] parent + operator-core"
 if should_build "operator"; then
   echo "--- [1] operator-controller"
   HELM_FLAGS=""
-  $HELM && HELM_FLAGS="-Dquarkus.helm.version=${IMAGE_TAG} -Dquarkus.helm.create-tar-file=true"
+  if $HELM; then
+    # Pin the auth-agent sidecar to this build's tag, matching what native-build.yml does
+    # at release time. Must go through quarkus.kubernetes.env.vars — a
+    # quarkus.helm.values.* mapping into the container env array is silently inert.
+    # See docs/design/pro-artifact-consumability.md
+    HELM_AGENT_IMAGE="${REGISTRY:+${REGISTRY}/}codriverlabs/kube-microvm-auth-agent:${IMAGE_TAG}"
+    HELM_FLAGS="-Dquarkus.helm.version=${IMAGE_TAG} -Dquarkus.helm.create-tar-file=true"
+    HELM_FLAGS+=" -Dquarkus.kubernetes.env.vars.MICROVM_AUTH_AGENT_IMAGE=${HELM_AGENT_IMAGE}"
+    echo "    auth-agent sidecar pinned to: ${HELM_AGENT_IMAGE}"
+  fi
   if $NATIVE; then
     ./mvnw -B -pl operator-controller package $SKIP_FLAG -Dnative \
       -Dquarkus.native.container-build=false \

@@ -179,6 +179,18 @@
 
     <build>
         <plugins>
+            <!-- Jandex index — this module is the Quarkus *application* in this build, so
+                 Quarkus indexes it as the root and needs no jar index here. But it is a
+                 plain compile dependency of KubeMicroVM-PRO's operator-pro-dist, and
+                 without META-INF/jandex.idx ArC silently discovers none of the reconcilers
+                 or Default* SPI beans in it — producing a PRO operator missing the entire
+                 Community product, with a green build.
+                 Version and execution configured in the parent pluginManagement.
+                 See docs/design/pro-artifact-consumability.md -->
+            <plugin>
+                <groupId>io.smallrye</groupId>
+                <artifactId>jandex-maven-plugin</artifactId>
+            </plugin>
             <plugin>
                 <groupId>${quarkus.platform.group-id}</groupId>
                 <artifactId>quarkus-maven-plugin</artifactId>
