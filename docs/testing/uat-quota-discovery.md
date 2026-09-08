@@ -10,7 +10,7 @@
 ## What Was Tested
 
 Runtime quota discovery: operator queries AWS Service Quotas API at startup
-when `AWS_QUOTA_DISCOVERY=true` (Helm: `--set-string app.envs.AWS_QUOTA_DISCOVERY=true`).
+when `AWS_QUOTA_DISCOVERY_ENABLED=true` (Helm: `--set-string app.envs.AWS_QUOTA_DISCOVERY_ENABLED=true`).
 
 Requires IAM permission `service-quotas:GetServiceQuota` on the operator role.
 
@@ -24,7 +24,7 @@ on the `kube-microvm-operator` IAM role.
 Deployed with:
 ```bash
 helm upgrade kube-microvm-operator <chart> \
-  --set-string "app.envs.AWS_QUOTA_DISCOVERY=true"
+  --set-string "app.envs.AWS_QUOTA_DISCOVERY_ENABLED=true"
 ```
 
 ---
