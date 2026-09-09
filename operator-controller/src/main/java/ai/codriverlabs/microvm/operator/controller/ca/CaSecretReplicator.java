@@ -33,6 +33,13 @@ import java.util.concurrent.TimeUnit;
  * Rotation: this component runs periodically and on namespace events to ensure
  * the CA Secret stays in sync. Kubernetes automatically propagates Secret changes
  * to mounted volumes within ~60-120 seconds.
+ *
+ * <p>Required RBAC (cluster-scoped, declared on MicroVMReconciler via @AdditionalRBACRules):
+ * <ul>
+ *   <li>{@code "" / namespaces: get, list, watch} — to discover managed namespaces</li>
+ *   <li>{@code "" / secrets: get, list, create, update} in managed namespaces — to replicate CA Secret</li>
+ * </ul>
+ * See docs/design/uat-failure-analysis-rc2.md RC-1.
  */
 @ApplicationScoped
 public class CaSecretReplicator {

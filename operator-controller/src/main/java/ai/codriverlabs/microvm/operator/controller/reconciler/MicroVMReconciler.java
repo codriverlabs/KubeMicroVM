@@ -44,6 +44,20 @@ import java.util.concurrent.TimeUnit;
         apiGroups = "lambda.aws.amazon.com",
         resources = {"microvmtemplates", "microvmnetworks", "microvmimages"},
         verbs = {"get", "list", "watch"}
+    ),
+    // CaSecretReplicator: list all namespaces to find managed ones, then replicate CA Secret.
+    // Without namespaces list the replicator fails silently every 5 minutes.
+    // See docs/design/uat-failure-analysis-rc2.md RC-1.
+    @io.quarkiverse.operatorsdk.annotations.RBACRule(
+        apiGroups = "",
+        resources = {"namespaces"},
+        verbs = {"get", "list", "watch"}
+    ),
+    // CaSecretReplicator: create/update the CA Secret in each managed namespace.
+    @io.quarkiverse.operatorsdk.annotations.RBACRule(
+        apiGroups = "",
+        resources = {"secrets"},
+        verbs = {"get", "list", "create", "update"}
     )
 })
 public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> {
