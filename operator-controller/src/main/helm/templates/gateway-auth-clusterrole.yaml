@@ -1,0 +1,39 @@
+{{/*
+  Shared ClusterRole for MicroVMGateway proxy pods.
+
+  Every gateway SA needs TokenReview and SubjectAccessReview to validate
+  incoming requests. These APIs are cluster-scoped — a namespace Role cannot
+  grant them. Rather than creating one identical ClusterRole per gateway
+  (N gateways → N ClusterRoles), a single shared ClusterRole is installed
+  once by the Helm chart.
+
+  The MicroVMGatewayReconciler creates a ClusterRoleBinding per gateway
+  binding the gateway SA to this shared ClusterRole.
+
+  Security: TokenReview and SubjectAccessReview are observer-only auth query
+  APIs (same as system:auth-delegator). They cannot read, write, or modify
+  any resources. The meaningful isolation boundary is the namespace-scoped
+  Role that restricts microvms/token access to the gateway's own namespace.
+
+  See: KubeMicroVM-PRO/docs/design/gateway-rbac.md
+*/}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: microvm-gateway-auth
+  labels:
+    app.kubernetes.io/name: kube-microvm-operator
+    app.kubernetes.io/component: gateway-auth
+    app.kubernetes.io/managed-by: kube-microvm-operator
+rules:
+  # TokenReview: validate caller's projected SA token and extract identity.
+  # Cluster-scoped by Kubernetes design — cannot be granted via namespace Role.
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+  # SubjectAccessReview: check caller has create microvms/token permission.
+  # Cluster-scoped by Kubernetes design — cannot be granted via namespace Role.
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews"]
+    verbs: ["create"]
