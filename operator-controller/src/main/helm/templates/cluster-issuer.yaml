@@ -1,0 +1,35 @@
+{{/*
+  ClusterIssuer backed by the operator CA certificate.
+
+  This is a cluster-scoped cert-manager Issuer that allows gateway reconcilers
+  in ANY namespace to issue TLS certificates without requiring a per-namespace
+  Issuer setup. The underlying CA Secret lives in the operator namespace
+  (kube-microvm) and was created by the namespace-scoped CA chain during install.
+
+  Name: kube-microvm-operator-ca (same as the namespace Issuer, different scope)
+
+  Why ClusterIssuer in addition to the existing namespace Issuer:
+  - The MicroVMGateway reconciler (PRO) deploys proxy Deployments into workload
+    namespaces (e.g. e2e-session, production). cert-manager requires the referenced
+    Issuer to exist in the same namespace as the Certificate, or to be a ClusterIssuer.
+  - Creating a per-namespace Issuer for every managed namespace is possible but
+    requires the CA Secret to be replicated there first (CaSecretReplicator). The
+    ClusterIssuer avoids this dependency and is simpler for the default case.
+  - Per-namespace Issuer (opt-in isolation) is tracked as a PRO roadmap item:
+    docs/design/gateway-tls-namespace-isolation.md
+
+  Roadmap: PRO will add opt-in per-namespace Issuer support once the ClusterIssuer
+  path is proven stable. See PRO docs/design/gateway-tls-namespace-isolation.md.
+*/}}
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: kube-microvm-operator-ca
+  labels:
+    app.kubernetes.io/name: kube-microvm-operator
+    app.kubernetes.io/component: pki
+    app.kubernetes.io/managed-by: kube-microvm-operator
+spec:
+  ca:
+    secretName: kube-microvm-operator-ca
