@@ -4,7 +4,6 @@ import io.fabric8.kubernetes.api.model.Namespace;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -12,32 +11,27 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Replicates the operator's CA certificate to a well-known Secret in each managed namespace.
+ * Replicates the operator's CA certificate Secret to each managed namespace.
  *
- * This enables auth-agent sidecars to verify TLS when connecting to the operator's
- * token endpoint, without requiring trust-all or cross-namespace Secret reads.
+ * Reads the full {@code kube-microvm-operator-ca} Secret from the operator namespace
+ * (including {@code tls.crt}, {@code tls.key}, {@code ca.crt}) and replicates it as a
+ * {@code kubernetes.io/tls} Secret to every namespace labelled
+ * {@value #MANAGED_LABEL}=true.
  *
- * The CA is read from the operator's TLS Secret (mounted by cert-manager at /tls/ca.crt).
- * It is replicated to a Secret named {@value #CA_SECRET_NAME} in every namespace labelled
- * with {@value #MANAGED_LABEL}=true.
- *
- * Rotation: this component runs periodically and on namespace events to ensure
- * the CA Secret stays in sync. Kubernetes automatically propagates Secret changes
- * to mounted volumes within ~60-120 seconds.
+ * Replicating the full keypair (not just ca.crt) is required so that consumers can
+ * use it as a cert-manager CA Issuer ({@code spec.ca.secretName}), which needs both
+ * {@code tls.crt} and {@code tls.key} to sign certificates.
  *
  * <p>Required RBAC (cluster-scoped, declared on MicroVMReconciler via @AdditionalRBACRules):
  * <ul>
  *   <li>{@code "" / namespaces: get, list, watch} — to discover managed namespaces</li>
- *   <li>{@code "" / secrets: get, list, create, update} in managed namespaces — to replicate CA Secret</li>
+ *   <li>{@code "" / secrets: get, list, create, update} — to read source + replicate CA Secret</li>
  * </ul>
  * See docs/design/uat-failure-analysis-rc2.md RC-1.
  */
@@ -54,9 +48,6 @@ public class CaSecretReplicator {
 
     @Inject
     KubernetesClient client;
-
-    @ConfigProperty(name = "microvm.ca.cert-path", defaultValue = "/tls/ca.crt")
-    String caCertPath;
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "ca-replicator");
@@ -78,17 +69,26 @@ public class CaSecretReplicator {
      */
     public void syncAll() {
         try {
-            String caCert = readCaCert();
-            if (caCert == null) {
-                LOG.warn("CA cert not available at " + caCertPath + " — skipping sync");
+            // Read the full CA Secret from the operator namespace — includes tls.crt, tls.key,
+            // and ca.crt. All three keys are required for cert-manager CA Issuers.
+            String operatorNamespace = resolveOperatorNamespace();
+            Secret sourceSecret = client.secrets()
+                    .inNamespace(operatorNamespace)
+                    .withName(CA_SECRET_NAME)
+                    .get();
+
+            if (sourceSecret == null || sourceSecret.getData() == null || sourceSecret.getData().isEmpty()) {
+                LOG.warn("CA Secret " + CA_SECRET_NAME + " not found in namespace " + operatorNamespace
+                        + " — skipping sync. It will be created by cert-manager after operator TLS is issued.");
                 return;
             }
 
             var namespaces = client.namespaces().list().getItems();
             int synced = 0;
             for (Namespace ns : namespaces) {
-                if (isManagedNamespace(ns)) {
-                    ensureCaSecret(ns.getMetadata().getName(), caCert);
+                String nsName = ns.getMetadata().getName();
+                if (isManagedNamespace(ns) && !nsName.equals(operatorNamespace)) {
+                    ensureCaSecret(nsName, sourceSecret.getData(), sourceSecret.getType());
                     synced++;
                 }
             }
@@ -100,28 +100,29 @@ public class CaSecretReplicator {
 
     /**
      * Ensure the CA Secret exists and is up-to-date in a specific namespace.
+     *
+     * @param namespace   target namespace
+     * @param data        Secret data map (all keys from the source Secret)
+     * @param secretType  Secret type (e.g. kubernetes.io/tls)
      */
-    public void ensureCaSecret(String namespace, String caCert) {
+    public void ensureCaSecret(String namespace, Map<String, String> data, String secretType) {
         try {
             Secret existing = client.secrets()
                     .inNamespace(namespace)
                     .withName(CA_SECRET_NAME)
                     .get();
 
-            String encodedCa = Base64.getEncoder().encodeToString(caCert.getBytes());
-
             if (existing != null) {
-                // Check if CA has changed
+                // Check if data has changed (compare ca.crt as proxy for full content)
                 String currentCa = existing.getData() != null ? existing.getData().get(CA_KEY) : null;
-                if (encodedCa.equals(currentCa)) {
+                String newCa = data.get(CA_KEY);
+                if (newCa != null && newCa.equals(currentCa)) {
                     return; // up to date
                 }
-                // Update
-                existing.setData(Map.of(CA_KEY, encodedCa));
+                existing.setData(data);
                 client.secrets().inNamespace(namespace).resource(existing).update();
-                LOG.infof("Updated CA Secret %s/%s (CA rotated)", namespace, CA_SECRET_NAME);
+                LOG.infof("Updated CA Secret %s/%s", namespace, CA_SECRET_NAME);
             } else {
-                // Create
                 Secret caSecret = new SecretBuilder()
                         .withNewMetadata()
                             .withName(CA_SECRET_NAME)
@@ -129,8 +130,8 @@ public class CaSecretReplicator {
                             .addToLabels("app.kubernetes.io/managed-by", "kube-microvm-operator")
                             .addToLabels("app.kubernetes.io/component", "ca-distribution")
                         .endMetadata()
-                        .withType("Opaque")
-                        .withData(Map.of(CA_KEY, encodedCa))
+                        .withType(secretType != null ? secretType : "kubernetes.io/tls")
+                        .withData(data)
                         .build();
                 client.secrets().inNamespace(namespace).resource(caSecret).create();
                 LOG.infof("Created CA Secret %s/%s", namespace, CA_SECRET_NAME);
@@ -150,7 +151,6 @@ public class CaSecretReplicator {
                     .withName(CA_SECRET_NAME)
                     .get();
             if (existing != null) {
-                // Only delete if we own it
                 var labels = existing.getMetadata().getLabels();
                 if (labels != null && "kube-microvm-operator".equals(labels.get("app.kubernetes.io/managed-by"))) {
                     client.secrets().inNamespace(namespace).withName(CA_SECRET_NAME).delete();
@@ -162,16 +162,14 @@ public class CaSecretReplicator {
         }
     }
 
-    private String readCaCert() {
-        try {
-            Path path = Path.of(caCertPath);
-            if (Files.exists(path) && Files.isReadable(path)) {
-                return Files.readString(path).trim();
-            }
-        } catch (Exception e) {
-            LOG.warnf("Error reading CA cert from %s: %s", caCertPath, e.getMessage());
-        }
-        return null;
+    /**
+     * Resolve the operator's own namespace from the KUBERNETES_NAMESPACE env var
+     * (injected by Quarkus/Kubernetes via fieldRef metadata.namespace).
+     * Falls back to "kube-microvm" as the default install namespace.
+     */
+    private String resolveOperatorNamespace() {
+        String ns = System.getenv("KUBERNETES_NAMESPACE");
+        return (ns != null && !ns.isBlank()) ? ns : "kube-microvm";
     }
 
     private boolean isManagedNamespace(Namespace ns) {
