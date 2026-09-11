@@ -11,8 +11,10 @@ public class MicroVMReplicaSetSpec {
     private Integer maxSurge;
     /** Scale-down behaviour configuration. */
     private ScaleDownSpec scaleDown;
-    /** Desired state for all child MicroVMs: Running (default) | Suspended. */
-    private String desiredReplicaSetState = "Running";
+    /** Desired state for all child MicroVMs: Running (default) | Suspended.
+     *  When null (not set in CR), individual VMs manage their own desiredState — the
+     *  cascade is disabled, allowing gateways to suspend/resume individual VMs. */
+    private String desiredReplicaSetState;
     /**
      * Update strategy type: RollingUpdate (default) | Recreate.
      * RollingUpdate: creates new VMs one-by-one, terminates old ones after new are Running.
