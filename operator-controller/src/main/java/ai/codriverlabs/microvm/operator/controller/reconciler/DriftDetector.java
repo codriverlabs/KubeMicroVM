@@ -54,11 +54,12 @@ public class DriftDetector {
             case SUSPENDING -> new DriftResult.NoOp("Transitional: suspending (idle policy or explicit suspend)");
             case SUSPENDED -> {
                 if (autoResumeEnabled) {
-                    // Idle policy owns resume — do not fight it.
-                    // Status updated; VM will auto-resume when traffic arrives.
-                    yield new DriftResult.NoOp("Auto-suspended by idle policy; auto-resume enabled");
+                    // autoResumeEnabled means the VM resumes automatically when traffic arrives
+                    // (the idle policy owns normal resume). However, if the user explicitly sets
+                    // desiredState=Running, we must still call ResumeMicrovm immediately —
+                    // the auto-resume path is driven by the gateway, not the reconciler.
+                    // Fall through to ActionRequired(RESUME) regardless of autoResumeEnabled.
                 }
-                // autoResumeEnabled=false: user controls lifecycle via desiredState.
                 // desiredState=Running while actual=Suspended → call ResumeMicrovm.
                 yield new DriftResult.ActionRequired(DriftAction.RESUME, MicroVMState.RUNNING);
             }
