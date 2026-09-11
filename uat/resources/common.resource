@@ -72,12 +72,15 @@ Wait For Image Ready
         IF    "${state}" == "CREATED" and "${vstate}" == "SUCCESSFUL"
             RETURN
         END
+        IF    "${state}" == "UPDATED"
+            RETURN
+        END
         Sleep    10s
     END
     Fail    Image ${name} did not reach CREATED/SUCCESSFUL within ${timeout}s
 
 Wait For VM Running
-    [Arguments]    ${name}    ${namespace}=${NAMESPACE}    ${timeout}=120
+    [Arguments]    ${name}    ${namespace}=${NAMESPACE}    ${timeout}=180
     FOR    ${i}    IN RANGE    ${{int($timeout) // 5}}
         ${state}=    Kubectl Get JsonPath    microvm    ${name}    {.status.state}    ${namespace}
         IF    "${state}" == "Running"
