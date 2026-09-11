@@ -83,8 +83,8 @@ Ensure Shared Image Ready
     IF    ${result.rc} == 0
         # Image CR exists — check if built
         ${state}=    Run Process    kubectl    get    microvmimage    ${SHARED_IMAGE}    -n    ${NAMESPACE}    -o    jsonpath\={.status.imageState}
-        IF    "${state.stdout}" == "CREATED"
-            Log    Shared image ${SHARED_IMAGE} already built
+        IF    "${state.stdout}" == "CREATED" or "${state.stdout}" == "UPDATED"
+            Log    Shared image ${SHARED_IMAGE} already built (state: ${state.stdout})
             RETURN
         END
         # Still building — wait

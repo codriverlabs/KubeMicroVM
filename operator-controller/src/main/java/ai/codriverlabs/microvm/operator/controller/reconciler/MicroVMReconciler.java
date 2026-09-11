@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
     ),
     @io.quarkiverse.operatorsdk.annotations.RBACRule(
         apiGroups = "lambda.aws.amazon.com",
-        resources = {"microvmtemplates", "microvmnetworks", "microvmimages"},
+        resources = {"microvmtemplates", "microvmnetworks", "microvmimages", "microvmclasses"},
         verbs = {"get", "list", "watch"}
     ),
     // CaSecretReplicator: list all namespaces to find managed ones, then replicate CA Secret.
