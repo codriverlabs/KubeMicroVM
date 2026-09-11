@@ -65,6 +65,7 @@ Create Memory Resources
     Set Suite Variable    ${MEM_4096}    mem-4096-${id}
     Set Suite Variable    ${MEM_DEFAULT}    mem-default-${id}
     Set Suite Variable    ${MEM_VM}    mem-vm-${id}
+    Set Suite Variable    ${MEM_INVALID}    mem-invalid-${id}
     # Image with explicit memorySizeMiB: 4096
     Set Suite Variable    ${NAME}    ${MEM_4096}
     Set Suite Variable    ${MEMORY_SIZE_MIB}    4096
@@ -77,3 +78,4 @@ Cleanup Memory Resources
     Run Keyword And Ignore Error    Kubectl Delete Force    microvm    ${MEM_VM}
     Run Keyword And Ignore Error    Kubectl Delete Force    microvmimage    ${MEM_4096}
     Run Keyword And Ignore Error    Kubectl Delete Force    microvmimage    ${MEM_DEFAULT}
+    Run Keyword And Ignore Error    Kubectl Delete Force    microvmimage    ${MEM_INVALID}

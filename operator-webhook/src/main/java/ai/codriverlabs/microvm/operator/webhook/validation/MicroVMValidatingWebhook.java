@@ -151,6 +151,22 @@ public class MicroVMValidatingWebhook {
         try {
             String resource = request.getResource() != null ? request.getResource().getResource() : "";
 
+            // Skip validation for objects being finalized (deletionTimestamp already set).
+            // Finalizer removal patches are UPDATE operations on a deleting object —
+            // re-validating them can block cleanup of previously-invalid resources.
+            if ("UPDATE".equals(request.getOperation()) && request.getObject() != null) {
+                io.fabric8.kubernetes.api.model.ObjectMeta meta = null;
+                try {
+                    var node = objectMapper.convertValue(request.getObject(), com.fasterxml.jackson.databind.JsonNode.class);
+                    var dtNode = node.path("metadata").path("deletionTimestamp");
+                    if (!dtNode.isMissingNode() && !dtNode.isNull()) {
+                        LOG.debugf("Skipping validation for %s/%s — object is being deleted",
+                                request.getNamespace(), request.getName());
+                        return buildAllow(review);
+                    }
+                } catch (Exception ignored) { /* safe to proceed with normal validation */ }
+            }
+
             // Only validate MicroVM spec fields for microvms — Images and Networks
             // have their own validation handled by CRD schema.
             if ("microvms".equals(resource)) {
@@ -267,6 +283,10 @@ public class MicroVMValidatingWebhook {
         } catch (Exception e) {
             LOG.warnf("Error checking namespace quota for %s: %s", namespace, e.getMessage());
         }
+    }
+
+    private AdmissionReview buildAllow(AdmissionReview review) {
+        return buildResponse(review, List.of());
     }
 
     private AdmissionReview buildResponse(AdmissionReview review, List<String> errors) {
