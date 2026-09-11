@@ -137,7 +137,11 @@ public class MicroVMReconciler implements Reconciler<MicroVM>, Cleaner<MicroVM> 
             MicroVMState actualState = MicroVMState.fromValue(awsState.state());
             DesiredState desired = resource.getSpec().getDesiredState();
             boolean autoResumeEnabled = Boolean.TRUE.equals(resource.getSpec().getAutoResumeEnabled());
-            DriftDetector.DriftResult driftResult = driftDetector.detectDrift(desired, actualState, autoResumeEnabled);
+            // specChanged=true means the user explicitly updated the spec since last reconcile.
+            // Pass this to DriftDetector so it knows to honor desiredState=RUNNING over idle policy.
+            boolean specChanged = specChanged(resource);
+            DriftDetector.DriftResult driftResult = driftDetector.detectDrift(desired, actualState,
+                    autoResumeEnabled, specChanged);
 
             return switch (driftResult) {
                 case DriftDetector.DriftResult.NoOp noOp -> {

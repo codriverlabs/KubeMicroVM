@@ -37,30 +37,45 @@ public class DriftDetector {
      *                        When false, the operator manages suspend/resume explicitly.
      */
     public DriftResult detectDrift(DesiredState desired, MicroVMState actual, boolean autoResumeEnabled) {
+        return detectDrift(desired, actual, autoResumeEnabled, false);
+    }
+
+    /**
+     * Extended form: specChanged=true when the spec generation advanced since the last
+     * observed generation, meaning the user explicitly changed desiredState.
+     * When specChanged=true and desired=RUNNING/actual=SUSPENDED, always resume
+     * (user explicitly requested it). When specChanged=false, respect autoResumeEnabled.
+     */
+    public DriftResult detectDrift(DesiredState desired, MicroVMState actual,
+                                   boolean autoResumeEnabled, boolean specChanged) {
         if (desired == null) return new DriftResult.Error("desiredState is null");
         if (actual == null) return new DriftResult.Error("actual state is null");
 
         return switch (desired) {
-            case RUNNING -> detectRunningDrift(actual, autoResumeEnabled);
+            case RUNNING -> detectRunningDrift(actual, autoResumeEnabled, specChanged);
             case SUSPENDED -> detectSuspendedDrift(actual);
             case TERMINATED -> detectTerminatedDrift(actual);
         };
     }
 
     private DriftResult detectRunningDrift(MicroVMState actual, boolean autoResumeEnabled) {
+        return detectRunningDrift(actual, autoResumeEnabled, false);
+    }
+
+    private DriftResult detectRunningDrift(MicroVMState actual, boolean autoResumeEnabled, boolean specChanged) {
         return switch (actual) {
             case RUNNING -> new DriftResult.NoOp("Aligned: Running");
             case PENDING -> new DriftResult.NoOp("Transitional: provisioning in progress");
             case SUSPENDING -> new DriftResult.NoOp("Transitional: suspending (idle policy or explicit suspend)");
             case SUSPENDED -> {
-                if (autoResumeEnabled) {
-                    // autoResumeEnabled means the VM resumes automatically when traffic arrives
-                    // (the idle policy owns normal resume). However, if the user explicitly sets
-                    // desiredState=Running, we must still call ResumeMicrovm immediately —
-                    // the auto-resume path is driven by the gateway, not the reconciler.
-                    // Fall through to ActionRequired(RESUME) regardless of autoResumeEnabled.
+                // Only resume if the user explicitly changed the spec (specChanged=true),
+                // or autoResumeEnabled=false (user controls lifecycle via desiredState).
+                // If autoResumeEnabled=true and spec is unchanged, the idle policy owns resume —
+                // the gateway will call ResumeMicrovm via its own path; the operator must not fight it.
+                if (autoResumeEnabled && !specChanged) {
+                    yield new DriftResult.NoOp("Auto-suspended by idle policy; auto-resume enabled");
                 }
-                // desiredState=Running while actual=Suspended → call ResumeMicrovm.
+                // specChanged=true (user explicitly set desiredState=Running) or autoResumeEnabled=false
                 yield new DriftResult.ActionRequired(DriftAction.RESUME, MicroVMState.RUNNING);
             }
             case TERMINATED -> new DriftResult.ActionRequired(DriftAction.RECREATE, MicroVMState.PENDING);

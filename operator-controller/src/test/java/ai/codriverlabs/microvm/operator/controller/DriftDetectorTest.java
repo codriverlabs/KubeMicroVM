@@ -112,11 +112,18 @@ class DriftDetectorTest {
     }
 
     @Test
-    void suspendedWithDesiredRunningAndAutoResumeEnabledAlsoReturnsResume() {
-        // autoResumeEnabled=true does NOT prevent explicit resume via desiredState=Running.
-        // The reconciler must call ResumeMicrovm when the user explicitly declares desiredState=Running,
-        // regardless of autoResumeEnabled. autoResumeEnabled only governs the gateway-driven resume path.
-        DriftResult result = detector.detectDrift(DesiredState.RUNNING, MicroVMState.SUSPENDED, true);
+    void suspendedWithDesiredRunningAndAutoResumeEnabledButNoSpecChangeReturnsNoOp() {
+        // autoResumeEnabled=true and spec unchanged: idle policy owns resume — operator must not fight it.
+        DriftResult result = detector.detectDrift(DesiredState.RUNNING, MicroVMState.SUSPENDED, true, false);
+        assertInstanceOf(DriftResult.NoOp.class, result);
+        assertTrue(((DriftResult.NoOp) result).reason().contains("idle policy"));
+    }
+
+    @Test
+    void suspendedWithDesiredRunningAndAutoResumeEnabledAndSpecChangedReturnsResume() {
+        // autoResumeEnabled=true but user explicitly changed the spec (specChanged=true):
+        // operator must resume — user explicitly requested desiredState=Running.
+        DriftResult result = detector.detectDrift(DesiredState.RUNNING, MicroVMState.SUSPENDED, true, true);
         assertInstanceOf(DriftResult.ActionRequired.class, result);
         assertEquals(DriftDetector.DriftAction.RESUME,
                 ((DriftResult.ActionRequired) result).action());
