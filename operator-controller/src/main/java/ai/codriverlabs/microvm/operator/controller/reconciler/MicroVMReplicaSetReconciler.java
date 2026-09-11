@@ -86,7 +86,13 @@ public class MicroVMReplicaSetReconciler
         // Handle suspend/resume cascade — paced through QuotaGuard to avoid
         // flooding SuspendMicrovm (2 req/s) or ResumeMicrovm (5 req/s) when
         // the ReplicaSet is large. Each patch triggers a child reconcile → AWS call.
-        boolean wantSuspended = "Suspended".equalsIgnoreCase(spec.getDesiredReplicaSetState());
+        // Only cascade when desiredReplicaSetState is explicitly set. When it is null/blank
+        // the individual VMs manage their own desiredState (e.g. driven by the gateway).
+        String replicaSetDesiredState = spec.getDesiredReplicaSetState();
+        if (replicaSetDesiredState == null || replicaSetDesiredState.isBlank()) {
+            // No explicit cascade requested — leave individual VM desiredState alone
+        } else {
+        boolean wantSuspended = "Suspended".equalsIgnoreCase(replicaSetDesiredState);
         for (MicroVM child : children) {
             // Never touch scale-down victims or already-terminated VMs —
             // the cascade must not overwrite desiredState=TERMINATED back to Running.
@@ -117,6 +123,7 @@ public class MicroVMReplicaSetReconciler
                 k8s.resource(child).patch();
             }
         }
+        } // end cascade block (desiredReplicaSetState != null)
 
         // Health eviction — remove unhealthy children so they get replaced
         Instant now = Instant.now();
