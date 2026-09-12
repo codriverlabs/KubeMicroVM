@@ -40,7 +40,7 @@ class MicroVMImageReconcilerIT {
         var quotaGuard = new ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard(
                 new ai.codriverlabs.microvm.operator.controller.spi.DefaultQuotaPolicy(),
                 100, 100, 100, 100, 100, 100, 100, 10, 200); // unlimited for tests
-        reconciler = new MicroVMImageReconciler(mockImageClient, awsIdentity, quotaGuard);
+        reconciler = new MicroVMImageReconciler(mockImageClient, awsIdentity, quotaGuard, client);
     }
 
     @Test
@@ -224,6 +224,80 @@ class MicroVMImageReconcilerIT {
         assertEquals("1.0", image.getStatus().getActiveVersion());
         // createImage must NOT be called — we adopted, not created
         verify(mockImageClient, never()).createImage(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("DELETE: cleanup on ValidationException 'running microvms' emits DeleteBlocked " +
+            "event, sets status reason, does not remove finalizer, and backs off")
+    void delete_blockedByRunningVms_emitsEventAndBacksOff() throws Exception {
+        var image = testImage("shared-app");
+        client.resource(image).create();
+        var status = new ai.codriverlabs.microvm.operator.core.model.MicroVMImageStatus();
+        status.setImageArn("arn:aws:lambda:us-east-1:123456789012:microvm-image:shared-app");
+        image.setStatus(status);
+
+        var validationException = software.amazon.awssdk.services.lambdamicrovms.model.ValidationException
+                .builder()
+                .message("Cannot delete microvm image with running microvms.")
+                .build();
+        when(mockImageClient.deleteImage(anyString()))
+                .thenReturn(CompletableFuture.failedFuture(validationException));
+
+        var deleteControl = reconciler.cleanup(image, mockContext());
+
+        assertFalse(deleteControl.isRemoveFinalizer(), "finalizer must not be removed while blocked");
+        assertTrue(image.getStatus().getLatestVersionStateReason().contains("running MicroVMs"),
+                "status reason should explain the delete is blocked");
+
+        var events = client.v1().events().inNamespace("default").list().getItems();
+        assertTrue(events.stream().anyMatch(e -> "DeleteBlocked".equals(e.getReason())),
+                "a DeleteBlocked Warning event should be emitted");
+    }
+
+    @Test
+    @DisplayName("DELETE: repeated delete-blocked retries use capped exponential backoff, " +
+            "tracked via annotation, and reset after a successful delete")
+    void delete_blockedRetries_useCappedExponentialBackoff() throws Exception {
+        var image = testImage("shared-app");
+        client.resource(image).create();
+        var status = new ai.codriverlabs.microvm.operator.core.model.MicroVMImageStatus();
+        status.setImageArn("arn:aws:lambda:us-east-1:123456789012:microvm-image:shared-app");
+        image.setStatus(status);
+
+        var validationException = software.amazon.awssdk.services.lambdamicrovms.model.ValidationException
+                .builder()
+                .message("Cannot delete microvm image with running microvms.")
+                .build();
+        when(mockImageClient.deleteImage(anyString()))
+                .thenReturn(CompletableFuture.failedFuture(validationException));
+
+        var first = reconciler.cleanup(image, mockContext());
+        assertEquals(Long.valueOf(java.time.Duration.ofSeconds(15).toMillis()), first.getScheduleDelay().orElse(null));
+
+        var second = reconciler.cleanup(image, mockContext());
+        assertEquals(Long.valueOf(java.time.Duration.ofSeconds(30).toMillis()), second.getScheduleDelay().orElse(null));
+
+        var third = reconciler.cleanup(image, mockContext());
+        assertEquals(Long.valueOf(java.time.Duration.ofMinutes(1).toMillis()), third.getScheduleDelay().orElse(null));
+
+        var fourth = reconciler.cleanup(image, mockContext());
+        assertEquals(Long.valueOf(java.time.Duration.ofMinutes(2).toMillis()), fourth.getScheduleDelay().orElse(null));
+
+        // Keeps escalating up to the cap, never beyond it
+        var fifth = reconciler.cleanup(image, mockContext());
+        assertEquals(Long.valueOf(java.time.Duration.ofMinutes(5).toMillis()), fifth.getScheduleDelay().orElse(null));
+        var sixth = reconciler.cleanup(image, mockContext());
+        assertEquals(Long.valueOf(java.time.Duration.ofMinutes(5).toMillis()), sixth.getScheduleDelay().orElse(null));
+
+        // Now the delete succeeds — retry count must reset (annotation cleared)
+        when(mockImageClient.deleteImage(anyString()))
+                .thenReturn(CompletableFuture.completedFuture(
+                        DeleteMicrovmImageResponse.builder().build()));
+        var success = reconciler.cleanup(image, mockContext());
+        assertTrue(success.isRemoveFinalizer());
+        var annotations = image.getMetadata().getAnnotations();
+        assertTrue(annotations == null || !annotations.containsKey("lambda.aws.amazon.com/delete-retry-count"),
+                "retry count annotation should be cleared after a successful delete");
     }
 
     // --- helpers ---

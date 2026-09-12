@@ -198,6 +198,11 @@ public class MicroVMValidatingWebhook {
                         validateMemoryImmutability(oldImage.getSpec(), image.getSpec(), errors);
                     }
                 }
+                // Cross-namespace ARN collision check — only on CREATE. See
+                // docs/design/image-arn-collision-prevention.md.
+                if ("CREATE".equals(request.getOperation())) {
+                    validateNoArnCollision(image, request.getNamespace(), errors);
+                }
             }
 
             // Namespace permission + quota applies to all resource types
@@ -367,6 +372,62 @@ public class MicroVMValidatingWebhook {
         if (spec.getMaxVersionsToKeep() == null) return;
         if (spec.getMaxVersionsToKeep() < 1) {
             errors.add("spec.maxVersionsToKeep must be >= 1 (or omit to disable automatic pruning)");
+        }
+    }
+
+    /**
+     * Rejects creating a MicroVMImage whose name already exists in another namespace.
+     * <p>
+     * The AWS Lambda MicroVM image ARN is identified by name within a single AWS
+     * account + region (arn:aws:lambda:&lt;region&gt;:&lt;account&gt;:microvm-image:&lt;name&gt;),
+     * which has no concept of Kubernetes namespaces. Two MicroVMImage CRs with the same
+     * metadata.name in different namespaces would silently resolve to the same AWS
+     * resource — the reconciler's create path adopts an existing AWS image by name with
+     * no error. If either CR is later deleted while the other's MicroVMs are still
+     * running, AWS permanently rejects the delete and the finalizer never clears,
+     * leaving the deleting namespace stuck Terminating indefinitely.
+     * <p>
+     * Since one operator instance manages images for a single AWS account + region
+     * (see {@code AwsIdentity}), comparing plain names across namespaces is equivalent
+     * to comparing ARNs — no AWS call or ARN construction is needed here.
+     * <p>
+     * See docs/design/image-arn-collision-prevention.md for the full design rationale.
+     * Sharing one image across namespaces must go through the PRO cross-namespace
+     * imageRef + MicroVMImageBinding mechanism, never through a second same-named CR.
+     */
+    void validateNoArnCollision(MicroVMImage image, String namespace, List<String> errors) {
+        if (kubernetesClient == null) return; // unit-test path with no cluster access
+        String name = image.getMetadata() != null ? image.getMetadata().getName() : null;
+        if (name == null || name.isBlank() || namespace == null) return;
+
+        try {
+            var allImages = kubernetesClient.resources(MicroVMImage.class)
+                    .inAnyNamespace()
+                    .list()
+                    .getItems();
+            for (MicroVMImage other : allImages) {
+                String otherNs = other.getMetadata().getNamespace();
+                String otherName = other.getMetadata().getName();
+                if (namespace.equals(otherNs) || !name.equals(otherName)) continue;
+
+                String otherArn = other.getStatus() != null ? other.getStatus().getImageArn() : null;
+                errors.add(String.format(
+                        "MicroVMImage '%s' rejected: an image with this name already exists in " +
+                        "namespace '%s'%s. The underlying AWS image is identified by name within " +
+                        "your AWS account and region, not by Kubernetes namespace, so this would " +
+                        "collide with the existing image. To consume the existing image from this " +
+                        "namespace, use a cross-namespace imageRef ('%s/%s') with a " +
+                        "MicroVMImageBinding (KubeMicroVM PRO) instead of creating a duplicate " +
+                        "MicroVMImage. See docs/design/image-arn-collision-prevention.md.",
+                        name, otherNs,
+                        otherArn != null ? " (" + otherArn + ")" : "",
+                        otherNs, name));
+                return;
+            }
+        } catch (Exception e) {
+            LOG.warnf("Error checking cross-namespace MicroVMImage name collision for %s/%s: %s",
+                    namespace, name, e.getMessage());
+            // Don't fail validation if we can't perform the lookup — degrade to Layer 2 protection.
         }
     }
 }
