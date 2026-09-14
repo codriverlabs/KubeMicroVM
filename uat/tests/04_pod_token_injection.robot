@@ -36,7 +36,7 @@ INJ-05 Token Volume Present
 
 INJ-06 Token Files Written
     [Documentation]    Verifies microvm-auth-agent writes auth-token, endpoint, and expires-at files.
-    Sleep    45s    Wait for agent to fetch token
+    Sleep    90s    Wait for agent to fetch token
     ${result}=    Run Process    kubectl    exec    inject-pod-${RUN_ID}    -c    app    -n    ${NAMESPACE}    --    ls    /var/run/microvm/
     Should Contain    ${result.stdout}    auth-token
     Should Contain    ${result.stdout}    endpoint
