@@ -11,6 +11,10 @@ import ai.codriverlabs.microvm.operator.controller.quota.QuotaGuard;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMImage;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMImageSpec;
 import ai.codriverlabs.microvm.operator.core.model.MicroVMImageStatus;
+import io.fabric8.kubernetes.api.model.Event;
+import io.fabric8.kubernetes.api.model.EventBuilder;
+import io.fabric8.kubernetes.api.model.ObjectReferenceBuilder;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.reconciler.*;
 import io.javaoperatorsdk.operator.processing.retry.GenericRetry;
 import jakarta.inject.Inject;
@@ -30,16 +34,26 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
     private static final Duration POLL_INTERVAL = Duration.ofSeconds(15);
     private static final Duration RESYNC = Duration.ofMinutes(5);
 
+    // Capped exponential backoff for delete-blocked retries: 15s, 30s, 1m, 2m, then
+    // capped at 5m. Indexed by retry count (see delete-retry-count annotation below).
+    private static final Duration[] DELETE_RETRY_BACKOFF = {
+        Duration.ofSeconds(15), Duration.ofSeconds(30), Duration.ofMinutes(1), Duration.ofMinutes(2)
+    };
+    private static final Duration DELETE_RETRY_BACKOFF_CAP = Duration.ofMinutes(5);
+    private static final String DELETE_RETRY_COUNT_ANNOTATION = "lambda.aws.amazon.com/delete-retry-count";
+
     private final MicroVMImageClient imageClient;
     private final AwsIdentity awsIdentity;
     private final QuotaGuard quotaGuard;
+    private final KubernetesClient kubernetesClient;
 
     @Inject
     public MicroVMImageReconciler(MicroVMImageClient imageClient, AwsIdentity awsIdentity,
-                                  QuotaGuard quotaGuard) {
+                                  QuotaGuard quotaGuard, KubernetesClient kubernetesClient) {
         this.imageClient = imageClient;
         this.awsIdentity = awsIdentity;
         this.quotaGuard = quotaGuard;
+        this.kubernetesClient = kubernetesClient;
     }
 
     @Override
@@ -246,12 +260,129 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
             if (isNotFound(e)) {
                 // Already deleted in AWS — proceed with CR cleanup
                 LOG.debugf("Image %s already gone in AWS, proceeding with CR deletion", status.getImageArn());
+                clearDeleteRetryCount(resource);
                 return DeleteControl.defaultDelete();
             }
-            LOG.warnf("Error deleting image %s: %s — retrying", status.getImageArn(), e.getMessage());
-            return DeleteControl.noFinalizerRemoval().rescheduleAfter(Duration.ofSeconds(15));
+            if (isDeleteBlockedByRunningVms(e)) {
+                String reason = "Cannot delete: AWS reports running MicroVMs still reference this image ("
+                        + status.getImageArn() + "). Waiting for those MicroVMs to be deleted or moved to "
+                        + "another image before this can be removed.";
+                status.setLatestVersionStateReason(reason);
+                emitImageEvent(resource, "DeleteBlocked", reason);
+                Duration backoff = nextDeleteRetryBackoff(resource);
+                LOG.warnf("Image %s delete blocked by running VMs — retrying in %s: %s",
+                        status.getImageArn(), backoff, e.getMessage());
+                return DeleteControl.noFinalizerRemoval().rescheduleAfter(backoff);
+            }
+            // Unknown/unexpected error — keep retrying, but still cap the backoff
+            // instead of hammering the AWS API at a flat interval forever.
+            Duration backoff = nextDeleteRetryBackoff(resource);
+            LOG.warnf("Error deleting image %s: %s — retrying in %s", status.getImageArn(), e.getMessage(), backoff);
+            return DeleteControl.noFinalizerRemoval().rescheduleAfter(backoff);
         }
+        clearDeleteRetryCount(resource);
         return DeleteControl.defaultDelete();
+    }
+
+    /**
+     * Detects the specific AWS error raised when a microvm-image cannot be deleted
+     * because MicroVMs are still running from it. See
+     * docs/design/image-arn-collision-prevention.md for the full failure scenario
+     * this is part of (two same-named MicroVMImage CRs in different namespaces
+     * silently sharing one AWS ARN).
+     */
+    private boolean isDeleteBlockedByRunningVms(Throwable t) {
+        Throwable cause = t.getCause() != null ? t.getCause() : t;
+        String msg = cause.getMessage();
+        return cause.getClass().getSimpleName().contains("ValidationException")
+                && msg != null && msg.toLowerCase().contains("running microvms");
+    }
+
+    /**
+     * Computes the next capped-exponential backoff for a delete retry, tracked via
+     * an annotation on the resource so the count survives operator restarts.
+     * Sequence: 15s, 30s, 1m, 2m, then capped at 5m.
+     */
+    private Duration nextDeleteRetryBackoff(MicroVMImage resource) {
+        int count = getDeleteRetryCount(resource);
+        Duration next = count < DELETE_RETRY_BACKOFF.length
+                ? DELETE_RETRY_BACKOFF[count]
+                : DELETE_RETRY_BACKOFF_CAP;
+        setDeleteRetryCount(resource, count + 1);
+        return next;
+    }
+
+    private int getDeleteRetryCount(MicroVMImage resource) {
+        var annotations = resource.getMetadata().getAnnotations();
+        if (annotations == null) return 0;
+        String raw = annotations.get(DELETE_RETRY_COUNT_ANNOTATION);
+        if (raw == null) return 0;
+        try {
+            return Integer.parseInt(raw);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private void setDeleteRetryCount(MicroVMImage resource, int count) {
+        try {
+            var annotations = resource.getMetadata().getAnnotations();
+            if (annotations == null) {
+                annotations = new java.util.HashMap<>();
+                resource.getMetadata().setAnnotations(annotations);
+            }
+            annotations.put(DELETE_RETRY_COUNT_ANNOTATION, String.valueOf(count));
+            if (kubernetesClient != null) {
+                kubernetesClient.resource(resource).patch(io.fabric8.kubernetes.client.dsl.base.PatchContext
+                        .of(io.fabric8.kubernetes.client.dsl.base.PatchType.JSON_MERGE));
+            }
+        } catch (Exception e) {
+            LOG.debugf("Could not persist delete-retry-count annotation for %s/%s: %s",
+                    resource.getMetadata().getNamespace(), resource.getMetadata().getName(), e.getMessage());
+            // Non-fatal — worst case the backoff resets to 15s after an operator restart.
+        }
+    }
+
+    private void clearDeleteRetryCount(MicroVMImage resource) {
+        var annotations = resource.getMetadata().getAnnotations();
+        if (annotations != null && annotations.remove(DELETE_RETRY_COUNT_ANNOTATION) != null && kubernetesClient != null) {
+            try {
+                kubernetesClient.resource(resource).patch(io.fabric8.kubernetes.client.dsl.base.PatchContext
+                        .of(io.fabric8.kubernetes.client.dsl.base.PatchType.JSON_MERGE));
+            } catch (Exception e) {
+                LOG.debugf("Could not clear delete-retry-count annotation: %s", e.getMessage());
+            }
+        }
+    }
+
+    private void emitImageEvent(MicroVMImage resource, String reason, String message) {
+        if (kubernetesClient == null) return;
+        try {
+            Event event = new EventBuilder()
+                .withNewMetadata()
+                    .withGenerateName(resource.getMetadata().getName() + "-")
+                    .withNamespace(resource.getMetadata().getNamespace())
+                .endMetadata()
+                .withReason(reason)
+                .withMessage(message)
+                .withType("Warning")
+                .withInvolvedObject(new ObjectReferenceBuilder()
+                    .withApiVersion(resource.getApiVersion())
+                    .withKind(resource.getKind())
+                    .withName(resource.getMetadata().getName())
+                    .withNamespace(resource.getMetadata().getNamespace())
+                    .withUid(resource.getMetadata().getUid())
+                    .build())
+                .withNewSource()
+                    .withComponent("microvmimage-controller")
+                .endSource()
+                .build();
+
+            kubernetesClient.v1().events().inNamespace(resource.getMetadata().getNamespace()).resource(event).create();
+        } catch (Exception e) {
+            LOG.warnf("Failed to emit event for %s/%s: %s",
+                resource.getMetadata().getNamespace(), resource.getMetadata().getName(), e.getMessage());
+        }
     }
 
     private boolean isNotFound(Throwable t) {

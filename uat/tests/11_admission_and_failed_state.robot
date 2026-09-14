@@ -121,11 +121,107 @@ ADM-07 Failed Creation Retries After Spec Change
     Should Not Be Equal    ${state}    Failed
     ...    msg=State should have left Failed after spec change (generation bump triggers retry)
 
+# ─── ARN Collision Prevention (#microvmimage-arn-collision-prevention) ────────
+
+ADM-08 Duplicate Named MicroVMImage Rejected By Webhook
+    [Documentation]    Creating a MicroVMImage with the same metadata.name as one that already
+    ...    exists in a different namespace must be rejected by the validating webhook with a
+    ...    clear error message naming the owning namespace.
+    ...
+    ...    AWS Lambda MicroVM image ARNs are account+region-global and keyed purely on name.
+    ...    Two CRs with the same name in different namespaces silently alias to the same AWS
+    ...    resource. The webhook blocks this at creation time (Layer 1).
+    ...
+    ...    Verifies docs/design/image-arn-collision-prevention.md Layer 1.
+    [Tags]    admission    webhook    arn-collision
+    # SHARED_IMAGE (uat-shared-app) is already Ready in ${NAMESPACE} from Suite Setup.
+    ${collision_ns}=    Set Variable    adm-collision-${ADM_RUN_ID}
+    ${ns_yaml}=    Catenate    SEPARATOR=\n
+    ...    apiVersion: v1
+    ...    kind: Namespace
+    ...    metadata:
+    ...    \ \ name: ${collision_ns}
+    ...    \ \ labels:
+    ...    \ \ \ \ lambda.aws.amazon.com/manage-microvms: "true"
+    Kubectl Apply    ${ns_yaml}
+    # Wait for namespace to become Active before applying resources into it
+    FOR    ${i}    IN RANGE    10
+        ${ns_phase}=    Run Process    kubectl    get    namespace    ${collision_ns}    -o    jsonpath\={.status.phase}
+        IF    "${ns_phase.stdout}" == "Active"    BREAK
+        Sleep    2s
+    END
+    Set Test Variable    ${ADM_COLLISION_NS}    ${collision_ns}
+    Set Test Variable    ${ADM_COLLISION_NAME}    ${SHARED_IMAGE}
+    ${output}=    Apply Template Expect Failure    admission/image-arn-collision.yaml
+    Should Contain    ${output}    ${NAMESPACE}
+    ...    ADM-08: error must name the namespace that owns the colliding image
+    Should Contain    ${output}    ${SHARED_IMAGE}
+    ...    ADM-08: error must include the image name
+    [Teardown]    Run Process    kubectl    delete    namespace    ${collision_ns}    --ignore-not-found    --timeout\=30s
+
+ADM-09 Delete Blocked By Running VMs Emits Warning Event
+    [Documentation]    When deleting a MicroVMImage that still has running MicroVMs, the
+    ...    reconciler must emit a Kubernetes Warning event with reason 'DeleteBlocked' and set
+    ...    a human-readable status message — not loop silently forever (Layer 2).
+    ...
+    ...    NOTE: This test provisions a real AWS MicroVM. It may take 2–3 minutes.
+    ...
+    ...    Verifies docs/design/image-arn-collision-prevention.md Layer 2.
+    [Tags]    admission    reconciler    arn-collision
+    ${img_name}=    Set Variable    adm-del-block-${ADM_RUN_ID}
+    ${vm_name}=     Set Variable    adm-del-block-vm-${ADM_RUN_ID}
+    ${image_yaml}=    Catenate    SEPARATOR=\n
+    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
+    ...    kind: MicroVMImage
+    ...    metadata:
+    ...    \ \ name: ${img_name}
+    ...    \ \ namespace: ${NAMESPACE}
+    ...    spec:
+    ...    \ \ source:
+    ...    \ \ \ \ s3Bucket: ${S3_BUCKET}
+    ...    \ \ \ \ s3Key: ${S3_KEY}
+    ...    \ \ baseImageArn: ${BASE_IMAGE_ARN}
+    ...    \ \ buildRoleArn: ${BUILD_ROLE_ARN}
+    Kubectl Apply    ${image_yaml}
+    Wait For Image Ready    ${img_name}    ${NAMESPACE}    600
+    ${vm_yaml}=    Catenate    SEPARATOR=\n
+    ...    apiVersion: lambda.aws.amazon.com/v1alpha1
+    ...    kind: MicroVM
+    ...    metadata:
+    ...    \ \ name: ${vm_name}
+    ...    \ \ namespace: ${NAMESPACE}
+    ...    spec:
+    ...    \ \ imageRef: ${img_name}
+    ...    \ \ desiredState: Running
+    ...    \ \ maxIdleDurationSeconds: 900
+    ...    \ \ suspendedDurationSeconds: 1800
+    Kubectl Apply    ${vm_yaml}
+    Wait For VM State    ${vm_name}    Running    timeout=300
+    # Delete the image while the VM is still Running — reconciler must block and emit event
+    Run Process    kubectl    delete    microvmimage    ${img_name}    -n    ${NAMESPACE}    --wait\=false    --timeout\=10s
+    Sleep    30s    Allow reconciler to detect block and emit event
+    ${events}=    Run Process    kubectl    get    events    -n    ${NAMESPACE}
+    ...    --field-selector    reason\=DeleteBlocked    -o    jsonpath\={.items[*].message}
+    Should Not Be Empty    ${events.stdout}
+    ...    ADM-09: expected a DeleteBlocked Warning event on the image
+    Should Contain    ${events.stdout}    ${img_name}
+    ...    ADM-09: DeleteBlocked event must reference the blocked image
+    [Teardown]    Cleanup ADM09    ${vm_name}    ${img_name}
+
 *** Keywords ***
 Setup Admission Tests
     ${id}=    Evaluate    __import__('time').strftime('%H%M%S')
     Set Suite Variable    ${ADM_RUN_ID}    ${id}
     Ensure Shared Image Ready
+
+Cleanup ADM09
+    [Documentation]    Teardown for ADM-09: terminate the VM then force-remove the blocked image.
+    [Arguments]    ${vm_name}    ${img_name}
+    Run Process    kubectl    delete    microvm    ${vm_name}    -n    ${NAMESPACE}    --ignore-not-found    --timeout\=60s
+    Run Process    kubectl    patch    microvmimage    ${img_name}    -n    ${NAMESPACE}
+    ...    --type\=json    -p    [{"op":"remove","path":"/metadata/finalizers"}]    --ignore-not-found
+    Run Process    kubectl    delete    microvmimage    ${img_name}    -n    ${NAMESPACE}
+    ...    --ignore-not-found    --force    --grace-period\=0
 
 Cleanup Admission Tests
     [Documentation]    Remove all admission test resources.
@@ -137,6 +233,16 @@ Cleanup Admission Tests
             Kubectl Delete Force    microvm    ${name}
         END
     END
+    # ADM-09 resources are cleaned up by that test's [Teardown]; belt-and-braces here
+    Run Process    kubectl    delete    microvm    adm-del-block-vm-${ADM_RUN_ID}    -n    ${NAMESPACE}
+    ...    --ignore-not-found    --timeout\=30s
+    Run Process    kubectl    patch    microvmimage    adm-del-block-${ADM_RUN_ID}    -n    ${NAMESPACE}
+    ...    --type\=json    -p    [{"op":"remove","path":"/metadata/finalizers"}]    --ignore-not-found
+    Run Process    kubectl    delete    microvmimage    adm-del-block-${ADM_RUN_ID}    -n    ${NAMESPACE}
+    ...    --ignore-not-found    --force    --grace-period\=0
     # Delete MicroVMClass
     Run Process    kubectl    delete    microvmclass    adm-test-class    -n    ${NAMESPACE}    --timeout\=30s
     ...    --ignore-not-found
+    # ADM-08 collision namespace (inline [Teardown] handles it, belt-and-braces)
+    Run Process    kubectl    delete    namespace    adm-collision-${ADM_RUN_ID}
+    ...    --ignore-not-found    --timeout\=30s

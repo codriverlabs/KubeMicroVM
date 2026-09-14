@@ -125,3 +125,25 @@ If a build fails:
 | Build timeout range | 60–3600 seconds |
 | Max concurrent builds per account | AWS service limit (typically 5) |
 | Source artifact max size | AWS service limit |
+
+## Namespace Identity vs. AWS Resource Identity
+
+**`MicroVMImage` names are not namespace-isolated identifiers.** The underlying AWS
+Lambda MicroVM image is identified by name within your AWS account + region, which has
+no concept of Kubernetes namespaces:
+
+```
+arn:aws:lambda:<region>:<account-id>:microvm-image:<name>
+```
+
+Creating two `MicroVMImage` CRs with the same `metadata.name` in different namespaces
+resolves to the exact same AWS ARN. This is rejected at admission time by the
+validating webhook (see [webhooks.md](webhooks.md)) — you cannot create a
+`MicroVMImage` whose name already resolves to an existing image owned by another
+namespace.
+
+To share one image across namespaces or tenants (PRO only), see
+[cross-namespace image reference](../../../KubeMicroVM-PRO/docs/design/cross-namespace-imageref.md)
+— never create a second same-named `MicroVMImage`. See
+[image-arn-collision-prevention.md](image-arn-collision-prevention.md) for the full
+design rationale and failure mode this prevents.
