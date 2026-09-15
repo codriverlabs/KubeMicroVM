@@ -31,7 +31,7 @@
 
 M80_REPO    := https://github.com/INTENTIUS/m80.git
 M80_DIR     ?= $(CURDIR)/.m80
-M80_IMAGE   ?= ghcr.io/intentius/m80:v0.4.0
+M80_IMAGE   ?= ghcr.io/intentius/m80:v0.4.1
 
 # Resolve chart version from nearest git tag; fall back to "main" for
 # untagged clones.
@@ -120,13 +120,30 @@ CHART_REF   := $(if $(LOCAL_CHART),$(LOCAL_CHART),oci://ghcr.io/codriverlabs/hel
 _cluster-up:
 	@echo "==> Bringing up k3d cluster (m80 + KubeMicroVM operator v$(CHART_VERSION))"
 	@echo "    Chart: $(CHART_REF)"
+	@# m80's up.sh installs whatever CHART_VERSION is set to. When CHART_VERSION is
+	@# unset, it defaults to 1.0.12 (pre-ClusterIssuer). We unset it so up.sh
+	@# installs 1.0.12 successfully, then do a clean uninstall and fresh install of
+	@# our target version. Helm upgrade is not used — ClusterRoleBinding.roleRef and
+	@# Deployment.spec.selector are immutable between versions.
 	M80_IMAGE="$(M80_IMAGE)" \
-	CHART_VERSION="$(CHART_VERSION)" \
-	CHART_REF="$(CHART_REF)" \
 	REGION="$(REGION)" \
 	MAX_ACCOUNT_MEMORY_MIB="$(MAX_ACCOUNT_MEMORY_MIB)" \
 	M80_DIR="$(M80_DIR)" \
-	  "$(CURDIR)/uat/m80-up-wrapper.sh"
+	CHART_REF="$(CHART_REF)" \
+	  env -u CHART_VERSION "$(CURDIR)/uat/m80-up-wrapper.sh"
+	@echo "==> Uninstalling chart 1.0.12 and doing fresh install of v$(CHART_VERSION)"
+	helm uninstall kube-microvm-operator -n "$(NS)" --wait 2>/dev/null || true
+	helm install kube-microvm-operator "$(CHART_REF)" \
+	  --version "$(CHART_VERSION)" -n "$(NS)" \
+	  --set "app.envs.AWS_MICROVM_ENDPOINT=http://m80.$(NS).svc.cluster.local:4290" \
+	  --set "app.envs.AWS_REGION=$(REGION)" \
+	  --wait --timeout 5m
+	kubectl -n "$(NS)" set env deploy/kube-microvm-operator \
+	  AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test \
+	  AWS_EC2_METADATA_DISABLED=true \
+	  "AWS_ENDPOINT_URL_STS=http://m80.$(NS).svc.cluster.local:4290" 2>/dev/null || true
+	kubectl -n "$(NS)" rollout status deploy/kube-microvm-operator --timeout=120s
+	kubectl label namespace default lambda.aws.amazon.com/manage-microvms=true --overwrite
 
 _cluster-down:
 	@echo "==> Tearing down k3d cluster"
