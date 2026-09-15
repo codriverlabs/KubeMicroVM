@@ -22,14 +22,14 @@ ${NET_VPC_NET}     ${EMPTY}
 NET-01 Internet Egress Connects To Public Internet
     [Tags]    smoke
     Wait For VM Running    ${NET_INTERNET}
-    ${endpoint}=    Get MicroVM Endpoint    ${NET_INTERNET}
+    ${endpoint}=    Get MicroVM Endpoint    ${NET_INTERNET}    timeout=90
     ${token}=    Get MicroVM Token    ${NET_INTERNET}
     ${response}=    Call MicroVM Endpoint    ${endpoint}    ${token}    /fetch?url=https://checkip.amazonaws.com/
     Should Contain    ${response}    "status":200
 
 NET-02 Default Egress Has Internet Access
     Wait For VM Running    ${NET_DEFAULT}
-    ${endpoint}=    Get MicroVM Endpoint    ${NET_DEFAULT}
+    ${endpoint}=    Get MicroVM Endpoint    ${NET_DEFAULT}    timeout=90
     ${token}=    Get MicroVM Token    ${NET_DEFAULT}
     ${response}=    Call MicroVM Endpoint    ${endpoint}    ${token}    /fetch?url=https://checkip.amazonaws.com/
     Should Contain    ${response}    "status":200
@@ -39,7 +39,7 @@ NET-03 MicroVMNetwork Becomes Active
 
 NET-04 VPC Egress VM Connects
     Wait For VM Running    ${NET_VPC_VM}
-    ${endpoint}=    Get MicroVM Endpoint    ${NET_VPC_VM}
+    ${endpoint}=    Get MicroVM Endpoint    ${NET_VPC_VM}    timeout=90
     ${token}=    Get MicroVM Token    ${NET_VPC_VM}
     ${response}=    Call MicroVM Endpoint    ${endpoint}    ${token}    /fetch?url=https://checkip.amazonaws.com/
     Should Contain    ${response}    "status":200

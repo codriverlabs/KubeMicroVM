@@ -134,7 +134,9 @@ ADM-08 Duplicate Named MicroVMImage Rejected By Webhook
     ...
     ...    Verifies docs/design/image-arn-collision-prevention.md Layer 1.
     [Tags]    admission    webhook    arn-collision
-    # SHARED_IMAGE (uat-shared-app) is already Ready in ${NAMESPACE} from Suite Setup.
+    # Ensure the shared image exists — don't rely on a prior suite having created it.
+    # Ensures Shared Image Ready is idempotent (no-op if image is already Ready).
+    Ensure Shared Image Ready
     ${collision_ns}=    Set Variable    adm-collision-${ADM_RUN_ID}
     ${ns_yaml}=    Catenate    SEPARATOR=\n
     ...    apiVersion: v1
