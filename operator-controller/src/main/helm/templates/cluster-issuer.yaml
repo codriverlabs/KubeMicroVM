@@ -30,6 +30,14 @@ metadata:
     app.kubernetes.io/name: kube-microvm-operator
     app.kubernetes.io/component: pki
     app.kubernetes.io/managed-by: kube-microvm-operator
+  annotations:
+    # Apply AFTER the main install so cert-manager has had time to create the
+    # CA Secret (kube-microvm-operator-ca) from the Certificate CR. Without this
+    # hook, cert-manager validates the ClusterIssuer synchronously at install
+    # time, before the CA Secret exists, and the install fails.
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation
 spec:
   ca:
     secretName: kube-microvm-operator-ca

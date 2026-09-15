@@ -258,6 +258,37 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Re-package the Helm chart tgz after maven-resources-plugin has copied
+                 overlay files (validating-clusterrolebinding.yaml, cluster-issuer.yaml,
+                 gateway-auth-clusterrole.yaml, ca-bootstrap-job.yaml) into the unpacked
+                 chart directory. Quarkus creates the tgz during the package phase, before
+                 the copy runs, so we regenerate it here to include the copied files.
+                 This mirrors the same step in KubeMicroVM-PRO's build-pro.sh. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>repackage-helm-chart</id>
+                        <phase>package</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <executable>helm</executable>
+                            <arguments>
+                                <argument>package</argument>
+                                <argument>${project.build.directory}/helm/kubernetes/kube-microvm-operator</argument>
+                                <argument>--version</argument>
+                                <argument>${project.version}</argument>
+                                <argument>--app-version</argument>
+                                <argument>${project.version}</argument>
+                                <argument>-d</argument>
+                                <argument>${project.build.directory}/helm/kubernetes</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
