@@ -130,9 +130,9 @@ To test a chart change locally:
 make m80-up   # will find and use the local tgz
 ```
 
-## Pass Matrix (v1.0.17-rc1 vs m80 v0.4.0)
+## Pass Matrix (v1.0.17-rc1 vs m80 v0.4.1)
 
-First run: 2026-09-15. **59 of 72 pass.**
+First run: 2026-09-15. **61 of 72 pass** (after UAT timing fixes).
 
 | Suite | Pass | Notes |
 |-------|------|-------|
@@ -141,16 +141,21 @@ First run: 2026-09-15. **59 of 72 pass.**
 | 02 RBAC | 8/8 ✅ | |
 | 03 Networking | 2/5 | NET-01/04: poll race; NET-02: endpoint auth |
 | 04 Pod Token Injection | 8/9 | INJ-08: endpoint auth |
-| 05 ReplicaSet | 5/6 | RS-06: poll race (operator resync 61–65s vs 60s timeout) |
+| 05 ReplicaSet | 6/6 ✅ | RS-06 fixed: label-scoped VM poll + m80 v0.4.1 idempotent terminate |
 | 06 MicroVMClass | 6/6 ✅ | |
 | 07 Drift Autosuspend | 4/5 | AUTO-02: endpoint auth |
 | 08 Memory Sizing | 5/6 | MEM-07: endpoint auth |
-| 11 Admission | 7/9 | ADM-08: test isolation gap; ADM-09: m80 gap (see below) |
-| 99 Cleanup | 1/2 | Debris from RS-06 race |
+| 11 Admission | 7/9 | ADM-08: needs v1.0.17-rc1 image published; ADM-09: m80 fixture gap |
+| 99 Cleanup | 1/2 | Debris from prior run on same cluster |
 
-**Total: 59/72**
+**Total: 61/72**
 
-### Why the 13 fail
+> Note: ADM-08 will pass once v1.0.17-rc1 operator image is published to GHCR.
+> The `make m80-up` currently installs the chart skeleton from the local tgz but
+> uses the `latest` OCI image (v1.0.12) because the new image hasn't been pushed yet.
+> The ARN collision webhook fix lives in the Java code, not the chart.
+
+### Why they fail
 
 #### Endpoint auth (5 failures: QS-07, NET-02, INJ-08, AUTO-02, MEM-07)
 
@@ -162,13 +167,16 @@ Fix requires wildcard DNS + TLS in m80 so the cluster resolves those hostnames
 to m80 instead. Tracked in
 [INTENTIUS/m80#45](https://github.com/INTENTIUS/m80/issues/45).
 
-#### Poll race (3 failures: NET-01, NET-04, RS-06 → debris in 99)
+#### Poll race (2 failures: NET-01, NET-04)
 
-The test polls `status.endpointUrl` or waits for VMs to terminate with a 60s
-timeout. The operator's resync cycle is 61–65s against m80, slightly over the
-limit. These tests win or lose the race run-to-run.
+The test polls `status.endpointUrl` with a 90s timeout (bumped from 60s in this
+branch). The operator's resync cycle is 61–65s against m80, which fits in 90s
+but occasionally loses to a 2-cycle delay. These tests win or lose run-to-run.
 
-Fix: increase poll timeouts in the affected tests from 60s to 90s.
+The networking poll timeout was raised to 90s in this branch; RS-06 was also
+fixed to scope its VM poll by ReplicaSet label (avoiding stale VMs from prior
+runs) and to use m80 v0.4.1 which returns 200 idempotently for
+terminate-on-terminated (fixing the stuck finalizer).
 
 #### No Pod Identity (1 failure: 00 cluster setup)
 
@@ -177,16 +185,16 @@ fail and is acknowledged in m80's documentation.
 
 Fix: the k3s-xpress cluster provider will include Pod Identity.
 
-#### ADM-08 test isolation gap (1 failure)
+#### ADM-08 requires published operator image (1 failure)
 
-ADM-08 creates a `MicroVMImageBinding` in a collision namespace and asserts the
-webhook rejects it, expecting the shared image (`uat-shared-app`) to already exist
-in `default`. On a cold run against m80, the image was built by `QS-03` but
-the reference in `default` is not guaranteed visible to `11_admission` when it runs
-after several intervening suites have modified state.
+ADM-08 tests the ARN collision webhook — a fix shipped in v1.0.17-rc1 Java code.
+`make m80-up` installs the chart CRDs/RBAC from the local v1.0.17-rc1 tgz but
+the operator container image defaults to `latest` (v1.0.12) because the new
+image hasn't been pushed to GHCR yet. The collision webhook code runs from the
+image, so ADM-08 sees the old (unfixed) behaviour.
 
-The webhook itself works — a manual live test confirms rejection. The fix is to
-add a `Ensure Shared Image Ready` pre-condition to `ADM-08`'s `[Setup]`.
+ADM-08 will pass once the v1.0.17-rc1 image is published to GHCR. It passes
+correctly on real AWS (where the published image is used).
 
 #### ADM-09 m80 gap (1 failure)
 
@@ -194,13 +202,18 @@ add a `Ensure Shared Image Ready` pre-condition to `ADM-08`'s `[Setup]`.
 `DeleteBlocked` Warning event. This path is triggered when the Lambda API returns
 `ValidationException: Cannot delete microvm image with running microvms`.
 
-m80 v0.4.0 does not return this error — it accepts the delete unconditionally.
+m80 v0.4.1 does not return this error — it accepts the delete unconditionally.
 The operator's delete-blocked path (Layer 2 of the ARN collision prevention fix)
 never fires.
 
 **Action**: file an issue against INTENTIUS/m80 requesting a fixture for
 delete-image-with-running-vms returning the recorded `ValidationException`.
 Once m80 implements it, ADM-09 will pass without any operator changes.
+
+#### 99 Cleanup debris (1 failure)
+
+Inherits from prior suites that left VMs behind (endpoint-auth failures or
+m80 restart orphans). Will clear when the inheriting failures are fixed.
 
 ## Known Limitations
 

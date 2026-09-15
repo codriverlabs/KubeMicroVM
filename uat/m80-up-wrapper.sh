@@ -15,7 +15,6 @@
 set -euo pipefail
 
 : "${M80_DIR:?set M80_DIR}"
-: "${CHART_VERSION:?set CHART_VERSION}"
 : "${CHART_REF:?set CHART_REF}"
 
 # If CHART_REF is a local file path, shim `helm` to rewrite the install

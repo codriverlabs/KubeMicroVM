@@ -73,9 +73,18 @@ RS-05 Rolling Update Changes ImageRef
 
 RS-06 Delete ReplicaSet Terminates All VMs
     [Tags]    destructive
-    Run Process    kubectl    delete    microvmreplicaset    ${RS_NAME}    -n    ${NAMESPACE}    --timeout\=60s
-    Sleep    10s
-    ${result}=    Run Process    kubectl    get    microvms    -n    ${NAMESPACE}    --no-headers
+    Run Process    kubectl    delete    microvmreplicaset    ${RS_NAME}    -n    ${NAMESPACE}    --timeout\=120s
+    # Poll until no VMs from THIS replicaset remain — scoped by label to avoid
+    # interference from stale VMs left by prior runs (e.g. after m80 restart).
+    # Allows up to 120s: m80's resync is ~65s; real AWS completes well within that.
+    FOR    ${i}    IN RANGE    24
+        ${result}=    Run Process    kubectl    get    microvms
+        ...    -n    ${NAMESPACE}    -l    lambda.aws.amazon.com/replicaset-name\=${RS_NAME}
+        ...    --no-headers    --ignore-not-found
+        ${vms_left}=    Get Length    ${result.stdout.strip()}
+        IF    ${vms_left} == 0    BREAK
+        Sleep    5s
+    END
     Should Be Empty    ${result.stdout.strip()}
 
 *** Keywords ***
