@@ -207,32 +207,10 @@
                 </executions>
             </plugin>
             <!-- Override JOSDK's validating-clusterrolebinding.yaml to reference the renamed role,
-                 and add the ClusterIssuer for cross-namespace gateway TLS (RC-2 fix). -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>fix-helm-clusterrolebinding</id>
-                        <phase>package</phase>
-                        <goals><goal>copy-resources</goal></goals>
-                        <configuration>
-                            <outputDirectory>${project.build.directory}/helm/kubernetes/kube-microvm-operator/templates</outputDirectory>
-                            <overwrite>true</overwrite>
-                            <resources>
-                                <resource>
-                                    <directory>src/main/helm/templates</directory>
-                                    <includes>
-                                        <include>validating-clusterrolebinding.yaml</include>
-                                        <include>cluster-issuer.yaml</include>
-                                        <include>gateway-auth-clusterrole.yaml</include>
-                                    </includes>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+                 and add the ClusterIssuer for cross-namespace gateway TLS (RC-2 fix).
+                 NOTE: overlay templates (cluster-issuer.yaml etc.) are now included via
+                 quarkus.helm.input-directory=src/main/helm in application.properties,
+                 so no post-processing copy or helm repackage step is needed here. -->
             <!-- Publish Helm overlay files as a Maven artifact so KubeMicroVM-PRO can
                  declare a versioned dependency instead of vendoring them manually.
                  Artifact: ai.codriverlabs:operator-controller:<version>:zip:helm-templates
