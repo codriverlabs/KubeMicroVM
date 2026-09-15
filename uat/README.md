@@ -3,6 +3,26 @@
 Automated User Acceptance Tests that validate every step in the user guides works
 exactly as documented.
 
+## Running Locally with m80 (No AWS Required)
+
+The fastest way to run the UAT suite is against
+[m80](https://github.com/INTENTIUS/m80), an open-source AWS Lambda MicroVMs API
+emulator. No AWS account, no credentials, ~5 minutes end-to-end.
+
+```bash
+# Prerequisites: docker, k3d (https://k3d.io), kubectl, helm, node >= 20, npm
+make full                     # clone m80, spin up k3d, run all suites, tear down
+make m80-up && make m80-run   # step by step — leaves the cluster running
+make m80-down                 # tear down when done
+```
+
+Results land in `uat/results/m80/report.html`.
+
+**Pass matrix**: 59/72 (v1.0.17-rc1 vs m80 v0.4.0). The 13 failures are all
+documented with root causes — none is an m80 fidelity gap in the normal control
+path. See [docs/design/m80-local-testing.md](../docs/design/m80-local-testing.md)
+for the full design, the pass matrix, and why each failure occurs.
+
 ## Release Candidate Workflow
 
 UAT runs against **release candidate (rc) versions** built and published by GitHub
