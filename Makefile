@@ -110,13 +110,23 @@ m80-clean: m80-down ## Tear down cluster and remove the m80 checkout
 
 ifeq ($(CLUSTER_PROVIDER),k3d)
 
+NS ?= kube-microvm
+
+# Prefer a locally-built chart tgz over the OCI registry — allows testing
+# chart changes (like ClusterIssuer hook fixes) without a release.
+LOCAL_CHART := $(shell find $(CURDIR)/operator-controller/target/helm/kubernetes -name "*.tgz" 2>/dev/null | head -1)
+CHART_REF   := $(if $(LOCAL_CHART),$(LOCAL_CHART),oci://ghcr.io/codriverlabs/helm/kube-microvm-operator)
+
 _cluster-up:
 	@echo "==> Bringing up k3d cluster (m80 + KubeMicroVM operator v$(CHART_VERSION))"
+	@echo "    Chart: $(CHART_REF)"
 	M80_IMAGE="$(M80_IMAGE)" \
 	CHART_VERSION="$(CHART_VERSION)" \
+	CHART_REF="$(CHART_REF)" \
 	REGION="$(REGION)" \
 	MAX_ACCOUNT_MEMORY_MIB="$(MAX_ACCOUNT_MEMORY_MIB)" \
-	  "$(M80_DIR)/uat/up.sh"
+	M80_DIR="$(M80_DIR)" \
+	  "$(CURDIR)/uat/m80-up-wrapper.sh"
 
 _cluster-down:
 	@echo "==> Tearing down k3d cluster"
