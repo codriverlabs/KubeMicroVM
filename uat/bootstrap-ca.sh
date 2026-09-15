@@ -1,16 +1,20 @@
 #!/usr/bin/env bash
-# Generates the operator CA secret and injects the CA bundle into webhook configs.
-# Must run AFTER helm install (so the namespace and webhook configs exist) but
-# the ClusterIssuer waits for the secret — so helm install uses --wait=false
-# and this script is called immediately after.
+# Manual fallback: generates the operator CA secret and injects the CA bundle
+# into webhook configurations.
 #
-# On EKS/production the CA is generated once and stored; here we generate a
-# throwaway self-signed CA that is only valid for the lifetime of the cluster.
+# In normal operation this is NOT needed — the chart's ClusterIssuer uses a
+# post-install Helm hook so cert-manager creates kube-microvm-operator-ca via
+# the Certificate CR before the ClusterIssuer is applied. See:
+#   operator-controller/src/main/helm/templates/cluster-issuer.yaml
+#   docs/design/m80-local-testing.md  (Chart Bootstrap Fix section)
 #
-# Called by the Makefile _cluster-up target (k3d provider).
-# Environment variables (all set by Makefile):
-#   NS          operator namespace  (default: kube-microvm)
-#   REGION      unused here, passed through for consistency
+# Use this script only if:
+#   - You are testing against a chart older than v1.0.17 (no post-install hook)
+#   - cert-manager is unavailable and you need to create the secret manually
+#   - You need to rotate the CA on a running cluster
+#
+# Environment variable:
+#   NS   operator namespace (default: kube-microvm)
 set -euo pipefail
 
 NS="${NS:-kube-microvm}"
