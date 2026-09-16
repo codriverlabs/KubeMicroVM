@@ -101,12 +101,28 @@ public class CaSecretReplicator {
     /**
      * Ensure the CA Secret exists and is up-to-date in a specific namespace.
      *
+     * The replicated secret includes BOTH naming conventions so that different
+     * consumers can find what they need:
+     * - {@code ca.crt} / {@code ca.key} — used by the operator itself and pod sidecar injection
+     * - {@code tls.crt} / {@code tls.key} — required by cert-manager's namespace-scoped CA Issuer
+     *   (spec.ca.secretName). Without tls.crt, the Issuer stays NotReady and cannot sign
+     *   gateway TLS certificates.
+     *
      * @param namespace   target namespace
      * @param data        Secret data map (all keys from the source Secret)
      * @param secretType  Secret type (e.g. kubernetes.io/tls)
      */
     public void ensureCaSecret(String namespace, Map<String, String> data, String secretType) {
         try {
+            // Ensure tls.crt and tls.key aliases are present alongside ca.crt/ca.key so
+            // that cert-manager's CA Issuer (which reads tls.crt/tls.key) can find the key pair.
+            Map<String, String> enrichedData = new java.util.HashMap<>(data);
+            if (data.containsKey("ca.crt") && !enrichedData.containsKey("tls.crt")) {
+                enrichedData.put("tls.crt", data.get("ca.crt"));
+            }
+            if (data.containsKey("ca.key") && !enrichedData.containsKey("tls.key")) {
+                enrichedData.put("tls.key", data.get("ca.key"));
+            }
             Secret existing = client.secrets()
                     .inNamespace(namespace)
                     .withName(CA_SECRET_NAME)
@@ -115,11 +131,12 @@ public class CaSecretReplicator {
             if (existing != null) {
                 // Check if data has changed (compare ca.crt as proxy for full content)
                 String currentCa = existing.getData() != null ? existing.getData().get(CA_KEY) : null;
-                String newCa = data.get(CA_KEY);
-                if (newCa != null && newCa.equals(currentCa)) {
-                    return; // up to date
+                String newCa = enrichedData.get(CA_KEY);
+                if (newCa != null && newCa.equals(currentCa)
+                        && existing.getData().containsKey("tls.crt")) {
+                    return; // up to date (including tls.crt alias)
                 }
-                existing.setData(data);
+                existing.setData(enrichedData);
                 client.secrets().inNamespace(namespace).resource(existing).update();
                 LOG.infof("Updated CA Secret %s/%s", namespace, CA_SECRET_NAME);
             } else {
@@ -130,8 +147,8 @@ public class CaSecretReplicator {
                             .addToLabels("app.kubernetes.io/managed-by", "kube-microvm-operator")
                             .addToLabels("app.kubernetes.io/component", "ca-distribution")
                         .endMetadata()
-                        .withType(secretType != null ? secretType : "kubernetes.io/tls")
-                        .withData(data)
+                        .withType("kubernetes.io/tls")
+                        .withData(enrichedData)
                         .build();
                 client.secrets().inNamespace(namespace).resource(caSecret).create();
                 LOG.infof("Created CA Secret %s/%s", namespace, CA_SECRET_NAME);
