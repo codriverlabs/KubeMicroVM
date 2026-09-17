@@ -1,8 +1,8 @@
 # KubeMicroVM — Support Matrix
 
-**Release:** v1.0.12  
-**Date:** 2026-08-05  
-**Test results:** [UAT v1.0.12-rc1 — 63/63 pass](../uat/results/v1.0.12-rc1/)
+**Release:** v1.0.17  
+**Date:** 2026-09-16  
+**Test results:** [UAT v1.0.17-rc3 — 63/63 pass](../uat/results/v1.0.17-rc3-clean/)
 
 ---
 
@@ -192,7 +192,7 @@ and CLI workflows beyond the official ACK controller.
 
 ---
 
-## Test Counts (v1.0.12)
+## Test Counts (v1.0.17)
 
 | Suite | Tests | Status |
 |-------|-------|--------|

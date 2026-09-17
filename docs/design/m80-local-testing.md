@@ -26,7 +26,7 @@ make m80-up && make m80-run   # step-by-step (leaves cluster running between run
 make m80-down                 # tear down
 
 # Use a specific chart version (default: nearest git tag)
-make m80-up CHART_VERSION=1.0.17-rc1
+make m80-up CHART_VERSION=1.0.17
 
 # Test a local m80 build
 make m80-up M80_IMAGE=m80:my-branch
@@ -42,7 +42,7 @@ Results land in `uat/results/m80/report.html`.
 │                                                         │
 │  ┌──────────────────┐    ┌──────────────────────────┐  │
 │  │   m80 container  │    │  kube-microvm-operator   │  │
-│  │  (8 MiB, Go)     │◄───│  (v1.0.17-rc1, Quarkus)  │  │
+│  │  (8 MiB, Go)     │◄───│  (v1.0.17 GA, Quarkus)  │  │
 │  │                  │    │                          │  │
 │  │  • all 29 API    │    │  AWS_MICROVM_ENDPOINT    │  │
 │  │    operations    │    │  → http://m80.kube-      │  │
@@ -130,7 +130,7 @@ To test a chart change locally:
 make m80-up   # will find and use the local tgz
 ```
 
-## Pass Matrix (v1.0.17-rc1 vs m80 v0.4.1)
+## Pass Matrix (v1.0.17 GA vs m80 v0.4.1)
 
 First run: 2026-09-15. **61 of 72 pass** (after UAT timing fixes).
 
@@ -145,15 +145,15 @@ First run: 2026-09-15. **61 of 72 pass** (after UAT timing fixes).
 | 06 MicroVMClass | 6/6 ✅ | |
 | 07 Drift Autosuspend | 4/5 | AUTO-02: endpoint auth |
 | 08 Memory Sizing | 5/6 | MEM-07: endpoint auth |
-| 11 Admission | 7/9 | ADM-08: needs v1.0.17-rc1 image published; ADM-09: m80 fixture gap |
+| 11 Admission | 7/9 | ADM-08: m80 uses `latest` image tag; ADM-09: m80 fixture gap |
 | 99 Cleanup | 1/2 | Debris from prior run on same cluster |
 
 **Total: 61/72**
 
-> Note: ADM-08 will pass once v1.0.17-rc1 operator image is published to GHCR.
-> The `make m80-up` currently installs the chart skeleton from the local tgz but
-> uses the `latest` OCI image (v1.0.12) because the new image hasn't been pushed yet.
-> The ARN collision webhook fix lives in the Java code, not the chart.
+> Note: ADM-08 fails because `make m80-up` installs the operator using the
+> `latest` OCI image tag from GHCR (the chart's default), not the specific
+> version you set via `CHART_VERSION`. Pass `--set app.image=ghcr.io/codriverlabs/kube-microvm-operator:v1.0.17`
+> to pin the image explicitly. The ARN collision webhook fix ships in v1.0.17 GA.
 
 ### Why they fail
 
@@ -169,14 +169,9 @@ to m80 instead. Tracked in
 
 #### Poll race (2 failures: NET-01, NET-04)
 
-The test polls `status.endpointUrl` with a 90s timeout (bumped from 60s in this
-branch). The operator's resync cycle is 61–65s against m80, which fits in 90s
-but occasionally loses to a 2-cycle delay. These tests win or lose run-to-run.
-
-The networking poll timeout was raised to 90s in this branch; RS-06 was also
-fixed to scope its VM poll by ReplicaSet label (avoiding stale VMs from prior
-runs) and to use m80 v0.4.1 which returns 200 idempotently for
-terminate-on-terminated (fixing the stuck finalizer).
+The test polls `status.endpointUrl` with a 90s timeout. The operator's resync
+cycle is 61–65s against m80, which fits in 90s but occasionally loses to a
+2-cycle delay. These tests win or lose run-to-run.
 
 #### No Pod Identity (1 failure: 00 cluster setup)
 
@@ -185,16 +180,19 @@ fail and is acknowledged in m80's documentation.
 
 Fix: the k3s-xpress cluster provider will include Pod Identity.
 
-#### ADM-08 requires published operator image (1 failure)
+#### ADM-08 uses wrong operator image (1 failure)
 
-ADM-08 tests the ARN collision webhook — a fix shipped in v1.0.17-rc1 Java code.
-`make m80-up` installs the chart CRDs/RBAC from the local v1.0.17-rc1 tgz but
-the operator container image defaults to `latest` (v1.0.12) because the new
-image hasn't been pushed to GHCR yet. The collision webhook code runs from the
-image, so ADM-08 sees the old (unfixed) behaviour.
+ADM-08 tests the ARN collision webhook. `make m80-up` installs the chart from
+a local tgz but the operator image defaults to the `latest` GHCR tag, which
+may not be `v1.0.17`. Override with:
 
-ADM-08 will pass once the v1.0.17-rc1 image is published to GHCR. It passes
-correctly on real AWS (where the published image is used).
+```bash
+make m80-up CHART_VERSION=1.0.17 \
+  M80_HELM_SET="--set app.image=ghcr.io/codriverlabs/kube-microvm-operator:v1.0.17"
+```
+
+Until the Makefile supports this override, ADM-08 is expected to fail unless
+the `latest` tag happens to point at v1.0.17.
 
 #### ADM-09 m80 gap (1 failure)
 

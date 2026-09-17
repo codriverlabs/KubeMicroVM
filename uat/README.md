@@ -18,24 +18,24 @@ make m80-down                 # tear down when done
 
 Results land in `uat/results/m80/report.html`.
 
-**Pass matrix**: 59/72 (v1.0.17-rc1 vs m80 v0.4.0). The 13 failures are all
-documented with root causes — none is an m80 fidelity gap in the normal control
-path. See [docs/design/m80-local-testing.md](../docs/design/m80-local-testing.md)
-for the full design, the pass matrix, and why each failure occurs.
+**Pass matrix**: 63/63 on real AWS (v1.0.17 GA, all 9 suites). On m80 emulator:
+61/72 — see [docs/design/m80-local-testing.md](../docs/design/m80-local-testing.md)
+for the documented failures and root causes.
 
 ## Release Candidate Workflow
 
 UAT runs against **release candidate (rc) versions** built and published by GitHub
 Actions. The workflow is:
 
-1. Push a tag: `git tag v1.0.12-rc1 && git push origin v1.0.12-rc1`
+1. Push a tag: `git tag v1.0.17 && git push origin v1.0.17`
 2. GitHub Actions builds native binaries, container images, and Helm chart → publishes
    to `ghcr.io/codriverlabs/helm/kube-microvm-operator`
-3. Update `CHART_VERSION` in `resources/variables.robot` to match the rc tag (without `v` prefix)
+3. Update `CHART_VERSION` in `resources/variables.robot` to match the tag (without `v` prefix)
 4. Run UAT — the suite auto-installs the operator from GHCR if not already deployed
 
-Each rc is immutable in GitHub Packages. If a build partially fails (409 Conflict),
-bump to the next rc (`-rc2` → `-rc3`) rather than trying to overwrite.
+Each release is immutable in GitHub Packages. RC builds follow the pattern
+`v<version>-rc<n>` (e.g. `v1.0.17-rc3`); promote to GA by tagging without
+the `-rc` suffix once all UAT suites pass.
 
 **Results are stored per-version** in `results/v<version>/` for comparison across runs.
 

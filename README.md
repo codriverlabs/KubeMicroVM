@@ -112,7 +112,7 @@ chmod +x install_kube_microvm.sh
 
 ```bash
 # Pin to a specific version (find latest at github.com/codriverlabs/KubeMicroVM/releases)
-CHART_VERSION=1.0.15   # replace with the version you want
+CHART_VERSION=1.0.17
 
 # EKS Pod Identity (recommended)
 helm install kube-microvm-operator \
