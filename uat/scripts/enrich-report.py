@@ -30,7 +30,7 @@ from pathlib import Path
 # Base URL for published documentation.
 # Override with --base-url for staging or custom domains.
 # ---------------------------------------------------------------------------
-DEFAULT_BASE_URL = "https://docs.codriverlabs.ai/kubemicrovm"
+DEFAULT_BASE_URL = "https://codriverlabs.github.io/KubeMicroVM"
 
 # ---------------------------------------------------------------------------
 # Community test ID → (short feature description, docs path)
