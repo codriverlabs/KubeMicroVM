@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>ai.codriverlabs</groupId>
+        <artifactId>microvm-operator-parent</artifactId>
+        <version>1.0.17</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>kubemicrovm-uat</artifactId>
+    <packaging>pom</packaging>
+    <name>KubeMicroVM :: UAT Suite</name>
+    <description>
+        Robot Framework UAT suite packaged as a Maven artifact for consumption
+        by downstream projects (e.g. KubeMicroVM-PRO uat-full runs).
+        Published to GitHub Packages as a zip with classifier robot-suite.
+    </description>
+
+    <!--
+        This module produces a single zip artifact:
+            ai.codriverlabs:kubemicrovm-uat:<version>:zip:robot-suite
+
+        Contents:
+            tests/          - Robot Framework .robot test files
+            resources/      - .resource and variables.robot shared resources
+            scripts/        - enrich-report.py and other UAT helpers
+            requirements.txt - Python dependencies for the UAT runner
+
+        PRO consumes this via mvn dependency:copy, unpacks it, and runs
+        both Community and PRO suites together as a single robot invocation.
+    -->
+
+    <build>
+        <plugins>
+            <!--
+                Package the UAT suite directory as a zip artifact.
+                We explicitly include only the files that are meaningful
+                to a downstream consumer running the suite.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>package-uat-suite</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <appendAssemblyId>true</appendAssemblyId>
+                            <descriptors>
+                                <descriptor>src/assembly/robot-suite.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Attach the zip so mvn deploy publishes it to GitHub Packages -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-uat-zip</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>attach-artifact</goal>
+                        </goals>
+                        <configuration>
+                            <artifacts>
+                                <artifact>
+                                    <file>
+                                        ${project.build.directory}/${project.artifactId}-${project.version}-robot-suite.zip
+                                    </file>
+                                    <type>zip</type>
+                                    <classifier>robot-suite</classifier>
+                                </artifact>
+                            </artifacts>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Skip standard Java compile/test phases — this is a resources-only module -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <skipMain>true</skipMain>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>KubeMicroVM (GitHub Packages)</name>
+            <url>https://maven.pkg.github.com/codriverlabs/KubeMicroVM</url>
+        </repository>
+    </distributionManagement>
+
+</project>

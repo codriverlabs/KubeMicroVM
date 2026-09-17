@@ -1,0 +1,67 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0
+                              https://maven.apache.org/xsd/assembly-2.2.0.xsd">
+
+    <id>robot-suite</id>
+    <formats>
+        <format>zip</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+
+    <!--
+        Produces: kubemicrovm-uat-<version>-robot-suite.zip
+        Layout inside the zip:
+            tests/          Robot Framework test suites
+            resources/      Shared .resource files and variables.robot
+            scripts/        enrich-report.py and other helpers
+            requirements.txt Python test dependencies
+    -->
+
+    <fileSets>
+        <!-- Robot Framework test suites -->
+        <fileSet>
+            <directory>${project.basedir}/tests</directory>
+            <outputDirectory>tests</outputDirectory>
+            <includes>
+                <include>**/*.robot</include>
+            </includes>
+            <!-- Exclude any local scratch or WIP files -->
+            <excludes>
+                <exclude>**/scratch/**</exclude>
+                <exclude>**/*.local.robot</exclude>
+            </excludes>
+        </fileSet>
+
+        <!-- Shared resources: .resource files and variables.robot -->
+        <fileSet>
+            <directory>${project.basedir}/resources</directory>
+            <outputDirectory>resources</outputDirectory>
+            <includes>
+                <include>**/*.resource</include>
+                <include>**/*.robot</include>
+            </includes>
+        </fileSet>
+
+        <!-- UAT helper scripts (enrich-report.py, etc.) -->
+        <fileSet>
+            <directory>${project.basedir}/scripts</directory>
+            <outputDirectory>scripts</outputDirectory>
+            <includes>
+                <include>**/*.py</include>
+                <include>**/*.sh</include>
+            </includes>
+            <fileMode>0755</fileMode>
+        </fileSet>
+
+        <!-- Python requirements for the UAT runner environment -->
+        <fileSet>
+            <directory>${project.basedir}</directory>
+            <outputDirectory></outputDirectory>
+            <includes>
+                <include>requirements.txt</include>
+            </includes>
+        </fileSet>
+    </fileSets>
+
+</assembly>
