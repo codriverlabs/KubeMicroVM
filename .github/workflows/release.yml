@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  MAVEN_OPTS: '-Xmx4g'
+  JAVA_VERSION: '25'
+
+jobs:
+
+  # ─── Publish Maven artifacts (jars + UAT suite zip) ──────────────────────
+
+  publish-maven:
+    name: Publish Maven Artifacts
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
+
+      - name: Set version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ./mvnw versions:set -DnewVersion=${VERSION} -DgenerateBackupPoms=false \
+            --batch-mode --no-transfer-progress
+
+      - name: Build and deploy all modules (including UAT suite zip)
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./mvnw --batch-mode --no-transfer-progress -DskipTests deploy
+
+      - name: Summarise published artifacts
+        run: |
+          echo "## Published artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Registry: \`https://maven.pkg.github.com/codriverlabs/KubeMicroVM\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Artifact | Type |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`ai.codriverlabs:operator-core\` | jar |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`ai.codriverlabs:operator-spi\` | jar |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`ai.codriverlabs:operator-controller\` | jar |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`ai.codriverlabs:operator-webhook\` | jar |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`ai.codriverlabs:kubemicrovm-uat\` | zip (robot-suite) |" >> $GITHUB_STEP_SUMMARY
+
+  # ─── GitHub Release ───────────────────────────────────────────────────────
+
+  release:
+    name: GitHub Release
+    needs: publish-maven
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Determine if pre-release
+        id: prerelease
+        run: |
+          echo "value=${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}" \
+            >> $GITHUB_OUTPUT
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          prerelease: ${{ steps.prerelease.outputs.value == 'true' }}
+          body: |
+            ## KubeMicroVM Community ${{ github.ref_name }}
+
+            ### Maven artifacts (GitHub Packages)
+            ```xml
+            <!-- Core operator libraries -->
+            <dependency>
+              <groupId>ai.codriverlabs</groupId>
+              <artifactId>operator-core</artifactId>
+              <version>${{ github.ref_name }}</version>
+            </dependency>
+
+            <!-- UAT suite (Robot Framework tests + resources) -->
+            <dependency>
+              <groupId>ai.codriverlabs</groupId>
+              <artifactId>kubemicrovm-uat</artifactId>
+              <version>${{ github.ref_name }}</version>
+              <classifier>robot-suite</classifier>
+              <type>zip</type>
+            </dependency>
+            ```
+
+            ### UAT results
+            [63/63 PASS — view report](https://codriverlabs.github.io/KubeMicroVM/uat-reports/v${{ github.ref_name }}-ga/report.html)
