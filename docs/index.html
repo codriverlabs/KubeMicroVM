@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KubeMicroVM — UAT Results</title>
+  <style>
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --accent:    #58a6ff;
+      --pass:      #3fb950;
+      --fail:      #f85149;
+      --pro-gold:  #d29922;
+      --tag-bg:    #1f2937;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    /* ── Header ── */
+    header { margin-bottom: 3rem; }
+    header h1 { font-size: 2rem; font-weight: 700; margin-bottom: .4rem; }
+    header p  { color: var(--muted); font-size: 1rem; }
+    .badges   { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; }
+    .badge {
+      display: inline-flex; align-items: center; gap: .35rem;
+      padding: .25rem .7rem; border-radius: 2rem; font-size: .8rem; font-weight: 600;
+      text-decoration: none;
+    }
+    .badge-pass  { background: #1a3a1f; color: var(--pass);     border: 1px solid #2ea043; }
+    .badge-pro   { background: #2d2209; color: var(--pro-gold); border: 1px solid var(--pro-gold); }
+    .badge-link  { background: var(--tag-bg); color: var(--accent); border: 1px solid var(--border); }
+
+    /* ── Release row ── */
+    .releases { display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 3.5rem; }
+    .release-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .release-card .meta h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: .2rem; }
+    .release-card .meta p  { color: var(--muted); font-size: .85rem; }
+    .release-card .links   { display: flex; gap: .6rem; flex-wrap: wrap; }
+    .btn {
+      padding: .35rem .9rem; border-radius: 6px; font-size: .85rem; font-weight: 500;
+      text-decoration: none; border: 1px solid var(--border);
+      background: var(--tag-bg); color: var(--accent);
+      transition: border-color .15s;
+    }
+    .btn:hover { border-color: var(--accent); }
+
+    /* ── Comparison table ── */
+    h2.section { font-size: 1.4rem; margin-bottom: 1rem; padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
+    .comparison { width: 100%; border-collapse: collapse; margin-bottom: 3.5rem; font-size: .9rem; }
+    .comparison th, .comparison td {
+      padding: .65rem 1rem; text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .comparison thead th { color: var(--muted); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+    .comparison tbody tr:hover td { background: #1c2128; }
+    .comparison .feature-group td {
+      padding-top: 1.2rem; padding-bottom: .2rem;
+      color: var(--muted); font-size: .78rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em;
+      border-bottom: none;
+    }
+    .tick   { color: var(--pass); font-size: 1.1rem; }
+    .cross  { color: var(--border); font-size: 1.1rem; }
+    .pro-label {
+      font-size: .72rem; font-weight: 700;
+      background: #2d2209; color: var(--pro-gold);
+      border: 1px solid #6e4c0e; border-radius: 3px;
+      padding: .1rem .35rem; margin-left: .4rem; vertical-align: middle;
+    }
+
+    /* ── Test suite tables ── */
+    .suites { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 3.5rem; }
+    @media (max-width: 800px) { .suites { grid-template-columns: 1fr; } }
+    .suite-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      overflow: hidden;
+    }
+    .suite-card .suite-header {
+      padding: .75rem 1rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .suite-card .suite-header h3 { font-size: .9rem; font-weight: 600; }
+    .suite-card .suite-header .count {
+      font-size: .78rem; color: var(--pass); font-weight: 700;
+      background: #1a3a1f; border: 1px solid #2ea043; border-radius: 3px;
+      padding: .1rem .4rem;
+    }
+    .suite-card .suite-header .count.pro {
+      color: var(--pro-gold); background: #2d2209; border-color: #6e4c0e;
+    }
+    .suite-card table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    .suite-card td { padding: .4rem 1rem; border-bottom: 1px solid #21262d; color: var(--muted); }
+    .suite-card td:first-child { color: var(--text); width: 6rem; font-family: monospace; }
+    .suite-card tr:last-child td { border-bottom: none; }
+    .suite-card tr:hover td { background: #1c2128; }
+
+    /* ── Footer ── */
+    footer { border-top: 1px solid var(--border); padding-top: 1.5rem; color: var(--muted); font-size: .82rem; }
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ── Header ── -->
+  <header>
+    <h1>KubeMicroVM — UAT Results</h1>
+    <p>Acceptance test results for each GA release, run on real AWS infrastructure.</p>
+    <div class="badges">
+      <span class="badge badge-pass">✓ Community v1.0.17 — 63/63 PASS</span>
+      <span class="badge badge-pro">★ PRO v1.1.1 — 33/33 PASS</span>
+      <a class="badge badge-link" href="https://github.com/codriverlabs/KubeMicroVM" target="_blank">Community ↗</a>
+    </div>
+  </header>
+
+  <!-- ── Release index ── -->
+  <h2 class="section">Releases</h2>
+  <div class="releases">
+
+    <div class="release-card">
+      <div class="meta">
+        <h2>Community v1.0.17 GA</h2>
+        <p>2026-09-17 &nbsp;·&nbsp; 63 tests &nbsp;·&nbsp; 9 suites &nbsp;·&nbsp; EKS (real AWS)</p>
+      </div>
+      <div class="links">
+        <a class="btn" href="uat-reports/v1.0.17-ga/report.html">Report</a>
+        <a class="btn" href="uat-reports/v1.0.17-ga/log.html">Log</a>
+      </div>
+    </div>
+
+    <div class="release-card">
+      <div class="meta">
+        <h2>PRO v1.1.1 GA <span class="pro-label">PRO</span></h2>
+        <p>2026-09-17 &nbsp;·&nbsp; 33 tests &nbsp;·&nbsp; 6 suites &nbsp;·&nbsp; EKS (real AWS)</p>
+      </div>
+      <div class="links">
+        <a class="btn" href="uat-reports/v1.1.1-ga/report.html">Report</a>
+        <a class="btn" href="uat-reports/v1.1.1-ga/log.html">Log</a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Comparison table ── -->
+  <h2 class="section">Community vs PRO</h2>
+  <table class="comparison">
+    <thead>
+      <tr>
+        <th style="width:55%">Capability</th>
+        <th style="width:22%">Community</th>
+        <th style="width:23%">PRO</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <tr class="feature-group"><td colspan="3">Core VM lifecycle</td></tr>
+      <tr><td>MicroVM create, run, terminate</td>              <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+      <tr><td>MicroVMImage build from Dockerfile</td>          <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+      <tr><td>Memory sizing (256 MiB – 32 GiB)</td>           <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+      <tr><td>Idle auto-suspend &amp; auto-resume</td>         <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+      <tr><td>Drift detection &amp; VM re-creation</td>        <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+      <tr><td>MicroVMClass (instance templates)</td>           <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+
+      <tr class="feature-group"><td colspan="3">Scaling</td></tr>
+      <tr><td>MicroVMReplicaSet (pool management)</td>         <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+      <tr><td>Scale up / scale down</td>                       <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+      <tr><td>Rolling update (new image version)</td>          <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+
+      <tr class="feature-group"><td colspan="3">Networking</td></tr>
+      <tr><td>Internet egress (default)</td>                   <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+      <tr><td>VPC egress (private network connector)</td>      <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+      <tr><td>MicroVMNetwork CRD</td>                          <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+
+      <tr class="feature-group"><td colspan="3">Security &amp; access control</td></tr>
+      <tr><td>RBAC — per-VM ServiceAccount tokens</td>         <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+      <tr><td>Sidecar token injection (pod annotation)</td>    <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+      <tr><td>ARN collision prevention (webhook)</td>          <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+      <tr><td>Admission webhook validation</td>                <td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+
+      <tr class="feature-group"><td colspan="3">PRO — Gateway &amp; load balancing</td></tr>
+      <tr>
+        <td>MicroVMGateway (session-affine HTTP proxy) <span class="pro-label">PRO</span></td>
+        <td><span class="cross">—</span></td><td><span class="tick">✓</span></td>
+      </tr>
+      <tr>
+        <td>Round-robin load balancing across pool <span class="pro-label">PRO</span></td>
+        <td><span class="cross">—</span></td><td><span class="tick">✓</span></td>
+      </tr>
+      <tr>
+        <td>Session lifecycle (202 Resuming, max duration) <span class="pro-label">PRO</span></td>
+        <td><span class="cross">—</span></td><td><span class="tick">✓</span></td>
+      </tr>
+      <tr>
+        <td>Token cache pre-warming <span class="pro-label">PRO</span></td>
+        <td><span class="cross">—</span></td><td><span class="tick">✓</span></td>
+      </tr>
+
+      <tr class="feature-group"><td colspan="3">PRO — Multi-tenancy</td></tr>
+      <tr>
+        <td>Cross-namespace isolation (tenants cannot cross) <span class="pro-label">PRO</span></td>
+        <td><span class="cross">—</span></td><td><span class="tick">✓</span></td>
+      </tr>
+      <tr>
+        <td>Namespace-scoped gateway access control <span class="pro-label">PRO</span></td>
+        <td><span class="cross">—</span></td><td><span class="tick">✓</span></td>
+      </tr>
+      <tr>
+        <td>MicroVMImageBinding / cross-namespace imageRef <span class="pro-label">PRO</span></td>
+        <td><span class="cross">—</span></td><td><span class="tick">✓</span></td>
+      </tr>
+      <tr>
+        <td>MicroVMImagePolicy (image governance) <span class="pro-label">PRO</span></td>
+        <td><span class="cross">—</span></td><td><span class="tick">✓</span></td>
+      </tr>
+
+    </tbody>
+  </table>
+
+  <!-- ── Community test suites ── -->
+  <h2 class="section">Community test suites — v1.0.17 GA (63/63)</h2>
+  <div class="suites">
+
+    <div class="suite-card">
+      <div class="suite-header">
+        <h3>01 · Quick Start</h3><span class="count">9/9</span>
+      </div>
+      <table><tbody>
+        <tr><td>QS-00</td><td>Installer download and checksum</td></tr>
+        <tr><td>QS-01</td><td>Operator running</td></tr>
+        <tr><td>QS-02</td><td>Namespace labelled for MicroVMs</td></tr>
+        <tr><td>QS-03</td><td>MicroVMImage created and built</td></tr>
+        <tr><td>QS-04</td><td>MicroVM created and running</td></tr>
+        <tr><td>QS-05</td><td>MicroVM list shows VM</td></tr>
+        <tr><td>QS-06</td><td>Token via --direct flag</td></tr>
+        <tr><td>QS-07</td><td>Curl endpoint returns OK</td></tr>
+        <tr><td>QS-08</td><td>Teardown — delete VM</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="suite-card">
+      <div class="suite-header">
+        <h3>02 · RBAC</h3><span class="count">8/8</span>
+      </div>
+      <table><tbody>
+        <tr><td>RBAC-01</td><td>ServiceAccount created</td></tr>
+        <tr><td>RBAC-02</td><td>Role with resourceNames</td></tr>
+        <tr><td>RBAC-03</td><td>RoleBinding created</td></tr>
+        <tr><td>RBAC-04</td><td>Auth can-i with subresource</td></tr>
+        <tr><td>RBAC-05</td><td>Authorised SA gets token</td></tr>
+        <tr><td>RBAC-06</td><td>SA rejected for different VM</td></tr>
+        <tr><td>RBAC-07</td><td>Unauthorised SA rejected</td></tr>
+        <tr><td>RBAC-08</td><td>Unlabelled namespace rejects VM</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="suite-card">
+      <div class="suite-header">
+        <h3>03 · Networking</h3><span class="count">5/5</span>
+      </div>
+      <table><tbody>
+        <tr><td>NET-01</td><td>Internet egress — public internet</td></tr>
+        <tr><td>NET-02</td><td>Default egress has internet access</td></tr>
+        <tr><td>NET-03</td><td>MicroVMNetwork becomes Active</td></tr>
+        <tr><td>NET-04</td><td>VPC egress VM connects</td></tr>
+        <tr><td>NET-05</td><td>Network list shows connector</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="suite-card">
+      <div class="suite-header">
+        <h3>04 · Pod Token Injection</h3><span class="count">9/9</span>
+      </div>
+      <table><tbody>
+        <tr><td>INJ-01</td><td>Namespace has injection label</td></tr>
+        <tr><td>INJ-02</td><td>SA and RBAC created</td></tr>
+        <tr><td>INJ-03</td><td>Annotated pod created</td></tr>
+        <tr><td>INJ-04</td><td>Sidecar container injected</td></tr>
+        <tr><td>INJ-05</td><td>Token volume present</td></tr>
+        <tr><td>INJ-06</td><td>Token files written</td></tr>
+        <tr><td>INJ-07</td><td>Auth token non-empty</td></tr>
+        <tr><td>INJ-08</td><td>Token works to call MicroVM</td></tr>
+        <tr><td>INJ-09</td><td>No-RBAC pod has empty token dir</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="suite-card">
+      <div class="suite-header">
+        <h3>05 · ReplicaSet</h3><span class="count">6/6</span>
+      </div>
+      <table><tbody>
+        <tr><td>RS-01</td><td>ReplicaSet creates 3 MicroVMs</td></tr>
+        <tr><td>RS-02</td><td>RS list shows ReplicaSet</td></tr>
+        <tr><td>RS-03</td><td>Scale up to 5</td></tr>
+        <tr><td>RS-04</td><td>Scale down to 2</td></tr>
+        <tr><td>RS-05</td><td>Rolling update changes ImageRef</td></tr>
+        <tr><td>RS-06</td><td>Delete terminates all VMs</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="suite-card">
+      <div class="suite-header">
+        <h3>06 · MicroVMClass</h3><span class="count">6/6</span>
+      </div>
+      <table><tbody>
+        <tr><td>CLASS-01</td><td>MicroVMClass created</td></tr>
+        <tr><td>CLASS-02</td><td>VM inherits class values</td></tr>
+        <tr><td>CLASS-03</td><td>Spec shows all inherited values</td></tr>
+        <tr><td>CLASS-04</td><td>User override takes precedence</td></tr>
+        <tr><td>CLASS-05</td><td>kubectl get lists class</td></tr>
+        <tr><td>CLASS-06</td><td>Non-existent class rejected</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="suite-card">
+      <div class="suite-header">
+        <h3>07 · Drift &amp; Auto-Suspend</h3><span class="count">5/5</span>
+      </div>
+      <table><tbody>
+        <tr><td>DRIFT-01</td><td>External termination detected</td></tr>
+        <tr><td>DRIFT-02</td><td>Operator re-creates VM with new ID</td></tr>
+        <tr><td>AUTO-01</td><td>VM suspends after idle duration</td></tr>
+        <tr><td>AUTO-02</td><td>Auto-resume on traffic</td></tr>
+        <tr><td>AUTO-03</td><td>Operator does not fight idle policy</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="suite-card">
+      <div class="suite-header">
+        <h3>08 · Memory Sizing</h3><span class="count">6/6</span>
+      </div>
+      <table><tbody>
+        <tr><td>MEM-01</td><td>4096 MiB image correct status</td></tr>
+        <tr><td>MEM-02</td><td>No memorySizeMiB defaults to 2048</td></tr>
+        <tr><td>MEM-03</td><td>Invalid memorySizeMiB rejected</td></tr>
+        <tr><td>MEM-04</td><td>memorySizeMiB immutable on update</td></tr>
+        <tr><td>MEM-05</td><td>CLI describe shows memory</td></tr>
+        <tr><td>MEM-07</td><td>Run VM from 4096 MiB image</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="suite-card" style="grid-column: 1 / -1">
+      <div class="suite-header">
+        <h3>11 · Admission &amp; Failed State</h3><span class="count">9/9</span>
+      </div>
+      <table><tbody>
+        <tr><td>ADM-01</td><td>Missing idle policy rejected at admission</td></tr>
+        <tr><td>ADM-02</td><td>Idle duration below minimum rejected</td></tr>
+        <tr><td>ADM-03</td><td>Maximum duration above 28800 rejected</td></tr>
+        <tr><td>ADM-04</td><td>ClassName bypasses idle policy requirement</td></tr>
+        <tr><td>ADM-05</td><td>Valid idle policy accepted</td></tr>
+        <tr><td>ADM-06</td><td>Failed creation stays in Failed state</td></tr>
+        <tr><td>ADM-07</td><td>Failed creation retries after spec change</td></tr>
+        <tr><td>ADM-08</td><td>Duplicate-named MicroVMImage rejected by webhook</td></tr>
+        <tr><td>ADM-09</td><td>Delete blocked by running VMs emits Warning event</td></tr>
+      </tbody></table>
+    </div>
+
+  </div>
+
+  <!-- ── PRO test suites ── -->
+  <h2 class="section">PRO test suites — v1.1.1 GA (33/33) <span class="pro-label">PRO</span></h2>
+  <div class="suites">
+
+    <div class="suite-card">
+      <div class="suite-header">
+        <h3>01 · Gateway Deploy</h3><span class="count pro">8/8</span>
+      </div>
+      <table><tbody>
+        <tr><td>GW-01</td><td>ReplicaSet pool created</td></tr>
+        <tr><td>GW-02</td><td>Pool VMs reach Running state</td></tr>
+        <tr><td>GW-03</td><td>Gateway CR created</td></tr>
+        <tr><td>GW-04</td><td>Gateway reaches Ready state</td></tr>
+        <tr><td>GW-05</td><td>Gateway service endpoint exists</td></tr>
+        <tr><td>GW-06</td><td>Gateway delete removes all resources</td></tr>
+        <tr><td>GW-07</td><td>Gateway spec replicas scales deployment</td></tr>
+        <tr><td>GW-08</td><td>Gateway status reflects readiness</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="suite-card">
+      <div class="suite-header">
+        <h3>03 · Multi-Tenant</h3><span class="count pro">4/4</span>
+      </div>
+      <table><tbody>
+        <tr><td>MT-01</td><td>Tenant A cannot access Tenant B gateway</td></tr>
+        <tr><td>MT-02</td><td>Tenant B cannot access Tenant A gateway</td></tr>
+        <tr><td>MT-04</td><td>Valid SA accesses its own namespace gateway</td></tr>
+        <tr><td>MT-05</td><td>Operator watches only labelled namespaces</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="suite-card">
+      <div class="suite-header">
+        <h3>05 · Round-Robin</h3><span class="count pro">5/5</span>
+      </div>
+      <table><tbody>
+        <tr><td>RR-01</td><td>Round-robin gateway reaches Ready</td></tr>
+        <tr><td>RR-02</td><td>Requests cycle through all pool VMs</td></tr>
+        <tr><td>RR-03</td><td>No session stickiness between requests</td></tr>
+        <tr><td>RR-04</td><td>Token cache pre-warmed for all VMs</td></tr>
+        <tr><td>RR-05</td><td>X-Served-By-VM header on every response</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="suite-card">
+      <div class="suite-header">
+        <h3>06 · Negative</h3><span class="count pro">8/8</span>
+      </div>
+      <table><tbody>
+        <tr><td>NEG-01</td><td>Non-existent pool — gateway stays DOWN</td></tr>
+        <tr><td>NEG-02</td><td>Pool scaled to zero — 503</td></tr>
+        <tr><td>NEG-03</td><td>Pool deleted — gateway recovers</td></tr>
+        <tr><td>NEG-04</td><td>Token cache miss returns 503 not 500</td></tr>
+        <tr><td>NEG-05a</td><td>Missing auth header returns 401</td></tr>
+        <tr><td>NEG-05b</td><td>Malformed bearer token returns 401</td></tr>
+        <tr><td>NEG-06</td><td>Cross-namespace SA token rejected</td></tr>
+        <tr><td>NEG-07</td><td>VM fails mid-session — assignment cleared</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="suite-card">
+      <div class="suite-header">
+        <h3>07 · Session Lifecycle</h3><span class="count pro">5/5</span>
+      </div>
+      <table><tbody>
+        <tr><td>SL-01</td><td>Idle timeout triggers VM suspension</td></tr>
+        <tr><td>SL-02</td><td>Suspended VM returns 202 Resuming</td></tr>
+        <tr><td>SL-03</td><td>Retry after 202 returns 200 once Running</td></tr>
+        <tr><td>SL-04</td><td>Max session duration forces release</td></tr>
+        <tr><td>SL-05</td><td>SuspendOnIdle=false — VM stays Running</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="suite-card">
+      <div class="suite-header">
+        <h3>08 · Image Governance</h3><span class="count pro">3/3</span>
+      </div>
+      <table><tbody>
+        <tr><td>IMG-01</td><td>Duplicate-named image rejected by webhook</td></tr>
+        <tr><td>IMG-02</td><td>Cross-namespace imageRef + Binding unaffected</td></tr>
+        <tr><td>IMG-03</td><td>Delete blocked — emits event + bounded retries</td></tr>
+      </tbody></table>
+    </div>
+
+  </div>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <p>
+      Reports generated by
+      <a href="https://github.com/codriverlabs/KubeMicroVM/blob/main/uat/scripts/enrich-report.py">enrich-report.py</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/codriverlabs/KubeMicroVM">KubeMicroVM on GitHub</a>
+      &nbsp;·&nbsp;
+      Results run on real AWS infrastructure
+    </p>
+  </footer>
+
+</div>
+</body>
+</html>
