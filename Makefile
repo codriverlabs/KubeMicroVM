@@ -202,6 +202,7 @@ _m80-fetch:
 # ─── UAT report enrichment ────────────────────────────────────────────────────
 
 UAT_RESULTS ?= $(CURDIR)/uat/results/m80
+DOCS_BASE_URL ?= https://docs.codriverlabs.ai/kubemicrovm
 
 uat-report: ## Merge suite outputs + inject doc links + regenerate HTML report
 	@echo "==> Merging UAT outputs from $(UAT_RESULTS)"
@@ -209,20 +210,13 @@ uat-report: ## Merge suite outputs + inject doc links + regenerate HTML report
 	  --outputdir $(UAT_RESULTS)/merged \
 	  --output output.xml --nostatusrc \
 	  $(UAT_RESULTS)/*/output.xml
-	@echo "==> Enriching with documentation links"
-	@# PRO script if available, else skip enrichment
-	@if [ -f "$(CURDIR)/../KubeMicroVM-PRO/uat/scripts/enrich-report.py" ]; then \
-	  python3 "$(CURDIR)/../KubeMicroVM-PRO/uat/scripts/enrich-report.py" \
-	    --input $(UAT_RESULTS)/merged/output.xml \
-	    --output $(UAT_RESULTS)/merged/output-enriched.xml && \
-	  python3 -m robot.rebot \
-	    --outputdir $(UAT_RESULTS)/report \
-	    --nostatusrc \
-	    $(UAT_RESULTS)/merged/output-enriched.xml; \
-	else \
-	  python3 -m robot.rebot \
-	    --outputdir $(UAT_RESULTS)/report \
-	    --nostatusrc \
-	    $(UAT_RESULTS)/merged/output.xml; \
-	fi
+	@echo "==> Enriching with documentation links (base: $(DOCS_BASE_URL))"
+	@python3 $(CURDIR)/uat/scripts/enrich-report.py \
+	  --input  $(UAT_RESULTS)/merged/output.xml \
+	  --output $(UAT_RESULTS)/merged/output-enriched.xml \
+	  --base-url $(DOCS_BASE_URL)
+	@python3 -m robot.rebot \
+	  --outputdir $(UAT_RESULTS)/report \
+	  --nostatusrc \
+	  $(UAT_RESULTS)/merged/output-enriched.xml
 	@echo "Report: $(UAT_RESULTS)/report/report.html"
