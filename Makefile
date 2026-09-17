@@ -198,3 +198,31 @@ _m80-fetch:
 	else \
 	  echo "==> m80 already present at $(M80_DIR) (run 'make m80-clean' to reset)"; \
 	fi
+
+# ─── UAT report enrichment ────────────────────────────────────────────────────
+
+UAT_RESULTS ?= $(CURDIR)/uat/results/m80
+
+uat-report: ## Merge suite outputs + inject doc links + regenerate HTML report
+	@echo "==> Merging UAT outputs from $(UAT_RESULTS)"
+	@python3 -m robot.rebot \
+	  --outputdir $(UAT_RESULTS)/merged \
+	  --output output.xml --nostatusrc \
+	  $(UAT_RESULTS)/*/output.xml
+	@echo "==> Enriching with documentation links"
+	@# PRO script if available, else skip enrichment
+	@if [ -f "$(CURDIR)/../KubeMicroVM-PRO/uat/scripts/enrich-report.py" ]; then \
+	  python3 "$(CURDIR)/../KubeMicroVM-PRO/uat/scripts/enrich-report.py" \
+	    --input $(UAT_RESULTS)/merged/output.xml \
+	    --output $(UAT_RESULTS)/merged/output-enriched.xml && \
+	  python3 -m robot.rebot \
+	    --outputdir $(UAT_RESULTS)/report \
+	    --nostatusrc \
+	    $(UAT_RESULTS)/merged/output-enriched.xml; \
+	else \
+	  python3 -m robot.rebot \
+	    --outputdir $(UAT_RESULTS)/report \
+	    --nostatusrc \
+	    $(UAT_RESULTS)/merged/output.xml; \
+	fi
+	@echo "Report: $(UAT_RESULTS)/report/report.html"
