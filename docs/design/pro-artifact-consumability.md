@@ -1,6 +1,6 @@
 # PRO Artifact Consumability — Jandex Indexes and Helm Value Mappings
 
-**Status**: Design
+**Status**: Implemented (shipped in v1.0.17 / PRO v1.1.1)
 **Scope**: `codriverlabs/KubeMicroVM` (Community)
 **Driven by**: `KubeMicroVM-PRO/docs/design/build-publish-open-gaps.md` (G0, G18) and
 `build-and-publish-pipeline.md` §7.4, §7.6
@@ -283,7 +283,7 @@ against the newly-indexed jars from this branch:
 
 ```bash
 mvn -pl operator-pro-dist -am package -DskipTests \
-  -Dcommunity.version=1.1.0-SNAPSHOT -Dquarkus.platform.version=3.39.1
+  -Dcommunity.version=1.0.17 -Dquarkus.platform.version=3.39.2
 ```
 
 All five reconcilers register:

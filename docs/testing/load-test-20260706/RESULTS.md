@@ -1,5 +1,8 @@
 # Load Test Results — 2026-07-06
 
+> **Historical record** — recorded during development. Current release: **v1.0.17 GA**.
+
+
 **Branch**: `feature/image-reconciler-adoption`  
 **Operator version**: `1.1.0-SNAPSHOT` (native image, ECR `<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/codriverlabs/kube-microvm-operator:1.0.1`)  
 **Cluster**: `ecp-us1` (EKS Auto Mode, `us-east-1`)  

@@ -1,5 +1,8 @@
 # UAT: Quota Guardrails
 
+> **Historical record** — recorded during development. Current release: **v1.0.17 GA**. Version numbers in this document reflect the state at time of writing and have not been updated.
+
+
 **Status**: ✅ PASS — all tests passed  
 **Branch**: `feature/quota-guardrails-replicaset` (merged to main)  
 **Cluster**: `ecp-us1` (EKS Auto Mode, `us-east-1`)  

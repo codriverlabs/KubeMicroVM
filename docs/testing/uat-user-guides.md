@@ -1,5 +1,10 @@
 # UAT: User Guides End-to-End
 
+> **Historical record** — this was the pre-v1.0.0 sign-off checklist. User guide
+> UAT is now part of the Robot Framework suite (`uat/tests/01_quick_start.robot`
+> through `uat/tests/11_admission_and_failed_state.robot`). Current release:
+> **v1.0.17 GA**, 63/63 pass.
+
 Validates that every documented step in the user guides works exactly as written.
 Must pass before tagging `v1.0.0` GA.
 

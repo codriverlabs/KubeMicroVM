@@ -1,6 +1,10 @@
 # UAT Gap Analysis
 
 > Reviewed: 2026-07-17 | Baseline: 10 suites, 62 tests | Last run: v1.0.5-rc4
+>
+> **Updated: 2026-09-16** — All gaps identified in this analysis have been addressed
+> and shipped in **v1.0.17 GA**. Current UAT: 9 suites, 63 tests, 63/63 pass on real AWS.
+> This document is retained as a historical record of the gap analysis process.
 
 ---
 

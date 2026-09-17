@@ -1,6 +1,10 @@
 # E2E Testing TODO — Remaining for GA
 
-Last updated: 2026-07-01
+> **Status as of v1.0.17 GA (2026-09-16):** All items in the "Must Do for GA"
+> list below have been completed and shipped. This document is now a historical
+> record of the pre-GA testing backlog.
+
+Last updated: 2026-07-01 (pre-GA checklist) | Superseded by: v1.0.17 GA release
 
 ## Completed ✅
 

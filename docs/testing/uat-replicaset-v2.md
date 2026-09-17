@@ -1,5 +1,8 @@
 # UAT: MicroVMReplicaSet E2E
 
+> **Historical record** — recorded during development. Current release: **v1.0.17 GA**. Version numbers in this document reflect the state at time of writing and have not been updated.
+
+
 **Status**: ✅ All tests pass  
 **Branch**: `feature/e2e-replicaset-v2`  
 **Cluster**: `ecp-us1` (us-east-1)  

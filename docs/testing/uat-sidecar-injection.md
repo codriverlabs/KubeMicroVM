@@ -1,5 +1,8 @@
 # UAT: Pod Sidecar Token Injection
 
+> **Historical record** — recorded during development. Current release: **v1.0.17 GA**. Version numbers in this document reflect the state at time of writing and have not been updated.
+
+
 ## What
 
 When a pod is annotated with `lambda.microvm.auth: <vm-name>`, the mutating
