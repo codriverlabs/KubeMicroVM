@@ -124,6 +124,12 @@ COMMUNITY_DOCS = {
 # PRO test ID → (short feature description, docs path)
 # ---------------------------------------------------------------------------
 PRO_DOCS = {
+    # ── Cluster Setup ────────────────────────────────────────────────────────
+    "CS-01": ("PRO operator running",                          "/pro/installation"),
+    "CS-02": ("Community CRDs installed",                     "/user-guides/quick-start#step-1-install-the-operator"),
+    "CS-03": ("PRO CRDs installed (MicroVMGateway)",          "/pro/gateway"),
+    "CS-04": ("Session namespace ready",                      "/pro/multi-tenant"),
+
     # ── Gateway Deploy ───────────────────────────────────────────────────────
     "GW-01": ("Create ReplicaSet pool",                f"/pro/gateway"),
     "GW-02": ("Wait for VMs to reach Running",         f"/user-guides/replicaset"),
