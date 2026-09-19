@@ -53,8 +53,6 @@ PRO_VERSION="${KUBE_MICROVM_PRO_VERSION:-}"
 # If set: charts pulled from <helm-registry>/codriverlabs/helm/<chart-name>
 # For ECR: same URL as --registry (e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com)
 HELM_REGISTRY="${KUBE_MICROVM_HELM_REGISTRY:-}"
-HELM_REGISTRY_USER="${KUBE_MICROVM_HELM_REGISTRY_USER:-}"
-HELM_REGISTRY_TOKEN="${KUBE_MICROVM_HELM_REGISTRY_TOKEN:-}"
 
 CLI_ONLY=false
 DRY_RUN=false
@@ -148,8 +146,6 @@ while [[ $# -gt 0 ]]; do
         --registry-token)    REGISTRY_TOKEN="$2";    shift 2 ;;
         --pro-version)       PRO_VERSION="$2";       shift 2 ;;
         --helm-registry)     HELM_REGISTRY="$2";     shift 2 ;;
-        --helm-registry-user)  HELM_REGISTRY_USER="$2";  shift 2 ;;
-        --helm-registry-token) HELM_REGISTRY_TOKEN="$2"; shift 2 ;;
 
         --quota-run-microvm-rate)         QUOTA_RUN_MICROVM_RATE="$2";         shift 2 ;;
         --quota-terminate-microvm-rate)   QUOTA_TERMINATE_MICROVM_RATE="$2";   shift 2 ;;
@@ -178,10 +174,8 @@ Options:
   --edition    <name>   Edition to install: community (default) or pro
   --registry-token <t>  GHCR PAT for PRO edition (or set KUBE_MICROVM_REGISTRY_TOKEN)
   --pro-version <ver>   PRO chart/image version (default: auto-resolved from GHCR)
-  --helm-registry <url>     Private Helm OCI registry (default: GHCR)
-                            For ECR use the same URL as --registry
-  --helm-registry-user <u>  Helm registry username (ECR: AWS, GHCR: token)
-  --helm-registry-token <t> Helm registry password/token
+  --helm-registry <url>     Private Helm OCI registry for air-gapped ECR deployments
+                            Use the same URL as --registry
 
   # Quota — auto-discovered by default via aws service-quotas get-service-quota
   --no-quota-discovery               Skip quota discovery, use AWS defaults
@@ -202,9 +196,7 @@ Environment variables:
   KUBE_MICROVM_EDITION             community or pro (same as --edition)
   KUBE_MICROVM_REGISTRY_TOKEN      GHCR PAT for PRO (same as --registry-token)
   KUBE_MICROVM_PRO_VERSION         Pin PRO version (same as --pro-version)
-  KUBE_MICROVM_HELM_REGISTRY       Private Helm OCI registry URL
-  KUBE_MICROVM_HELM_REGISTRY_USER  Helm registry username
-  KUBE_MICROVM_HELM_REGISTRY_TOKEN Helm registry password/token
+  KUBE_MICROVM_HELM_REGISTRY       Private Helm OCI registry URL (ECR air-gapped)
 
 Examples:
   # Community — full install with IAM setup
@@ -316,29 +308,19 @@ ghcr_logout_pro() {
     helm registry logout ghcr.io 2>/dev/null || true
 }
 
-# Private Helm registry login/logout — used when --helm-registry is set.
-# Supports ECR (auto-detects, uses aws ecr get-login-password) and generic
-# OCI registries (uses --helm-registry-user / --helm-registry-token).
+# Private Helm registry login — ECR only.
+# For non-ECR private registries, pre-authenticate with `helm registry login`
+# before running the installer.
 _helm_registry_login() {
     local registry="$1"
     if [[ "$registry" == *".ecr."* ]]; then
-        # ECR: token from aws CLI, username always "AWS"
         local ecr_region
         ecr_region=$(echo "$registry" | grep -oP 'ecr\.\K[a-z0-9-]+(?=\.)')
         info "Helm registry login (ECR): $registry"
         run "aws ecr get-login-password --region $ecr_region | \
             helm registry login $registry --username AWS --password-stdin"
-    elif [[ -n "$HELM_REGISTRY_TOKEN" ]]; then
-        local user="${HELM_REGISTRY_USER:-token}"
-        info "Helm registry login: $registry (user: $user)"
-        run "echo ${HELM_REGISTRY_TOKEN} | helm registry login $registry --username $user --password-stdin"
-    elif [[ -n "$REGISTRY_TOKEN" && "$EDITION" == "pro" ]]; then
-        # Fall back to PRO GHCR token for GHCR-compatible registries
-        info "Helm registry login (PRO token): $registry"
-        run "echo ${REGISTRY_TOKEN} | helm registry login $registry --username token --password-stdin"
     else
-        warn "No Helm registry credentials — login skipped for $registry"
-        warn "Provide --helm-registry-token or --registry-token (PRO)"
+        warn "Non-ECR Helm registry: assuming pre-authenticated. Run 'helm registry login $registry' if needed."
     fi
 }
 
