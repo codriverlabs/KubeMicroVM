@@ -37,8 +37,18 @@ Webhook Endpoints Are Active
 
 Pod Identity Association Exists
     [Documentation]    Verifies that EKS Pod Identity is configured for the operator SA.
+    ...    The cluster name is resolved from the current kubeconfig context.
+    ...    If Pod Identity is missing, run:
+    ...    install_kube_microvm.sh --cluster <name> --region <region> --iam
+    ${ctx}=    Run Process    kubectl    config    current-context
+    # Extract cluster name from ARN (arn:aws:eks:region:account:cluster/NAME) or use as-is
+    ${cluster_name}=    Evaluate    '${ctx.stdout}'.split('/')[-1]
+    Should Not Be Empty    ${cluster_name}    Could not determine cluster name from kubeconfig context
     ${result}=    Run Process    aws    eks    list-pod-identity-associations
-    ...    --cluster-name    ecp-us1
+    ...    --cluster-name    ${cluster_name}
     ...    --namespace    ${OPERATOR_NS}
     ...    --service-account    kube-microvm-operator
-    Should Contain    ${result.stdout}    podidentityassociation
+    ...    --query    associations[0].associationId
+    ...    --output    text
+    Should Not Be Empty    ${result.stdout}    Pod Identity association missing for kube-microvm-operator SA in ${OPERATOR_NS}\n\nFix: install_kube_microvm.sh --cluster ${cluster_name} --iam
+    Should Not Contain    ${result.stdout}    None    Pod Identity association missing for kube-microvm-operator SA\n\nFix: install_kube_microvm.sh --cluster ${cluster_name} --iam
