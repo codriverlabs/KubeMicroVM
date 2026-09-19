@@ -129,6 +129,7 @@ PRO_DOCS = {
     "CS-02": ("Community CRDs installed",                     "/user-guides/quick-start#step-1-install-the-operator"),
     "CS-03": ("PRO CRDs installed (MicroVMGateway)",          "/pro/gateway"),
     "CS-04": ("Session namespace ready",                      "/pro/multi-tenant"),
+    "CS-05": ("Pod Identity association exists",              "/user-guides/rbac#setup-eks-pod-identity"),
 
     # ── Gateway Deploy ───────────────────────────────────────────────────────
     "GW-01": ("Create ReplicaSet pool",                f"/pro/gateway"),

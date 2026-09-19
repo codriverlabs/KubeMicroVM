@@ -10,11 +10,32 @@ Resource   common.resource
 *** Keywords ***
 Verify Cluster Ready
     [Documentation]    Validates that the cluster has operator running, CRDs installed,
-    ...    namespace labelled, and S3 test fixtures uploaded. Fails fast if not ready.
+    ...    namespace labelled, S3 test fixtures uploaded, and Pod Identity configured.
+    ...    Fails fast if any prerequisite is missing.
     Verify Operator Running
     Verify CRDs Installed
     Verify Namespace Labelled
     Verify S3 Fixtures Uploaded
+    Verify Pod Identity
+
+Verify Pod Identity
+    [Documentation]    Verifies that EKS Pod Identity is configured for the operator SA.
+    ...    Both Community and PRO use the same IAM role: kube-microvm-operator.
+    ...    If missing, run:
+    ...    install_kube_microvm.sh --cluster <name> --region <region> --iam
+    ${ctx}=    Run Process    kubectl    config    current-context
+    ${cluster_name}=    Evaluate    '${ctx.stdout}'.split('/')[-1]
+    Should Not Be Empty    ${cluster_name}    Could not determine cluster name from kubeconfig
+    ${result}=    Run Process    aws    eks    list-pod-identity-associations
+    ...    --cluster-name    ${cluster_name}
+    ...    --namespace    ${OPERATOR_NS}
+    ...    --service-account    kube-microvm-operator
+    ...    --query    associations[0].associationId
+    ...    --output    text
+    Should Not Be Empty    ${result.stdout}
+    ...    Pod Identity association missing for kube-microvm-operator in ${OPERATOR_NS}\n\nFix: install_kube_microvm.sh --cluster ${cluster_name} --iam
+    Should Not Contain    ${result.stdout}    None
+    ...    Pod Identity association missing for kube-microvm-operator in ${OPERATOR_NS}\n\nFix: install_kube_microvm.sh --cluster ${cluster_name} --iam
 
 Verify Operator Running
     ${result}=    Run Process    kubectl    get    deploy    kube-microvm-operator    -n    ${OPERATOR_NS}    -o    jsonpath\={.status.readyReplicas}
