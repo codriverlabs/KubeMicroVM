@@ -178,11 +178,10 @@ Options:
   --edition    <name>   Edition to install: community (default) or pro
   --registry-token <t>  GHCR PAT for PRO edition (or set KUBE_MICROVM_REGISTRY_TOKEN)
   --pro-version <ver>   PRO chart/image version (default: auto-resolved from GHCR)
-  --helm-registry <url> Private Helm OCI registry (default: GHCR)
-                        For ECR: same URL as --registry
-                        e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com
-  --helm-registry-user <u>   Helm registry username (default: AWS for ECR, token for GHCR-like)
-  --helm-registry-token <t>  Helm registry password/token
+  --helm-registry <url>     Private Helm OCI registry (default: GHCR)
+                            For ECR use the same URL as --registry
+  --helm-registry-user <u>  Helm registry username (ECR: AWS, GHCR: token)
+  --helm-registry-token <t> Helm registry password/token
 
   # Quota — auto-discovered by default via aws service-quotas get-service-quota
   --no-quota-discovery               Skip quota discovery, use AWS defaults
@@ -220,13 +219,6 @@ Examples:
     --edition pro \
     --registry 123456789.dkr.ecr.us-east-1.amazonaws.com \
     --helm-registry 123456789.dkr.ecr.us-east-1.amazonaws.com
-
-  # PRO — separate container + Helm registries (Harbor, Nexus, etc.)
-  ./install_kube_microvm.sh --cluster my-cluster --region us-east-1 --iam \
-    --edition pro \
-    --registry my-harbor.example.com \
-    --helm-registry my-harbor.example.com \
-    --helm-registry-user admin --helm-registry-token <password>
 
   # PRO — use existing IAM role, skip IAM step
   ./install_kube_microvm.sh --cluster my-cluster --region us-east-1 \
