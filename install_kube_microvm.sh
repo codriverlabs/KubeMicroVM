@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install_kube_microvm.sh — KubeMicroVM installer
+# install_kube_microvm.sh — KubeMicroVM installer (Community and PRO)
 #
 # Usage:
 #   ./install_kube_microvm.sh [options]
@@ -10,22 +10,29 @@
 #   --registry   <url>    Private registry URL — import images here (e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com)
 #   --iam                 Create IAM role + Pod Identity association via CloudFormation
 #   --role-arn   <arn>    Use existing IAM role ARN (skips --iam)
-
+#   --edition    <name>   Edition to install: community (default) or pro
+#   --registry-token <t>  GHCR PAT for PRO edition (required when --edition pro and no --registry)
+#   --pro-version <ver>   PRO chart/image version to install (default: latest from GHCR)
+#
 #   --cli-only            Only install the microvm CLI (skip Helm installs)
 #   --dry-run             Print what would be done without executing
 #   --help                Show this help
 #
 # Examples:
-#   # Full install with private ECR registry + IAM setup
-#   ./install_kube_microvm.sh --cluster my-cluster --region us-east-1 \
-#     --registry 123456789.dkr.ecr.us-east-1.amazonaws.com --iam
+#   # Community — full install with IAM setup
+#   ./install_kube_microvm.sh --cluster my-cluster --region us-east-1 --iam
+#
+#   # PRO — full install with GHCR token
+#   ./install_kube_microvm.sh --cluster my-cluster --region us-east-1 --iam \
+#     --edition pro --registry-token <GHCR_PAT>
+#
+#   # PRO — with private ECR mirror (air-gapped)
+#   ./install_kube_microvm.sh --cluster my-cluster --region us-east-1 --iam \
+#     --edition pro --registry 123456789.dkr.ecr.us-east-1.amazonaws.com
 #
 #   # Install using existing IAM role
 #   ./install_kube_microvm.sh --cluster my-cluster --region us-east-1 \
 #     --role-arn arn:aws:iam::123456789:role/kube-microvm-operator
-#
-#   # CLI only
-#   ./install_kube_microvm.sh --cli-only
 
 set -euo pipefail
 
@@ -36,6 +43,11 @@ REGISTRY=""
 ROLE_ARN=""
 DO_IAM=false
 
+# Edition — community or pro
+EDITION="${KUBE_MICROVM_EDITION:-community}"
+REGISTRY_TOKEN="${KUBE_MICROVM_REGISTRY_TOKEN:-}"
+PRO_VERSION="${KUBE_MICROVM_PRO_VERSION:-}"
+
 CLI_ONLY=false
 DRY_RUN=false
 INSTALL_DIR="${HOME}/bin"
@@ -44,41 +56,65 @@ CONFIG_FILE="${CONFIG_DIR}/config"
 
 # Quota overrides — defaults match AWS account-level defaults
 # Populated automatically at install time via aws service-quotas get-service-quota
-# Override with --quota-* flags if your account has received a quota increase
 QUOTA_RUN_MICROVM_RATE=""
 QUOTA_TERMINATE_MICROVM_RATE=""
 QUOTA_SUSPEND_MICROVM_RATE=""
 QUOTA_RESUME_MICROVM_RATE=""
 QUOTA_AUTH_TOKEN_RATE=""
 QUOTA_CONCURRENT_IMAGE_BUILDS=""
-QUOTA_DISCOVERY_RUNTIME=false   # --quota-discovery=runtime: operator queries quotas on startup
+QUOTA_DISCOVERY_RUNTIME=false
 
-# Resolved at runtime from GitHub Release or bundled in installer image
+# Resolved at runtime
 VERSION="${KUBE_MICROVM_VERSION:-}"
+
+# Community image/chart coordinates (public GHCR)
 GHCR_OPERATOR="ghcr.io/codriverlabs/kube-microvm-operator"
 GHCR_AGENT="ghcr.io/codriverlabs/microvm-auth-agent"
 GHCR_HELM="oci://ghcr.io/codriverlabs/helm"
+
+# PRO image/chart coordinates (private GHCR)
+GHCR_PRO_OPERATOR="ghcr.io/codriverlabs/kubemicrovm-pro/kube-microvm-operator-pro"
+GHCR_PRO_GATEWAY="ghcr.io/codriverlabs/kubemicrovm-pro/microvm-gateway"
+GHCR_PRO_HELM="oci://ghcr.io/codriverlabs/kubemicrovm-pro/helm"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Resolve version — prefer env var, then bundled VERSION file, then GitHub API
+# ─── Version resolution ───────────────────────────────────────────────────────
 resolve_version() {
     [[ -n "$VERSION" ]] && return 0
-    # Check for bundled VERSION file (installer Docker image)
     if [[ -f "${SCRIPT_DIR}/VERSION" ]]; then
         VERSION=$(cat "${SCRIPT_DIR}/VERSION")
         info "Version from bundle: $VERSION"
         return 0
     fi
-    # Query GitHub Releases API for latest
-    info "Resolving latest version from GitHub..."
+    info "Resolving latest Community version from GitHub..."
     VERSION=$(curl -fsSL \
         "https://api.github.com/repos/codriverlabs/KubeMicroVM/releases/latest" \
         2>/dev/null | grep '"tag_name"' | grep -oP 'v[\d.]+(-rc\d+)?' | head -1)
     if [[ -z "$VERSION" ]]; then
-        error "Could not resolve version. Set KUBE_MICROVM_VERSION env var or pass bundled installer."
+        error "Could not resolve version. Set KUBE_MICROVM_VERSION env var."
         exit 1
     fi
-    info "Latest version: $VERSION"
+    info "Latest Community version: $VERSION"
+}
+
+resolve_pro_version() {
+    [[ -n "$PRO_VERSION" ]] && return 0
+    info "Resolving latest PRO version from GHCR..."
+    # Resolve from GHCR OCI tags using helm CLI if available
+    if command -v helm &>/dev/null && [[ -n "$REGISTRY_TOKEN" ]]; then
+        PRO_VERSION=$(helm show chart \
+            "${GHCR_PRO_HELM}/kube-microvm-pro" \
+            --registry-config /dev/stdin <<< \
+            "{\"auths\":{\"ghcr.io\":{\"auth\":\"$(echo -n "token:${REGISTRY_TOKEN}" | base64)\"}}}" \
+            2>/dev/null | grep '^version:' | awk '{print $2}' | head -1 || echo "")
+    fi
+    if [[ -z "$PRO_VERSION" ]]; then
+        warn "Could not auto-resolve PRO version — defaulting to Community version ${VERSION#v}"
+        warn "Override with: --pro-version <version> or KUBE_MICROVM_PRO_VERSION env var"
+        PRO_VERSION="${VERSION#v}"
+    fi
+    info "PRO version: $PRO_VERSION"
 }
 
 # ─── Colors ───────────────────────────────────────────────────────────────────
@@ -95,11 +131,14 @@ run()     { if $DRY_RUN; then echo -e "${YELLOW}[DRY-RUN]${NC} $*"; else eval "$
 # ─── Parse arguments ──────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --cluster)   CLUSTER="$2";   shift 2 ;;
-        --region)    REGION="$2";    shift 2 ;;
-        --registry)  REGISTRY="$2";  shift 2 ;;
-        --role-arn)  ROLE_ARN="$2";  shift 2 ;;
-        --iam)       DO_IAM=true;    shift ;;
+        --cluster)           CLUSTER="$2";          shift 2 ;;
+        --region)            REGION="$2";            shift 2 ;;
+        --registry)          REGISTRY="$2";          shift 2 ;;
+        --role-arn)          ROLE_ARN="$2";          shift 2 ;;
+        --iam)               DO_IAM=true;            shift ;;
+        --edition)           EDITION="$2";           shift 2 ;;
+        --registry-token)    REGISTRY_TOKEN="$2";    shift 2 ;;
+        --pro-version)       PRO_VERSION="$2";       shift 2 ;;
 
         --quota-run-microvm-rate)         QUOTA_RUN_MICROVM_RATE="$2";         shift 2 ;;
         --quota-terminate-microvm-rate)   QUOTA_TERMINATE_MICROVM_RATE="$2";   shift 2 ;;
@@ -114,7 +153,7 @@ while [[ $# -gt 0 ]]; do
         --dry-run)   DRY_RUN=true;   shift ;;
         --help|-h)
             cat <<'HELP'
-install_kube_microvm.sh — KubeMicroVM installer
+install_kube_microvm.sh — KubeMicroVM installer (Community and PRO)
 
 Usage:
   ./install_kube_microvm.sh [options]
@@ -125,28 +164,45 @@ Options:
   --registry   <url>    Private registry URL (e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com)
   --iam                 Create IAM role + Pod Identity association via CloudFormation
   --role-arn   <arn>    Use existing IAM role ARN (skips --iam)
+  --edition    <name>   Edition to install: community (default) or pro
+  --registry-token <t>  GHCR PAT for PRO edition (or set KUBE_MICROVM_REGISTRY_TOKEN)
+  --pro-version <ver>   PRO chart/image version (default: auto-resolved from GHCR)
 
   # Quota — auto-discovered by default via aws service-quotas get-service-quota
-  --no-quota-discovery              Skip quota discovery, use AWS defaults
-  --quota-discovery=runtime         Operator queries quotas on startup (requires additional IAM permission)
-  --quota-run-microvm-rate    <N>   Override RunMicrovm rate/s (auto-discovered if omitted)
+  --no-quota-discovery               Skip quota discovery, use AWS defaults
+  --quota-discovery=runtime          Operator queries quotas on startup
+  --quota-run-microvm-rate    <N>    Override RunMicrovm rate/s
   --quota-terminate-microvm-rate <N> Override TerminateMicrovm rate/s
-  --quota-suspend-microvm-rate <N>  Override SuspendMicrovm rate/s
-  --quota-resume-microvm-rate  <N>  Override ResumeMicrovm rate/s
-  --quota-auth-token-rate      <N>  Override CreateMicrovmAuthToken rate/s
+  --quota-suspend-microvm-rate <N>   Override SuspendMicrovm rate/s
+  --quota-resume-microvm-rate  <N>   Override ResumeMicrovm rate/s
+  --quota-auth-token-rate      <N>   Override CreateMicrovmAuthToken rate/s
   --quota-concurrent-image-builds <N> Override concurrent image build limit
 
   --cli-only            Only install the microvm CLI (skip Helm installs)
   --dry-run             Print what would be done without executing
   --help                Show this help
 
-Examples:
-  # Full install with private ECR registry + IAM setup
-  ./install_kube_microvm.sh --cluster my-cluster --region us-east-1 \
-    --registry 123456789.dkr.ecr.us-east-1.amazonaws.com --iam
+Environment variables:
+  KUBE_MICROVM_VERSION          Pin Community version (e.g. v1.0.17)
+  KUBE_MICROVM_EDITION          community or pro (same as --edition)
+  KUBE_MICROVM_REGISTRY_TOKEN   GHCR PAT for PRO (same as --registry-token)
+  KUBE_MICROVM_PRO_VERSION      Pin PRO version (same as --pro-version)
 
-  # Install using existing IAM role
+Examples:
+  # Community — full install with IAM setup
+  ./install_kube_microvm.sh --cluster my-cluster --region us-east-1 --iam
+
+  # PRO — full install with GHCR token
+  ./install_kube_microvm.sh --cluster my-cluster --region us-east-1 --iam \
+    --edition pro --registry-token <GHCR_PAT>
+
+  # PRO — with private ECR mirror (air-gapped / enterprise)
+  ./install_kube_microvm.sh --cluster my-cluster --region us-east-1 --iam \
+    --edition pro --registry 123456789.dkr.ecr.us-east-1.amazonaws.com
+
+  # PRO — use existing IAM role, skip IAM step
   ./install_kube_microvm.sh --cluster my-cluster --region us-east-1 \
+    --edition pro --registry-token <GHCR_PAT> \
     --role-arn arn:aws:iam::123456789:role/kube-microvm-operator
 
   # CLI only
@@ -157,10 +213,25 @@ HELP
     esac
 done
 
+# Validate edition
+case "$EDITION" in
+    community|pro) ;;
+    *) error "Unknown edition: $EDITION (must be 'community' or 'pro')"; exit 1 ;;
+esac
+
+# PRO requires a registry token (or a private registry mirror)
+if [[ "$EDITION" == "pro" ]] && ! $CLI_ONLY; then
+    if [[ -z "$REGISTRY_TOKEN" && -z "$REGISTRY" ]]; then
+        error "PRO edition requires --registry-token <GHCR_PAT> or --registry <private-url>"
+        error "Get your GHCR PAT from https://github.com/settings/tokens (read:packages scope)"
+        exit 1
+    fi
+fi
+
 # ─── Detect arch ──────────────────────────────────────────────────────────────
 ARCH="$(uname -m)"
 case "$ARCH" in
-    x86_64)  ARCH_TAG="amd64" ;;
+    x86_64)        ARCH_TAG="amd64" ;;
     aarch64|arm64) ARCH_TAG="arm64" ;;
     *) error "Unsupported architecture: $ARCH"; exit 1 ;;
 esac
@@ -179,7 +250,7 @@ check_prerequisites() {
         check_cmd aws
         [[ -n "$CLUSTER" ]] || { error "--cluster is required (unless --cli-only)"; exit 1; }
     fi
-    success "Prerequisites OK (arch: $ARCH_TAG)"
+    success "Prerequisites OK (arch: $ARCH_TAG, edition: $EDITION)"
 }
 
 # ─── cert-manager check ───────────────────────────────────────────────────────
@@ -210,6 +281,21 @@ ensure_cert_manager() {
     fi
 }
 
+# ─── GHCR auth for PRO ────────────────────────────────────────────────────────
+ghcr_login_pro() {
+    [[ "$EDITION" != "pro" ]] && return 0
+    [[ -z "$REGISTRY_TOKEN" ]] && return 0  # using private registry mirror — no GHCR auth needed
+    info "Authenticating with GHCR for PRO images..."
+    run "echo ${REGISTRY_TOKEN} | helm registry login ghcr.io --username token --password-stdin"
+    success "GHCR authenticated"
+}
+
+ghcr_logout_pro() {
+    [[ "$EDITION" != "pro" ]] && return 0
+    [[ -z "$REGISTRY_TOKEN" ]] && return 0
+    helm registry logout ghcr.io 2>/dev/null || true
+}
+
 # ─── Load/save config ─────────────────────────────────────────────────────────
 load_config() {
     mkdir -p "$CONFIG_DIR"
@@ -221,11 +307,13 @@ save_config() {
     cat > "$CONFIG_FILE" <<EOF
 # KubeMicroVM installer config — written by install_kube_microvm.sh
 KUBE_MICROVM_VERSION="${VERSION}"
+KUBE_MICROVM_EDITION="${EDITION}"
 KUBE_MICROVM_REGISTRY="${REGISTRY}"
 KUBE_MICROVM_REGION="${REGION}"
 KUBE_MICROVM_CLUSTER="${CLUSTER}"
 KUBE_MICROVM_ROLE_ARN="${ROLE_ARN}"
 EOF
+    [[ -n "$PRO_VERSION" ]] && echo "KUBE_MICROVM_PRO_VERSION=\"${PRO_VERSION}\"" >> "$CONFIG_FILE"
     info "Config saved to $CONFIG_FILE"
 }
 
@@ -243,11 +331,26 @@ import_images() {
             docker login --username AWS --password-stdin $REGISTRY"
     fi
 
-    for IMAGE_NAME in kube-microvm-operator microvm-auth-agent; do
-        SRC_REPO="ghcr.io/codriverlabs/${IMAGE_NAME}"
-        DST_REPO="${REGISTRY}/codriverlabs/${IMAGE_NAME}"
+    if [[ "$EDITION" == "community" ]]; then
+        IMAGES=("kube-microvm-operator" "microvm-auth-agent")
+        SRC_BASE="ghcr.io/codriverlabs"
+    else
+        # PRO — authenticate GHCR if token provided
+        if [[ -n "$REGISTRY_TOKEN" ]]; then
+            run "echo ${REGISTRY_TOKEN} | docker login ghcr.io --username token --password-stdin"
+        fi
+        IMAGES=("kubemicrovm-pro/kube-microvm-operator-pro" "kubemicrovm-pro/microvm-gateway" "microvm-auth-agent")
+        SRC_BASE="ghcr.io/codriverlabs"
+    fi
 
-        # Create ECR repo if needed
+    for IMAGE_PATH in "${IMAGES[@]}"; do
+        IMAGE_NAME="${IMAGE_PATH##*/}"
+        SRC_REPO="${SRC_BASE}/${IMAGE_PATH}"
+        DST_REPO="${REGISTRY}/codriverlabs/${IMAGE_NAME}"
+        TAG="${IMAGE_TAG}"
+        # auth-agent always uses Community tag even in PRO
+        [[ "$IMAGE_NAME" == "microvm-auth-agent" ]] && TAG="${IMAGE_TAG}"
+
         if [[ "$REGISTRY" == *".ecr."* ]]; then
             info "Ensuring ECR repo: codriverlabs/${IMAGE_NAME}"
             run "aws ecr create-repository \
@@ -255,38 +358,39 @@ import_images() {
                 --region ${ECR_REGION} 2>/dev/null || true"
         fi
 
-        # Pull, retag, push both arches
         for ARCH in amd64 arm64; do
-            SRC="${SRC_REPO}:${IMAGE_TAG}-${ARCH}"
-            DST="${DST_REPO}:${IMAGE_TAG}"
-            info "  $SRC → $DST (${ARCH})"
+            SRC="${SRC_REPO}:${TAG}-${ARCH}"
+            info "  $SRC → ${DST_REPO}:${TAG}-${ARCH}"
             run "docker pull --platform linux/${ARCH} $SRC"
-            run "docker tag $SRC ${DST_REPO}:${IMAGE_TAG}-${ARCH}"
-            run "docker push ${DST_REPO}:${IMAGE_TAG}-${ARCH}"
+            run "docker tag $SRC ${DST_REPO}:${TAG}-${ARCH}"
+            run "docker push ${DST_REPO}:${TAG}-${ARCH}"
         done
 
-        # Create and push multi-arch manifest
-        run "docker manifest create ${DST_REPO}:${IMAGE_TAG} \
-            ${DST_REPO}:${IMAGE_TAG}-amd64 \
-            ${DST_REPO}:${IMAGE_TAG}-arm64"
-        run "docker manifest push ${DST_REPO}:${IMAGE_TAG}"
+        run "docker manifest create ${DST_REPO}:${TAG} \
+            ${DST_REPO}:${TAG}-amd64 \
+            ${DST_REPO}:${TAG}-arm64"
+        run "docker manifest push ${DST_REPO}:${TAG}"
         success "Pushed $IMAGE_NAME → $REGISTRY"
     done
 }
 
 # ─── b. IAM role + Pod Identity ───────────────────────────────────────────────
+# Both Community and PRO use the same IAM role: kube-microvm-operator
+# The CloudFormation template is published with the Community release and
+# is authoritative for both editions.
 setup_iam() {
     ! $DO_IAM && [[ -z "$ROLE_ARN" ]] && return 0
     [[ -n "$ROLE_ARN" ]] && { info "Using existing role: $ROLE_ARN"; return 0; }
 
     step "b. Setting up IAM role + Pod Identity"
+    info "IAM role name: kube-microvm-operator (shared across Community and PRO)"
 
     STACK_NAME="kube-microvm-operator-role-${CLUSTER}"
     IAM_TEMPLATE="${SCRIPT_DIR}/iam/kube-microvm-operator-role.yaml"
 
-    # Download IAM template from release if not bundled locally
+    # Download IAM template from Community release (authoritative for both editions)
     if [[ ! -f "$IAM_TEMPLATE" ]]; then
-        info "Downloading IAM CloudFormation template from release..."
+        info "Downloading IAM CloudFormation template from Community release ${VERSION}..."
         RELEASE_BASE="https://github.com/codriverlabs/KubeMicroVM/releases/download/${VERSION}"
         mkdir -p "${SCRIPT_DIR}/iam"
         run "curl -fsSL ${RELEASE_BASE}/kube-microvm-operator-role.yaml -o $IAM_TEMPLATE"
@@ -294,7 +398,6 @@ setup_iam() {
         info "Verifying IAM template checksum..."
         if ! sha256sum -c "${IAM_TEMPLATE}.sha256" 2>/dev/null; then
             error "Checksum verification failed for IAM template!"
-            error "The downloaded file may be corrupted or tampered with."
             rm -f "$IAM_TEMPLATE" "${IAM_TEMPLATE}.sha256"
             exit 1
         fi
@@ -317,13 +420,7 @@ setup_iam() {
 
     info "Configuring IAM role for operator service account"
 
-    # Detect cluster type and configure credentials accordingly:
-    # 1. EKS (standard or Auto Mode): aws eks list-pod-identity-associations succeeds
-    # 2. EKS-DX: eks-dx CLI available
-    # 3. Fallback: IRSA annotation on ServiceAccount
-
     if aws eks list-pod-identity-associations --cluster-name "$CLUSTER" --region "$REGION" &>/dev/null; then
-        # EKS cluster (standard or Auto Mode) — use native Pod Identity
         info "EKS Pod Identity detected — creating association"
         run "aws eks create-pod-identity-association \
             --cluster-name $CLUSTER \
@@ -334,7 +431,6 @@ setup_iam() {
         success "Pod Identity association created: $ROLE_ARN"
 
     elif command -v eks-dx &>/dev/null; then
-        # EKS-DX cluster — tag role for automatic trust policy, use eks-dx CLI
         info "EKS-DX detected — configuring Pod Identity via eks-dx CLI"
         ROLE_NAME="${ROLE_ARN##*/}"
         run "aws iam tag-role --role-name $ROLE_NAME \
@@ -347,13 +443,11 @@ setup_iam() {
         success "EKS-DX Pod Identity association created: $ROLE_ARN"
 
     else
-        # Fallback: IRSA annotation
         info "Pod Identity not available — configuring IRSA annotation"
         run "kubectl annotate serviceaccount kube-microvm-operator \
             -n kube-microvm \
             eks.amazonaws.com/role-arn=$ROLE_ARN \
             --overwrite 2>/dev/null || true"
-        # Restart operator to pick up new annotation
         run "kubectl rollout restart deployment kube-microvm-operator -n kube-microvm 2>/dev/null || true"
         success "IRSA annotation set: $ROLE_ARN"
     fi
@@ -365,25 +459,20 @@ setup_iam() {
 discover_quotas() {
     step "b2. Discovering AWS Lambda MicroVMs service quotas"
 
-    # Skip if all quotas explicitly overridden via flags
     local all_set=true
     for v in "$QUOTA_RUN_MICROVM_RATE" "$QUOTA_TERMINATE_MICROVM_RATE" \
               "$QUOTA_SUSPEND_MICROVM_RATE" "$QUOTA_RESUME_MICROVM_RATE" \
               "$QUOTA_AUTH_TOKEN_RATE" "$QUOTA_CONCURRENT_IMAGE_BUILDS"; do
         [[ -z "$v" ]] && all_set=false && break
     done
-    if $all_set; then
-        info "All quota values explicitly set — skipping discovery"
-        return 0
-    fi
+    $all_set && { info "All quota values explicitly set — skipping discovery"; return 0; }
 
-    # Quota codes for Lambda MicroVMs API
-    local SQ_RUN="L-91B95582"        # Burst rate of RunMicrovm
-    local SQ_TERMINATE="L-2CCA0501"  # Burst rate of TerminateMicrovm
-    local SQ_SUSPEND="L-139F9A48"    # Burst rate of SuspendMicrovm
-    local SQ_RESUME="L-25EEC0A4"     # Burst rate of ResumeMicrovm
-    local SQ_AUTH_TOKEN="L-D65D9F16" # Burst rate of CreateMicrovmAuthToken
-    local SQ_IMAGE_BUILDS="L-72E0D058" # Concurrent image builds
+    local SQ_RUN="L-91B95582"
+    local SQ_TERMINATE="L-2CCA0501"
+    local SQ_SUSPEND="L-139F9A48"
+    local SQ_RESUME="L-25EEC0A4"
+    local SQ_AUTH_TOKEN="L-D65D9F16"
+    local SQ_IMAGE_BUILDS="L-72E0D058"
 
     get_quota() {
         local code="$1" fallback="$2"
@@ -394,11 +483,7 @@ discover_quotas() {
             --region "${REGION}" \
             --query "Quota.Value" \
             --output text 2>/dev/null | cut -d. -f1)
-        if [[ -n "$val" && "$val" =~ ^[0-9]+$ ]]; then
-            echo "$val"
-        else
-            echo "$fallback"
-        fi
+        [[ -n "$val" && "$val" =~ ^[0-9]+$ ]] && echo "$val" || echo "$fallback"
     }
 
     if aws service-quotas get-service-quota \
@@ -419,7 +504,7 @@ discover_quotas() {
                 "suspend=${QUOTA_SUSPEND_MICROVM_RATE}/s authToken=${QUOTA_AUTH_TOKEN_RATE}/s" \
                 "imageBuilds=${QUOTA_CONCURRENT_IMAGE_BUILDS}"
     else
-        warn "Cannot query service quotas (requires service-quotas:GetServiceQuota) — using AWS defaults"
+        warn "Cannot query service quotas — using AWS defaults"
         QUOTA_RUN_MICROVM_RATE="${QUOTA_RUN_MICROVM_RATE:-5}"
         QUOTA_TERMINATE_MICROVM_RATE="${QUOTA_TERMINATE_MICROVM_RATE:-10}"
         QUOTA_SUSPEND_MICROVM_RATE="${QUOTA_SUSPEND_MICROVM_RATE:-2}"
@@ -429,11 +514,18 @@ discover_quotas() {
     fi
 }
 
-# ─── c. helm install kube-microvm-operator ────────────────────────────────────
+# ─── c. helm install operator ─────────────────────────────────────────────────
 install_operator() {
-    step "c. Installing kube-microvm-operator Helm chart"
+    if [[ "$EDITION" == "pro" ]]; then
+        install_operator_pro
+    else
+        install_operator_community
+    fi
+}
 
-    # Determine chart source
+install_operator_community() {
+    step "c. Installing kube-microvm-operator (Community) Helm chart"
+
     if [[ -f "${SCRIPT_DIR}/charts/kube-microvm-operator-${HELM_VERSION}.tar.gz" ]]; then
         CHART="${SCRIPT_DIR}/charts/kube-microvm-operator-${HELM_VERSION}.tar.gz"
         info "Using bundled chart: $CHART"
@@ -442,18 +534,14 @@ install_operator() {
         info "Using GHCR chart: $CHART"
     fi
 
-    # Determine image
     OPERATOR_IMAGE="${GHCR_OPERATOR}:${IMAGE_TAG}"
     [[ -n "$REGISTRY" ]] && OPERATOR_IMAGE="${REGISTRY}/codriverlabs/kube-microvm-operator:${IMAGE_TAG}"
 
-    # Determine auth-agent image (injected as sidecar by mutating webhook)
     AGENT_IMAGE="${GHCR_AGENT}:${IMAGE_TAG}"
     [[ -n "$REGISTRY" ]] && AGENT_IMAGE="${REGISTRY}/codriverlabs/microvm-auth-agent:${IMAGE_TAG}"
 
-    # Ensure namespace
     run "kubectl create namespace kube-microvm --dry-run=client -o yaml | kubectl apply -f -"
 
-    # Helm install
     HELM_ARGS="--namespace kube-microvm \
         --set app.image=${OPERATOR_IMAGE} \
         --set app.envs.AWS_REGION=${REGION} \
@@ -461,11 +549,54 @@ install_operator() {
         --timeout 4m --wait"
 
     [[ -n "$ROLE_ARN" ]] && HELM_ARGS="$HELM_ARGS --set serviceAccount.roleArn=${ROLE_ARN}"
+    _append_quota_args
 
-    # Quota overrides — only set if explicitly provided (populated by discover_quotas())
-    # These inject env vars into the operator container via app.envs.*.
-    # Do NOT use --set quotas.* — those paths were removed; see
-    # docs/design/pro-artifact-consumability.md
+    run "helm upgrade --install kube-microvm-operator $CHART $HELM_ARGS"
+    success "kube-microvm-operator (Community) installed"
+}
+
+install_operator_pro() {
+    step "c. Installing kube-microvm-pro (PRO) Helm chart"
+
+    if [[ -f "${SCRIPT_DIR}/charts/kube-microvm-pro-${PRO_HELM_VERSION}.tar.gz" ]]; then
+        CHART="${SCRIPT_DIR}/charts/kube-microvm-pro-${PRO_HELM_VERSION}.tar.gz"
+        info "Using bundled PRO chart: $CHART"
+    else
+        CHART="${GHCR_PRO_HELM}/kube-microvm-pro --version $PRO_HELM_VERSION"
+        info "Using GHCR PRO chart: $CHART (authenticated)"
+    fi
+
+    OPERATOR_IMAGE="${GHCR_PRO_OPERATOR}:${PRO_IMAGE_TAG}"
+    GATEWAY_IMAGE="${GHCR_PRO_GATEWAY}:${PRO_IMAGE_TAG}"
+    AGENT_IMAGE="${GHCR_AGENT}:${IMAGE_TAG}"
+
+    if [[ -n "$REGISTRY" ]]; then
+        OPERATOR_IMAGE="${REGISTRY}/codriverlabs/kube-microvm-operator-pro:${PRO_IMAGE_TAG}"
+        GATEWAY_IMAGE="${REGISTRY}/codriverlabs/microvm-gateway:${PRO_IMAGE_TAG}"
+        AGENT_IMAGE="${REGISTRY}/codriverlabs/microvm-auth-agent:${IMAGE_TAG}"
+    fi
+
+    run "kubectl create namespace kube-microvm --dry-run=client -o yaml | kubectl apply -f -"
+
+    HELM_ARGS="--namespace kube-microvm \
+        --set app.image=${OPERATOR_IMAGE} \
+        --set app.envs.AWS_REGION=${REGION} \
+        --set app.envs.MICROVM_AUTH_AGENT_IMAGE=${AGENT_IMAGE} \
+        --set app.envs.PRO_GATEWAY_DEFAULT_IMAGE=${GATEWAY_IMAGE} \
+        --timeout 5m --wait"
+
+    [[ -n "$ROLE_ARN" ]] && HELM_ARGS="$HELM_ARGS --set serviceAccount.roleArn=${ROLE_ARN}"
+    _append_quota_args
+
+    run "helm upgrade --install kube-microvm-operator-pro $CHART $HELM_ARGS"
+    success "kube-microvm-pro (PRO) installed"
+
+    # Inject caBundle into MutatingWebhookConfiguration
+    # (PRO chart doesn't use cert-manager; caBundle is patched post-install)
+    _patch_pro_cabundle
+}
+
+_append_quota_args() {
     [[ -n "$QUOTA_RUN_MICROVM_RATE" ]]        && HELM_ARGS="$HELM_ARGS --set-string app.envs.AWS_QUOTA_RUN_MICROVM_RATE=${QUOTA_RUN_MICROVM_RATE}"
     [[ -n "$QUOTA_TERMINATE_MICROVM_RATE" ]]  && HELM_ARGS="$HELM_ARGS --set-string app.envs.AWS_QUOTA_TERMINATE_MICROVM_RATE=${QUOTA_TERMINATE_MICROVM_RATE}"
     [[ -n "$QUOTA_SUSPEND_MICROVM_RATE" ]]    && HELM_ARGS="$HELM_ARGS --set-string app.envs.AWS_QUOTA_SUSPEND_MICROVM_RATE=${QUOTA_SUSPEND_MICROVM_RATE}"
@@ -473,24 +604,55 @@ install_operator() {
     [[ -n "$QUOTA_AUTH_TOKEN_RATE" ]]         && HELM_ARGS="$HELM_ARGS --set-string app.envs.AWS_QUOTA_AUTH_TOKEN_RATE=${QUOTA_AUTH_TOKEN_RATE}"
     [[ -n "$QUOTA_CONCURRENT_IMAGE_BUILDS" ]] && HELM_ARGS="$HELM_ARGS --set-string app.envs.AWS_QUOTA_CONCURRENT_IMAGE_BUILDS=${QUOTA_CONCURRENT_IMAGE_BUILDS}"
     $QUOTA_DISCOVERY_RUNTIME                  && HELM_ARGS="$HELM_ARGS --set-string app.envs.AWS_QUOTA_DISCOVERY_ENABLED=true"
+}
 
-    run "helm upgrade --install kube-microvm-operator $CHART $HELM_ARGS"
-    success "kube-microvm-operator installed"
+_patch_pro_cabundle() {
+    info "Waiting for PRO operator to register MutatingWebhookConfiguration..."
+    for i in $(seq 1 30); do
+        if kubectl get mutatingwebhookconfiguration kube-microvm-operator-mutating \
+            > /dev/null 2>&1; then
+            CA_BUNDLE=$(kubectl get secret kube-microvm-operator-webhook-tls \
+                -n kube-microvm \
+                -o jsonpath='{.data.tls\.crt}' 2>/dev/null || echo "")
+            if [[ -n "$CA_BUNDLE" ]]; then
+                kubectl patch mutatingwebhookconfiguration kube-microvm-operator-mutating \
+                    --type='json' \
+                    -p="[
+                      {\"op\":\"replace\",\"path\":\"/webhooks/0/clientConfig/caBundle\",\"value\":\"${CA_BUNDLE}\"},
+                      {\"op\":\"replace\",\"path\":\"/webhooks/1/clientConfig/caBundle\",\"value\":\"${CA_BUNDLE}\"}
+                    ]" 2>/dev/null || \
+                kubectl patch mutatingwebhookconfiguration kube-microvm-operator-mutating \
+                    --type='json' \
+                    -p="[
+                      {\"op\":\"add\",\"path\":\"/webhooks/0/clientConfig/caBundle\",\"value\":\"${CA_BUNDLE}\"},
+                      {\"op\":\"add\",\"path\":\"/webhooks/1/clientConfig/caBundle\",\"value\":\"${CA_BUNDLE}\"}
+                    ]" 2>/dev/null && \
+                success "caBundle injected into MutatingWebhookConfiguration"
+                kubectl patch validatingwebhookconfiguration kube-microvm-operator-validating \
+                    --type='json' \
+                    -p="[{\"op\":\"replace\",\"path\":\"/webhooks/0/clientConfig/caBundle\",\"value\":\"${CA_BUNDLE}\"}]" 2>/dev/null || \
+                kubectl patch validatingwebhookconfiguration kube-microvm-operator-validating \
+                    --type='json' \
+                    -p="[{\"op\":\"add\",\"path\":\"/webhooks/0/clientConfig/caBundle\",\"value\":\"${CA_BUNDLE}\"}]" 2>/dev/null && \
+                success "caBundle injected into ValidatingWebhookConfiguration"
+            fi
+            return 0
+        fi
+        sleep 5
+    done
+    warn "MutatingWebhookConfiguration not found after 150s — webhook injection skipped"
+    warn "Sidecar injection and MicroVMClass defaults may not work until operator restarts"
 }
 
 # ─── d. Auth-agent image availability ─────────────────────────────────────────
 install_auth_agent() {
     step "d. Verifying microvm-auth-agent image"
-
-    # Image import is already handled by import_images() in step (a) when --registry is set
-    # Operator is configured with MICROVM_AUTH_AGENT_IMAGE env in step (c)
     if [[ -n "$REGISTRY" ]]; then
         success "Auth-agent image imported to $REGISTRY (step a) and operator configured (step c)"
     else
         info "Auth-agent image: ${GHCR_AGENT}:${IMAGE_TAG} (pulled from GHCR at injection time)"
         success "Auth-agent ready"
     fi
-}    success "microvm-auth-agent installed"
 }
 
 # ─── e. Install CLI ───────────────────────────────────────────────────────────
@@ -499,25 +661,20 @@ install_cli() {
 
     mkdir -p "$INSTALL_DIR"
 
-    # Check if bundled binary exists
     BUNDLED="${SCRIPT_DIR}/bin/microvm-linux-${ARCH_TAG}"
     if [[ -f "$BUNDLED" ]]; then
         info "Installing bundled binary: $BUNDLED"
         run "cp $BUNDLED $INSTALL_DIR/microvm"
     else
-        # Download from GitHub Release — VERSION includes 'v' prefix (e.g. v1.0.0)
         info "Downloading microvm-linux-${ARCH_TAG} (version: ${VERSION})"
         DOWNLOAD_URL="https://github.com/codriverlabs/KubeMicroVM/releases/download/${VERSION}/microvm-linux-${ARCH_TAG}"
         run "curl -fsSL $DOWNLOAD_URL -o $INSTALL_DIR/microvm"
     fi
 
     run "chmod +x $INSTALL_DIR/microvm"
-
-    # Create kubectl-microvm symlink
     run "ln -sf $INSTALL_DIR/microvm $INSTALL_DIR/kubectl-microvm"
     success "Installed: $INSTALL_DIR/microvm → symlink: $INSTALL_DIR/kubectl-microvm"
 
-    # Shell completion
     SHELL_RC=""
     [[ -f "$HOME/.bashrc" ]] && SHELL_RC="$HOME/.bashrc"
     [[ -f "$HOME/.zshrc" && -z "$SHELL_RC" ]] && SHELL_RC="$HOME/.zshrc"
@@ -530,7 +687,6 @@ install_cli() {
         info "Reload with: source $SHELL_RC"
     fi
 
-    # PATH hint if needed
     if ! echo "$PATH" | grep -q "$INSTALL_DIR"; then
         warn "$INSTALL_DIR is not in your PATH"
         warn "Add to your shell rc: export PATH=\"\$PATH:$INSTALL_DIR\""
@@ -541,7 +697,6 @@ install_cli() {
 validate() {
     step "f. Validating installation"
 
-    # CLI
     if command -v microvm &>/dev/null; then
         VER=$(microvm --version 2>/dev/null | grep -oP '\d+\.\d+\.\d+' | head -1 || echo "unknown")
         success "microvm CLI: $VER"
@@ -551,17 +706,19 @@ validate() {
 
     $CLI_ONLY && return 0
 
-    # Operator pod
+    # Check the right deployment name per edition
+    local DEPLOY_NAME="kube-microvm-operator"
+    [[ "$EDITION" == "pro" ]] && DEPLOY_NAME="kube-microvm-operator"  # same SA/deploy name in PRO
+
     OPERATOR_READY=$(kubectl get pods -n kube-microvm \
         -l app.kubernetes.io/name=kube-microvm-operator \
         -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "")
     if [[ "$OPERATOR_READY" == "True" ]]; then
-        success "kube-microvm-operator: Running"
+        success "kube-microvm-operator ($EDITION): Running"
     else
-        warn "kube-microvm-operator not ready yet — check: kubectl get pods -n kube-microvm"
+        warn "Operator not ready yet — check: kubectl get pods -n kube-microvm"
     fi
 
-    # AWS connectivity (optional — requires credentials)
     if command -v microvm &>/dev/null && command -v aws &>/dev/null; then
         info "Testing AWS connectivity..."
         if microvm image list-base --region "$REGION" &>/dev/null; then
@@ -575,27 +732,35 @@ validate() {
 # ─── Main ─────────────────────────────────────────────────────────────────────
 main() {
     echo ""
-    echo -e "${BOLD}KubeMicroVM Installer${NC} (version: ${VERSION:-resolving...})"
+    echo -e "${BOLD}KubeMicroVM Installer${NC} (edition: ${EDITION}, version: ${VERSION:-resolving...})"
     echo "────────────────────────────────────────"
     $DRY_RUN && warn "DRY-RUN mode — no changes will be made"
 
     resolve_version
-    # Helm chart and image tags must not have 'v' prefix
+    # Tags/versions must not have 'v' prefix
     HELM_VERSION="${VERSION#v}"
     IMAGE_TAG="${VERSION#v}"
 
-    echo -e "${BOLD}KubeMicroVM Installer${NC} (version: ${VERSION})"
+    if [[ "$EDITION" == "pro" ]]; then
+        resolve_pro_version
+        PRO_HELM_VERSION="${PRO_VERSION#v}"
+        PRO_IMAGE_TAG="${PRO_VERSION#v}"
+    fi
+
+    echo -e "${BOLD}KubeMicroVM Installer${NC} (edition: ${EDITION}, community: ${VERSION}${PRO_VERSION:+, pro: ${PRO_VERSION}})"
 
     load_config
     check_prerequisites
 
     if ! $CLI_ONLY; then
+        [[ "$EDITION" == "pro" ]] && ghcr_login_pro
         import_images
         setup_iam
         ensure_cert_manager
         discover_quotas
         install_operator
         install_auth_agent
+        [[ "$EDITION" == "pro" ]] && ghcr_logout_pro
     fi
 
     install_cli
@@ -603,13 +768,16 @@ main() {
     validate
 
     echo ""
-    echo -e "${GREEN}${BOLD}Installation complete!${NC}"
+    echo -e "${GREEN}${BOLD}Installation complete! (${EDITION})${NC}"
     echo ""
     if ! $CLI_ONLY; then
         echo "Next steps:"
         echo "  1. Label a namespace:  kubectl label namespace default lambda.aws.amazon.com/manage-microvms=true"
         echo "  2. Create a MicroVMImage and MicroVM"
-        echo "  3. See docs: https://github.com/codriverlabs/KubeMicroVM"
+        if [[ "$EDITION" == "pro" ]]; then
+            echo "  3. Create a MicroVMGateway for session-affine routing"
+        fi
+        echo "  Docs: https://codriverlabs.github.io/KubeMicroVM/"
     fi
 }
 
