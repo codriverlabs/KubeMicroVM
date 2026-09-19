@@ -2,6 +2,10 @@
 
 CloudFormation templates for provisioning least-privilege IAM roles for the KubeMicroVM operator.
 
+> **Community and PRO use the same IAM role.** KubeMicroVM PRO is the Community operator
+> extended with PRO capabilities — it does not require a separate IAM identity. Deploy
+> this stack once; both Community and PRO installations share it.
+
 ## Quick Deploy
 
 ### EKS Pod Identity (recommended)
