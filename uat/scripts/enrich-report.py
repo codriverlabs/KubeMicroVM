@@ -175,6 +175,28 @@ PRO_DOCS = {
     "IMG-01": ("Duplicate-named MicroVMImage rejected by webhook",    "/design/image-arn-collision-prevention"),
     "IMG-02": ("Cross-namespace imageRef + Binding path unaffected",  "/pro/cross-namespace-imageref"),
     "IMG-03": ("Delete blocked by running VMs emits event",           "/design/image-arn-collision-prevention"),
+
+    # ── Exclusive Session (TC-*) ─────────────────────────────────────────────
+    "TC-01": ("First connection assigns VM to user",              "/pro/gateway#session-lifecycle"),
+    "TC-02": ("Same user routes to same VM (stickiness)",         "/pro/gateway#session-lifecycle"),
+    "TC-03": ("Different user gets different VM",                 "/pro/gateway#session-lifecycle"),
+    "TC-04": ("No capacity returns 503",                          "/pro/gateway#session-lifecycle"),
+    "TC-05": ("Released VM available for new user",               "/pro/gateway#session-lifecycle"),
+    "TC-06": ("Idle suspend triggers after timeout",              "/pro/gateway#session-lifecycle"),
+    "TC-07": ("Resume on access after suspend",                   "/pro/gateway#session-lifecycle"),
+    "TC-08": ("Assignments survive gateway pod restart",          "/pro/gateway#session-lifecycle"),
+    "TC-09": ("Unauthorized access denied",                       "/user-guides/rbac#4-app-pod-rbac-token-access"),
+    "TC-10": ("Max session duration forces release",              "/pro/gateway#session-lifecycle"),
+
+    # ── Suspend Resume (SR-*) ────────────────────────────────────────────────
+    "SR-01": ("VM starts in Running state",                       "/user-guides/drift-and-autosuspend"),
+    "SR-02": ("Patch to Suspended changes DesiredState",          "/user-guides/drift-and-autosuspend#auto-suspend-idle-policy"),
+    "SR-03": ("VM state is Suspended",                            "/user-guides/drift-and-autosuspend#auto-suspend-idle-policy"),
+    "SR-04": ("Patch to Running resumes VM",                      "/user-guides/drift-and-autosuspend#auto-resume-flow"),
+    "SR-05": ("Resumed VM is accessible",                         "/user-guides/drift-and-autosuspend#auto-resume-flow"),
+
+    # ── Cleanup ───────────────────────────────────────────────────────────────
+    "CLEANUP-01": ("Remove all session resources",                "/user-guides/quick-start#tear-down"),
 }
 
 # Unified map — PRO entries override Community if IDs collide (none currently do)
