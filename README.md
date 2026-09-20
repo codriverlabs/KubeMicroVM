@@ -7,8 +7,11 @@ you already use.
 Built with **Quarkus 3**, **JOSDK**, **GraalVM native image** (Java 25).
 
 [![Release](https://img.shields.io/github/v/release/codriverlabs/KubeMicroVM)](https://github.com/codriverlabs/KubeMicroVM/releases)
+[![UAT](https://img.shields.io/badge/UAT-63%2F63%20PASS-brightgreen)](https://codriverlabs.github.io/KubeMicroVM/uat-reports/v1.0.18-ga/report.html)
 
 📢 [GA Announcement](https://www.linkedin.com/feed/update/urn:li:activity:7478884939476733952/) — 158+ reactions, discussed by AWS engineers and cloud-native leaders
+
+🔬 **UAT results & Community vs PRO comparison**: [codriverlabs.github.io/KubeMicroVM](https://codriverlabs.github.io/KubeMicroVM/)
 
 ---
 
@@ -57,7 +60,7 @@ scope.
 
 ## Installation
 
-> **Latest stable release: `v1.0.15`** — [Download](https://github.com/codriverlabs/KubeMicroVM/releases/latest)
+> **Latest stable release: `v1.0.18`** — [Download](https://github.com/codriverlabs/KubeMicroVM/releases/latest)
 >
 > **Replace throughout this section**:
 > - `<CLUSTER>` → your EKS cluster name
