@@ -5,6 +5,7 @@ Every test name links directly to the feature documentation it validates.
 
 | Release | Date | Result | Report |
 |---------|------|--------|--------|
+| [v1.0.18 GA](v1.0.18-ga/report.html) | 2026-09-20 | **63/63 PASS** ✅ | [report.html](v1.0.18-ga/report.html) · [log.html](v1.0.18-ga/log.html) |
 | [v1.0.17 GA](v1.0.17-ga/report.html) | 2026-09-17 | **63/63 PASS** ✅ | [report.html](v1.0.17-ga/report.html) · [log.html](v1.0.17-ga/log.html) |
 
 ## Suites
