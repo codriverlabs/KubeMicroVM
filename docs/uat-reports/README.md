@@ -30,3 +30,12 @@ documentation links into every test before rendering the HTML.
 ```bash
 make uat-report UAT_RESULTS=uat/results/<run-dir>
 ```
+
+## PRO Edition Reports
+
+PRO UAT results are mirrored here for public access until a dedicated
+public PRO repository is available.
+
+| Release | Date | Result | Report |
+|---------|------|--------|--------|
+| [PRO v1.1.1 GA](pro-v1.1.1-ga/report.html) | 2026-09-20 | **38/38 PASS** ✅ (CE v1.0.18) | [report.html](pro-v1.1.1-ga/report.html) · [log.html](pro-v1.1.1-ga/log.html) |
