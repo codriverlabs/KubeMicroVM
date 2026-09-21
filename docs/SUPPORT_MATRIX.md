@@ -1,8 +1,8 @@
 # KubeMicroVM — Support Matrix
 
-**Release:** v1.0.17  
-**Date:** 2026-09-16  
-**Test results:** [UAT v1.0.17-rc3 — 63/63 pass](../uat/results/v1.0.17-rc3-clean/)
+**Release:** v1.0.18
+**Date:** 2026-09-20
+**Test results:** [UAT v1.0.18 GA — 63/63 pass](https://codriverlabs.github.io/KubeMicroVM/uat-reports/v1.0.18-ga/report.html)
 
 ---
 
@@ -33,6 +33,8 @@
 | MicroVMImage (memory sizing) | `production-supported` | 08 Memory Sizing |
 | MicroVMImage (version pruning) | `integration-tested` | — |
 | MicroVMImage (generation update) | `integration-tested` | — |
+| MicroVMImage (ARN collision prevention — duplicate name webhook) | `production-supported` | 11 Admission (ADM-08/09) |
+| MicroVMImage (delete blocked by running VMs) | `production-supported` | 11 Admission (ADM-09) |
 | MicroVMReplicaSet (scale up/down) | `production-supported` | 05 ReplicaSet |
 | MicroVMReplicaSet (rolling update) | `production-supported` | 05 ReplicaSet |
 | MicroVMReplicaSet (health eviction) | `integration-tested` | — |
@@ -67,6 +69,7 @@
 | Namespace label selector (watch control) | `production-supported` | 02 RBAC | — |
 | AWS connectivity health check | `implemented` | — | — |
 | Operator liveness/readiness probes | `production-supported` | 00 Cluster Setup | — |
+| Pod Identity association verification | `production-supported` | 00 Cluster Setup | — |
 | Micrometer metrics (counters, timers) | `implemented` | — | — |
 | SPI: ImageRefResolver | `integration-tested` | — | 13 (SPI defaults) |
 | SPI: TenantResolver | `integration-tested` | — | 13 (SPI defaults) |
@@ -171,7 +174,7 @@
 | Feature | Priority | Notes |
 |---------|----------|-------|
 | ListMicrovmImages (AWS state) | P3 | CLI shows CRs only |
-| Cross-namespace imageRef | P3 | Current: same namespace only |
+| Cross-namespace imageRef | PRO | Available in KubeMicroVM PRO via `MicroVMImageBinding` |
 | Tag sync | Blocked | AWS API doesn't support `microvm:` resource type |
 | macOS native CLI | P3 | Linux amd64/arm64 only |
 | Krew manifest | P3 | Distribution |
@@ -192,7 +195,7 @@ and CLI workflows beyond the official ACK controller.
 
 ---
 
-## Test Counts (v1.0.17)
+## Test Counts (v1.0.18)
 
 | Suite | Tests | Status |
 |-------|-------|--------|
