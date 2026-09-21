@@ -87,8 +87,8 @@
 | `microvm delete` | `production-supported` | |
 | `microvm pause` | `production-supported` | |
 | `microvm resume` | `production-supported` | |
-| `microvm start` | `implemented` | Alias for resume |
-| `microvm stop` | `implemented` | Alias for pause |
+| `microvm start` | `production-supported` | Alias for resume |
+| `microvm stop` | `production-supported` | Alias for pause |
 | `microvm logs` | `implemented` | |
 | `microvm token --direct` | `production-supported` | |
 | `microvm token` (via operator) | `production-supported` | |
