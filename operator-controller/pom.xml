@@ -275,6 +275,58 @@
                 <quarkus.native.container-build>false</quarkus.native.container-build>
             </properties>
         </profile>
+        <!--
+          Offload the GraalVM native build to remote workers, one per architecture, via the
+          scaleout-build control plane. Activate with the scaleout profile.
+
+          Quarkus must emit its native-image sources first, because a Quarkus native build is not a plain
+          native-image invocation: augmentation generates a Quarkus feature registration plus reflection
+          and resource configuration that cannot be reconstructed from a classpath alone. The plugin
+          detects target/native-sources and reuses the argument file Quarkus wrote, rather than deriving
+          one of its own.
+
+              ./mvnw -B -pl operator-controller -am package -Pscaleout \
+                  -Dquarkus.native.enabled=true -Dquarkus.native.sources-only=true
+
+          The developer needs no AWS permissions beyond invoking the control-plane function: no ECS, S3,
+          CloudWatch or ECR access at all.
+        -->
+        <profile>
+            <id>scaleout</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>ai.codriverlabs</groupId>
+                        <artifactId>scaleout-build-maven-plugin</artifactId>
+                        <version>1.0.0-SNAPSHOT</version>
+                        <executions>
+                            <execution>
+                                <id>native-image-both-architectures</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>build</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <buildKinds>
+                                <buildKind>native</buildKind>
+                            </buildKinds>
+                            <architectures>
+                                <architecture>x86_64</architecture>
+                                <architecture>arm64</architecture>
+                            </architectures>
+                            <!-- Both cells remotely, including the one matching this host. -->
+                            <forceRemote>true</forceRemote>
+                            <!-- A real Quarkus app takes far longer than a hello world. -->
+                            <timeoutMinutes>25</timeoutMinutes>
+                            <overallTimeoutMinutes>40</overallTimeoutMinutes>
+                            <endpoint>https://26usidrly3gc4uo4b2i6fcp5ui0njbjo.lambda-url.eu-west-1.on.aws/</endpoint>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 
 </project>
