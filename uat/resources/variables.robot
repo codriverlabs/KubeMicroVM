@@ -11,6 +11,10 @@ ${OPERATOR_ROLE}    arn:aws:iam::${ACCOUNT_ID}:role/kube-microvm-operator
 ${NAMESPACE}        default
 ${OPERATOR_NS}      kube-microvm
 ${CHART_VERSION}    1.0.18
+# When true, the control plane is an emulator (e.g. m80 on k3d) rather than real
+# AWS/EKS. EKS-only prerequisites (e.g. Pod Identity) are skipped in this mode.
+# Override via: robot --variable EMULATED:true ...
+${EMULATED}         false
 ${CODEBASE_PATH}    /home/ubuntu/projects/microvm/KubeMicroVM
 ${TIMEOUT}          600s
 ${POLL_INTERVAL}    10s

@@ -16,6 +16,9 @@
 #   REGION           AWS region passed to the operator          (default: us-east-1)
 #   RESULTS          Robot Framework output directory           (default: uat/results/m80/)
 #   MAX_ACCOUNT_MEMORY_MIB  m80 memory ceiling                 (default: 262144)
+#   EMULATED         true if control plane is emulated (m80) vs real AWS/EKS;
+#                    skips EKS-only UAT checks like Pod Identity when true
+#                    (default: true for k3d, false for k3s-xpress)
 #
 # Cluster providers (CLUSTER_PROVIDER variable):
 #   k3d (default)    local k3d cluster, follows m80's own harness
@@ -42,6 +45,17 @@ RESULTS                ?= $(CURDIR)/uat/results/m80
 MAX_ACCOUNT_MEMORY_MIB ?= 262144
 CLUSTER_PROVIDER       ?= k3d
 
+# Whether the control plane is emulated (m80) rather than real AWS/EKS.
+# EKS-only prerequisites (e.g. Pod Identity) are skipped in the UAT suite
+# when this is true. Defaults to true for k3d (always emulated via m80),
+# false for k3s-xpress (includes a real EKS Pod Identity layer). Override
+# explicitly with EMULATED=true/false if needed.
+ifeq ($(CLUSTER_PROVIDER),k3d)
+EMULATED ?= true
+else
+EMULATED ?= false
+endif
+
 # k3s-xpress provider — only used when CLUSTER_PROVIDER=k3s-xpress
 K3S_XPRESS_CLUSTER ?=
 K3S_XPRESS_REGION  ?= $(REGION)
@@ -67,6 +81,7 @@ help: ## Show this help
 	@echo "    REGION=$(REGION)"
 	@echo "    RESULTS=$(RESULTS)"
 	@echo "    CLUSTER_PROVIDER=$(CLUSTER_PROVIDER)"
+	@echo "    EMULATED=$(EMULATED)"
 
 # ─── Build & unit tests ───────────────────────────────────────────────────────
 
@@ -97,7 +112,7 @@ m80-run: ## Run KubeMicroVM UAT against the running m80 stack
 	RESULTS="$(RESULTS)" \
 	REGION="$(REGION)" \
 	CHART_VERSION="$(CHART_VERSION)" \
-	  "$(M80_DIR)/uat/run.sh"
+	  "$(M80_DIR)/uat/run.sh" --variable "EMULATED:$(EMULATED)"
 	@echo ""
 	@echo "Results: $(RESULTS)/report.html"
 

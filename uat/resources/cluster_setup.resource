@@ -10,19 +10,29 @@ Resource   common.resource
 *** Keywords ***
 Verify Cluster Ready
     [Documentation]    Validates that the cluster has operator running, CRDs installed,
-    ...    namespace labelled, S3 test fixtures uploaded, and Pod Identity configured.
-    ...    Fails fast if any prerequisite is missing.
+    ...    namespace labelled, S3 test fixtures uploaded, and (on real EKS only) Pod
+    ...    Identity configured. Fails fast if any prerequisite is missing.
+    ...    Set ${EMULATED} to true (robot --variable EMULATED:true) when running
+    ...    against an emulated control plane (e.g. m80 on k3d) — EKS-only checks
+    ...    are skipped in that mode since there is no EKS cluster to query.
     Verify Operator Running
     Verify CRDs Installed
     Verify Namespace Labelled
     Verify S3 Fixtures Uploaded
-    Verify Pod Identity
+    IF    '${EMULATED}' == 'false'
+        Verify Pod Identity
+    ELSE
+        Log    Skipping Verify Pod Identity — EMULATED=${EMULATED} (no EKS cluster to query)
+    END
 
 Verify Pod Identity
     [Documentation]    Verifies that EKS Pod Identity is configured for the operator SA.
     ...    Both Community and PRO use the same IAM role: kube-microvm-operator.
-    ...    If missing, run:
+    ...    EKS-only — not applicable when ${EMULATED} is true. If missing, run:
     ...    install_kube_microvm.sh --cluster <name> --region <region> --iam
+    IF    '${EMULATED}' == 'true'
+        Skip    Pod Identity is an EKS-only concept — EMULATED=true, no EKS cluster to query
+    END
     ${ctx}=    Run Process    kubectl    config    current-context
     ${cluster_name}=    Evaluate    '${ctx.stdout}'.split('/')[-1]
     Should Not Be Empty    ${cluster_name}    Could not determine cluster name from kubeconfig
