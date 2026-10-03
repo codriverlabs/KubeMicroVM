@@ -20,7 +20,11 @@ ${NET_VPC_NET}     ${EMPTY}
 
 *** Test Cases ***
 NET-01 Internet Egress Connects To Public Internet
-    [Tags]    smoke
+    [Tags]    smoke    m80-endpoint-auth
+    [Documentation]    Known m80 limitation: VM endpoint hostnames resolve to real AWS
+    ...    (m80 has no wildcard DNS/TLS for them), so the call never reaches the
+    ...    emulator. Excluded from emulated (m80) CI runs via --exclude m80-endpoint-auth.
+    ...    Tracked: https://github.com/INTENTIUS/m80/issues/45
     Wait For VM Running    ${NET_INTERNET}
     ${endpoint}=    Get MicroVM Endpoint    ${NET_INTERNET}    timeout=90
     ${token}=    Get MicroVM Token    ${NET_INTERNET}
@@ -28,6 +32,8 @@ NET-01 Internet Egress Connects To Public Internet
     Should Contain    ${response}    "status":200
 
 NET-02 Default Egress Has Internet Access
+    [Tags]    m80-endpoint-auth
+    [Documentation]    Known m80 limitation — see NET-01.
     Wait For VM Running    ${NET_DEFAULT}
     ${endpoint}=    Get MicroVM Endpoint    ${NET_DEFAULT}    timeout=90
     ${token}=    Get MicroVM Token    ${NET_DEFAULT}
@@ -38,6 +44,8 @@ NET-03 MicroVMNetwork Becomes Active
     Wait For Network Active    ${NET_VPC_NET}
 
 NET-04 VPC Egress VM Connects
+    [Tags]    m80-endpoint-auth
+    [Documentation]    Known m80 limitation — see NET-01.
     Wait For VM Running    ${NET_VPC_VM}
     ${endpoint}=    Get MicroVM Endpoint    ${NET_VPC_VM}    timeout=90
     ${token}=    Get MicroVM Token    ${NET_VPC_VM}

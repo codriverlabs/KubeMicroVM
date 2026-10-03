@@ -66,7 +66,12 @@ QS-06 Token Via Direct Flag
     Should Be True    ${length} > 100
 
 QS-07 Curl Endpoint Returns OK
-    [Tags]    smoke
+    [Tags]    smoke    m80-endpoint-auth
+    [Documentation]    Known m80 limitation: VM endpoint hostnames resolve to real AWS
+    ...    (m80 has no wildcard DNS/TLS for them), so the call never reaches the
+    ...    emulator and fails with "Token authentication failed". Excluded from
+    ...    emulated (m80) CI runs via --exclude m80-endpoint-auth.
+    ...    Tracked: https://github.com/INTENTIUS/m80/issues/45
     ${endpoint}=    Get MicroVM Endpoint    ${QS_VM}
     ${token}=    Get MicroVM Token    ${QS_VM}
     ${response}=    Call MicroVM Endpoint    ${endpoint}    ${token}

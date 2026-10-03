@@ -34,6 +34,54 @@ jobs:
           ./mvnw versions:set -DnewVersion=${VERSION} -DgenerateBackupPoms=false --batch-mode --no-transfer-progress
       - run: ./mvnw verify -pl operator-core,operator-spi,operator-controller,operator-webhook,operator-cli,operator-tests -am --batch-mode --no-transfer-progress
 
+  # ─── UAT (m80 emulator) ────────────────────────────────────────────────────
+  # Runs the full Robot Framework UAT suite against the just-published release
+  # candidate (chart + images from GHCR) on a local k3d cluster with the m80
+  # emulator — no AWS account or credentials required. Excludes the known
+  # m80 control-plane limitations (tagged m80-endpoint-auth; m80 lacks
+  # wildcard DNS/TLS for VM endpoint hostnames — see
+  # docs/design/m80-local-testing.md and https://github.com/INTENTIUS/m80/issues/45)
+  # and performance tests (long-running, account-limit dependent).
+
+  uat-m80:
+    name: UAT (m80 emulator)
+    needs: [manifest, helm-chart]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      K3D_VERSION: v5.9.0
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+      - uses: azure/setup-helm@v4
+      - name: Install k3d (pinned, verified checksum)
+        run: |
+          curl -fsSL -o k3d "https://github.com/k3d-io/k3d/releases/download/${K3D_VERSION}/k3d-linux-amd64"
+          curl -fsSL -o checksums.txt "https://github.com/k3d-io/k3d/releases/download/${K3D_VERSION}/checksums.txt"
+          EXPECTED=$(grep 'k3d-linux-amd64$' checksums.txt | awk '{print $1}')
+          ACTUAL=$(sha256sum k3d | awk '{print $1}')
+          [ "$EXPECTED" = "$ACTUAL" ] || { echo "::error::k3d checksum mismatch"; exit 1; }
+          chmod +x k3d
+          sudo mv k3d /usr/local/bin/k3d
+      - name: Run UAT against m80 emulator
+        env:
+          CHART_VERSION: ${{ github.ref_name }}
+        run: |
+          CHART_VERSION="${CHART_VERSION#v}"
+          make full CHART_VERSION="${CHART_VERSION}"
+      - name: Upload UAT results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: uat-m80-results
+          path: uat/results/m80/
+          retention-days: 30
+
   # ─── Platform versions artifact ──────────────────────────────────────────
   # Maven artifact publishing is handled by release.yml which runs in parallel.
   # Generates platform-versions.properties and uploads it as a workflow artifact
@@ -300,7 +348,7 @@ jobs:
 
   release:
     name: GitHub Release
-    needs: [native-cli, manifest, helm-chart, platform-versions]
+    needs: [native-cli, manifest, helm-chart, platform-versions, uat-m80]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:

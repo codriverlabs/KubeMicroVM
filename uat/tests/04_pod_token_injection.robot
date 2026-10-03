@@ -48,7 +48,11 @@ INJ-07 Auth Token Non-Empty
     Length Should Be Greater Than    ${result.stdout}    100
 
 INJ-08 Token Works To Call MicroVM
-    [Tags]    smoke
+    [Tags]    smoke    m80-endpoint-auth
+    [Documentation]    Known m80 limitation: VM endpoint hostnames resolve to real AWS
+    ...    (m80 has no wildcard DNS/TLS for them), so the call never reaches the
+    ...    emulator. Excluded from emulated (m80) CI runs via --exclude m80-endpoint-auth.
+    ...    Tracked: https://github.com/INTENTIUS/m80/issues/45
     ${token}=    Run Process    kubectl    exec    inject-pod-${RUN_ID}    -c    app    -n    ${NAMESPACE}    --    cat    /var/run/microvm/auth-token
     ${endpoint}=    Get MicroVM Endpoint    ${INJ_VM}
     ${response}=    Call MicroVM Endpoint    ${endpoint}    ${token.stdout}

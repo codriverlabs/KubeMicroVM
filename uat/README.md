@@ -81,12 +81,33 @@ robot --outputdir results -i performance tests/
 
 # Run everything including performance
 robot --outputdir results tests/
+
+# On an emulated control plane (m80/k3d) — skip EKS-only checks (Pod Identity)
+# and the known endpoint-auth gap (VM endpoint hostnames resolve to real AWS,
+# not m80 — see docs/design/m80-local-testing.md)
+robot --outputdir results --exclude performance --exclude m80-endpoint-auth \
+  --variable EMULATED:true tests/
 ```
 
 ## Quick Start (single command)
 
 ```bash
 cd uat
+
+# Step 1 — validate cluster setup (hard stop if IAM/Pod Identity/CRDs not ready)
+robot --outputdir results tests/00_cluster_setup.robot
+
+# Step 2 — run all functional suites
+robot --outputdir results --exclude performance tests/
+```
+
+If step 1 fails, fix the issue (the error message tells you exactly what to run)
+before proceeding to step 2. Running step 2 on a misconfigured cluster produces
+60+ cryptic failures that are hard to diagnose.
+
+**One-liner** (skips hard stop — not recommended for CI):
+
+```bash
 robot --outputdir results --exclude performance tests/
 ```
 

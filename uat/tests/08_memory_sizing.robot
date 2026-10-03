@@ -45,7 +45,11 @@ MEM-05 CLI Describe Shows Memory
     Should Contain    ${result.stdout}    Compute:
 
 MEM-07 Run VM From 4096 MiB Image
-    [Tags]    smoke
+    [Tags]    smoke    m80-endpoint-auth
+    [Documentation]    Known m80 limitation: VM endpoint hostnames resolve to real AWS
+    ...    (m80 has no wildcard DNS/TLS for them). Endpoint resolution can hang/fail
+    ...    in this mode. Excluded from emulated (m80) CI runs via
+    ...    --exclude m80-endpoint-auth. Tracked: https://github.com/INTENTIUS/m80/issues/45
     Wait For Image Ready    ${MEM_4096}
     Set Suite Variable    ${NAME}    ${MEM_VM}
     Set Suite Variable    ${IMAGE_REF}    ${MEM_4096}

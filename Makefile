@@ -112,7 +112,8 @@ m80-run: ## Run KubeMicroVM UAT against the running m80 stack
 	RESULTS="$(RESULTS)" \
 	REGION="$(REGION)" \
 	CHART_VERSION="$(CHART_VERSION)" \
-	  "$(M80_DIR)/uat/run.sh" --variable "EMULATED:$(EMULATED)"
+	  "$(M80_DIR)/uat/run.sh" --exclude performance $(if $(filter true,$(EMULATED)),--exclude m80-endpoint-auth,) \
+	  --variable "EMULATED:$(EMULATED)"
 	@echo ""
 	@echo "Results: $(RESULTS)/report.html"
 

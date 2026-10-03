@@ -36,6 +36,11 @@ AUTO-01 VM Suspends After Idle Duration
     Should Be Equal    ${state}    Suspended
 
 AUTO-02 Auto-Resume On Traffic
+    [Tags]    m80-endpoint-auth
+    [Documentation]    Known m80 limitation: VM endpoint hostnames resolve to real AWS
+    ...    (m80 has no wildcard DNS/TLS for them), so the call never reaches the
+    ...    emulator. Excluded from emulated (m80) CI runs via --exclude m80-endpoint-auth.
+    ...    Tracked: https://github.com/INTENTIUS/m80/issues/45
     ${endpoint}=    Get MicroVM Endpoint    ${DRIFT_VM}
     ${token}=    Get MicroVM Token    ${DRIFT_VM}
     ${response}=    Call MicroVM Endpoint    ${endpoint}    ${token}
