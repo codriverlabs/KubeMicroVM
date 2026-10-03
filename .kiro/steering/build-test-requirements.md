@@ -46,6 +46,29 @@ manifest during native compilation. Always verify native builds after dependency
 - **CRD model changes**: integration tests use real CR instances — field renames break them
 - **Dependency upgrades**: new transitive deps may introduce classes that GraalVM can't resolve (NoClassDefFoundError at native-image build time)
 - **aws-crt version mismatch**: the `aws-crt` version must match what the AWS SDK was compiled against — check `awscrt.version` in the SDK's parent pom
+- **zstd-jni FFM regression (1.5.7-17+)**: versions 1.5.7-17 and later ship a Java 22+
+  multi-release `ZstdBinding` class that uses the Foreign Function & Memory (FFM/Panama)
+  API instead of classic JNI. GraalVM/Mandrel native-image cannot statically analyze the
+  FFM `MethodHandle` downcalls, which are reachable transitively via Netty's `ZstdEncoder`
+  from fabric8's `KubernetesClientImpl` HTTP/2 flush path. This fails native compilation
+  with `VMError$HostedError: should not reach here: unexpected input could not be handled:
+  linkToNative` — passes JVM build and all tests, only breaks native-image (see
+  [oracle/graal#9727](https://github.com/oracle/graal/issues/9727) for the same failure
+  mode via a different FFM binding). **Pin `zstd-jni` to `1.5.7-16` or earlier** until
+  GraalVM/Mandrel supports FFM downcall analysis or zstd-jni ships native-image
+  reachability metadata. Dependabot will try to bump this — reject bumps past `1.5.7-16`
+  without re-verifying the native build.
+- **fabric8 / JOSDK version skew**: `fabric8.version` and `josdk.version` must match what
+  the Quarkiverse `quarkus-operator-sdk` extension (pinned via `quarkus-operator-sdk-bom`,
+  itself pinned to the `quarkus.platform.version`) was built against — currently fabric8
+  `7.8.0` / JOSDK `5.5.0` (extension capped at `7.8.0`, no newer release exists as of this
+  writing). Overriding these ahead of the extension causes either a split dependency tree
+  (client at a newer version, `kubernetes-model-*` still on the extension's pinned version
+  via the Quarkus BOM → `NoClassDefFoundError` during CRD generation) or a binary
+  incompatibility with the extension's compiled bytecode (`NoSuchMethodError` on
+  `InformerConfiguration` at runtime). Before bumping either property, check what
+  `io.quarkiverse.operatorsdk:quarkus-operator-sdk-deployment:<version>` on Maven Central
+  actually declares for `operator-framework-core`/`fabric8-client.version`.
 
 ## Quick Commands
 
