@@ -352,7 +352,7 @@ public class MicroVMValidatingWebhook {
                 ObjectMapper mapper = this.objectMapper != null
                         ? this.objectMapper
                         : new ObjectMapper();
-                MicroVM oldVm = mapper.convertValue(oldObject, MicroVM.class);
+                MicroVM oldVm = mapper.treeToValue(mapper.valueToTree(oldObject), MicroVM.class);
                 String oldImportId = oldVm.getSpec() != null ? oldVm.getSpec().getImportMicroVmId() : null;
                 if (oldImportId != null && !oldImportId.equals(importId)) {
                     errors.add("spec.importMicroVmId is immutable after creation");

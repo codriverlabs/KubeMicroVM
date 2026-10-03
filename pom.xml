@@ -28,11 +28,11 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-        <quarkus.platform.version>3.39.5</quarkus.platform.version>
+        <quarkus.platform.version>3.40.1</quarkus.platform.version>
         <aws.sdk.version>2.55.6</aws.sdk.version>
         <jackson.version>2.22.3</jackson.version>
-        <fabric8.version>8.0.0</fabric8.version>
-        <josdk.version>5.6.2</josdk.version>
+        <fabric8.version>7.8.0</fabric8.version>
+        <josdk.version>5.5.0</josdk.version>
         <josdk-webhooks.version>3.0.5</josdk-webhooks.version>
         <jqwik.version>1.10.1</jqwik.version>
         <picocli.version>4.7.6</picocli.version>
@@ -132,10 +132,20 @@
                 <artifactId>dec</artifactId>
                 <version>0.1.2</version>
             </dependency>
+            <!-- Pinned below 1.5.7-17: that version introduces a Java 22+ multi-release jar
+                 entry (ZstdBinding) using the Foreign Function & Memory (FFM/Panama) API
+                 instead of classic JNI. GraalVM native-image's static analysis cannot resolve
+                 FFM MethodHandle downcalls reachable from Netty's ZstdEncoder (via
+                 io.fabric8.kubernetes.client.impl.KubernetesClientImpl's HTTP/2 flush path),
+                 causing: VMError$HostedError: should not reach here: unexpected input could
+                 not be handled: linkToNative. See https://github.com/oracle/graal/issues/9727
+                 for the same failure mode (triggered by JLine's FFM terminal binding on
+                 Windows). Revisit once GraalVM/Mandrel supports FFM downcall analysis or
+                 zstd-jni ships a native-image reachability-metadata fix. -->
             <dependency>
                 <groupId>com.github.luben</groupId>
                 <artifactId>zstd-jni</artifactId>
-                <version>1.5.7-20</version>
+                <version>1.5.7-16</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
