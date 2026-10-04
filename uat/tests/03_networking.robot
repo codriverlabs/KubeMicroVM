@@ -103,4 +103,9 @@ Cleanup Networking Resources
     Run Keyword And Ignore Error    Kubectl Delete Force    microvm    ${NET_DEFAULT}
     Run Keyword And Ignore Error    Kubectl Delete Force    microvm    ${NET_VPC_VM}
     Run Keyword And Ignore Error    Kubectl Delete Force    microvmnetwork    ${NET_VPC_NET}
-    Run Keyword And Ignore Error    Kubectl Delete Force    microvmimage    ${NET_IMG}
+    # The image delete can be rejected by the operator's running-VMs safety check
+    # (ARN-collision prevention) if AWS/m80 hasn't yet reflected the VM deletions
+    # above; the operator retries with backoff (15s/30s/1m/2m). Give it more time
+    # here than the default Kubectl Delete Force timeout.
+    Run Keyword And Ignore Error    Wait Until Keyword Succeeds    3x    30s
+    ...    Kubectl Delete Force    microvmimage    ${NET_IMG}

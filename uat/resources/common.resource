@@ -60,7 +60,18 @@ Kubectl Get JsonPath
     RETURN    ${result.stdout}
 
 Kubectl Delete Force
+    [Documentation]    Deletes a resource, preferring a plain delete so the owning
+    ...    controller's own finalizer cleanup (JOSDK Cleaner.cleanup()) runs normally.
+    ...    Stripping the finalizer manually before deleting races the controller's
+    ...    reconcile loop, which re-adds a declared finalizer if it sees the resource
+    ...    without one — this can silently defeat the delete (CR lingers with no
+    ...    deletionTimestamp, no error surfaced). Only force-strips the finalizer as
+    ...    a fallback if the plain delete does not complete in time (e.g. the
+    ...    controller is not running — see docs .kiro/steering/eks-deployment.md).
     [Arguments]    ${resource}    ${name}    ${namespace}=${NAMESPACE}
+    ${result}=    Run Process    kubectl    delete    ${resource}    ${name}    -n    ${namespace}    --timeout\=20s
+    IF    ${result.rc} == 0    RETURN
+    Log    Plain delete of ${resource}/${name} did not complete in time — falling back to finalizer strip
     Run Process    kubectl    patch    ${resource}    ${name}    -n    ${namespace}    --type\=json    -p\=[{"op":"remove","path":"/metadata/finalizers"}]    --request-timeout\=10s
     Run Process    kubectl    delete    ${resource}    ${name}    -n    ${namespace}    --force    --grace-period\=0    --timeout\=30s
 
