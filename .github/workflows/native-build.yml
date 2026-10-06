@@ -76,6 +76,22 @@ jobs:
         run: |
           CHART_VERSION="${CHART_VERSION#v}"
           make full CHART_VERSION="${CHART_VERSION}"
+      - name: Capture diagnostics on failure
+        if: failure()
+        run: |
+          mkdir -p uat/results/m80
+          {
+            echo "=== docker ps -a ==="; docker ps -a || true
+            echo "=== k3d cluster list ==="; k3d cluster list || true
+            echo "=== kubectl get all -A (if cluster reachable) ==="
+            kubectl get all -A 2>&1 || true
+            echo "=== kubectl get pods -n kube-microvm -o wide ==="
+            kubectl get pods -n kube-microvm -o wide 2>&1 || true
+            echo "=== operator logs (if pod exists) ==="
+            kubectl logs -n kube-microvm deploy/kube-microvm-operator --tail=200 2>&1 || true
+            echo "=== m80 logs (if pod exists) ==="
+            kubectl logs -n kube-microvm deploy/m80 --tail=200 2>&1 || true
+          } > uat/results/m80/failure-diagnostics.log 2>&1
       - name: Upload UAT results
         if: always()
         uses: actions/upload-artifact@v7
@@ -83,6 +99,7 @@ jobs:
           name: uat-m80-results
           path: uat/results/m80/
           retention-days: 30
+          if-no-files-found: warn
 
   # ─── Platform versions artifact ──────────────────────────────────────────
   # Maven artifact publishing is handled by release.yml which runs in parallel.
