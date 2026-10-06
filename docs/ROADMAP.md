@@ -1,7 +1,7 @@
 # KubeMicroVM — Roadmap
 
-**Current release:** v1.0.18 (Community) / v1.1.1 (PRO)
-**Last updated:** 2026-09-21
+**Current release:** v1.0.19 (Community) / v1.1.1 (PRO)
+**Last updated:** 2026-10-06
 
 This document tracks planned improvements grouped by theme. Items are not
 committed to specific release dates. PRO items require a KubeMicroVM PRO
@@ -9,16 +9,14 @@ licence.
 
 ---
 
-## Recently Shipped (v1.0.17 / v1.0.18)
+## Recently Shipped (v1.0.18 / v1.0.19)
 
 | Feature | Release | Notes |
 |---------|---------|-------|
-| ARN collision prevention — duplicate `MicroVMImage` names rejected by webhook | v1.0.17 | ADM-08/09 UAT |
-| `DeleteBlocked` events with capped exponential backoff | v1.0.17 | ADM-09 UAT |
-| `CaSecretReplicator` tls.crt/tls.key fix | v1.0.17 | Gateway TLS in managed namespaces |
-| ClusterIssuer post-install hook | v1.0.17 | Fixes fresh installs |
-| m80 local UAT harness | v1.0.17 | `make full` — no AWS needed |
-| Reconciliation intervals documented | v1.0.17 | 60s RESYNC_PERIOD |
+| EMULATED flag — skip EKS-only checks on m80/k3d | v1.0.19 | Fixes cascading UAT failures on local emulator |
+| m80 UAT suite as an automated GitHub Actions release gate | v1.0.19 | Blocks GitHub Release on UAT failure |
+| Fixed test-harness finalizer race with operator cleanup | v1.0.19 | `Kubectl Delete Force` now tries a plain delete first |
+| Pinned fabric8/JOSDK/zstd-jni to GraalVM 25-compatible versions | v1.0.19 | Fixes native-image build failures |
 | Pod Identity verification in cluster setup | v1.0.18 | CS-05 UAT, hard-stop on missing IAM |
 | `install_kube_microvm.sh --edition pro` | v1.0.18 | Single installer for CE and PRO |
 | `--helm-registry` for air-gapped ECR deployments | v1.0.18 | Helm chart from private ECR |

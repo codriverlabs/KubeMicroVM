@@ -1,8 +1,8 @@
 # KubeMicroVM — Support Matrix
 
-**Release:** v1.0.18
-**Date:** 2026-09-20
-**Test results:** [UAT v1.0.18 GA — 63/63 pass](https://codriverlabs.github.io/KubeMicroVM/uat-reports/v1.0.18-ga/report.html)
+**Release:** v1.0.19
+**Date:** 2026-10-06
+**Test results:** [UAT v1.0.19 GA — 72/72 pass](https://codriverlabs.github.io/KubeMicroVM/uat-reports/v1.0.19-ga/report.html)
 
 ---
 
@@ -195,13 +195,11 @@ and CLI workflows beyond the official ACK controller.
 
 ---
 
-## Test Counts (v1.0.18)
+## Test Counts (v1.0.19)
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| Integration tests (`operator-tests`) | 81 | ✅ All pass |
-| Webhook unit/property tests | 17 | ✅ All pass |
-| CLI property tests | 2 | ✅ All pass |
-| Robot Framework UAT (`uat/`) | 63 | ✅ All pass |
+| Integration tests (`operator-tests`) | 92 | ✅ All pass |
+| Robot Framework UAT (`uat/`) | 72 | ✅ All pass |
 | Performance UAT (optional) | 8 | ⚠️ Account-limit dependent |
 | **Total automated tests** | **186** | |

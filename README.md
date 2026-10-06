@@ -7,7 +7,7 @@ you already use.
 Built with **Quarkus 3**, **JOSDK**, **GraalVM native image** (Java 25).
 
 [![Release](https://img.shields.io/github/v/release/codriverlabs/KubeMicroVM)](https://github.com/codriverlabs/KubeMicroVM/releases)
-[![UAT](https://img.shields.io/badge/UAT-63%2F63%20PASS-brightgreen)](https://codriverlabs.github.io/KubeMicroVM/uat-reports/v1.0.18-ga/report.html)
+[![UAT](https://img.shields.io/badge/UAT-72%2F72%20PASS-brightgreen)](https://codriverlabs.github.io/KubeMicroVM/uat-reports/v1.0.19-ga/report.html)
 
 📢 [GA Announcement](https://www.linkedin.com/feed/update/urn:li:activity:7478884939476733952/) — 158+ reactions, discussed by AWS engineers and cloud-native leaders
 
@@ -60,7 +60,7 @@ scope.
 
 ## Installation
 
-> **Latest stable release: `v1.0.18`** — [Download](https://github.com/codriverlabs/KubeMicroVM/releases/latest)
+> **Latest stable release: `v1.0.19`** — [Download](https://github.com/codriverlabs/KubeMicroVM/releases/latest)
 >
 > **Replace throughout this section**:
 > - `<CLUSTER>` → your EKS cluster name
@@ -115,7 +115,7 @@ chmod +x install_kube_microvm.sh
 
 ```bash
 # Pin to a specific version (find latest at github.com/codriverlabs/KubeMicroVM/releases)
-CHART_VERSION=1.0.17
+CHART_VERSION=1.0.19
 
 # EKS Pod Identity (recommended)
 helm install kube-microvm-operator \
