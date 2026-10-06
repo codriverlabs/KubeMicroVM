@@ -78,15 +78,18 @@ jobs:
           # Retry: the first attempt on a cold GitHub Actions runner does a from-scratch
           # `npm install` for m80's chant cluster-config builder plus a `helm repo add
           # jetstack && helm repo update`, both network-bound with no warm cache (unlike
-          # a persistent dev machine). Observed failing in ~3 minutes, before any k3d
-          # cluster or docker container exists (confirmed via the diagnostics step below
-          # reporting nothing running) — consistent with a transient resolve/fetch failure
-          # in that cold-start window rather than a cluster-level timeout.
+          # a persistent dev machine).
           for attempt in 1 2; do
-            if make full CHART_VERSION="${CHART_VERSION}"; then
+            echo "::group::UAT attempt ${attempt}"
+            set +e
+            make full CHART_VERSION="${CHART_VERSION}" 2>&1 | tee "/tmp/uat-attempt-${attempt}.log"
+            RC=${PIPESTATUS[0]}
+            set -e
+            echo "::endgroup::"
+            if [ "${RC}" = "0" ]; then
               exit 0
             fi
-            echo "::warning::UAT attempt ${attempt} failed"
+            echo "::warning::UAT attempt ${attempt} failed with exit ${RC}"
             make m80-down || true
             [ "${attempt}" = "2" ] && exit 1
             sleep 10
@@ -95,6 +98,7 @@ jobs:
         if: failure()
         run: |
           mkdir -p uat/results/m80
+          cp /tmp/uat-attempt-*.log uat/results/m80/ 2>/dev/null || true
           {
             echo "=== docker ps -a ==="; docker ps -a || true
             echo "=== k3d cluster list ==="; k3d cluster list || true
@@ -107,6 +111,20 @@ jobs:
             echo "=== m80 logs (if pod exists) ==="
             kubectl logs -n kube-microvm deploy/m80 --tail=200 2>&1 || true
           } > uat/results/m80/failure-diagnostics.log 2>&1
+          # Mirror the tail of each attempt's output into the step summary — visible on
+          # the workflow run page without needing to download the artifact (which
+          # requires repo write/admin auth even on a public repo).
+          {
+            echo "## UAT failure — last 100 lines per attempt"
+            for f in /tmp/uat-attempt-*.log; do
+              [ -f "$f" ] || continue
+              echo ""
+              echo "### $(basename "$f")"
+              echo '```'
+              tail -100 "$f"
+              echo '```'
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload UAT results
         if: always()
         uses: actions/upload-artifact@v7
