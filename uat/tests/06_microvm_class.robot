@@ -42,10 +42,16 @@ CLASS-05 Kubectl Get Lists Class
     Should Contain    ${result.stdout}    ${CLASS_NAME}
 
 CLASS-06 Non-Existent Class Rejected
+    [Documentation]    Verifies a MicroVM referencing a non-existent MicroVMClass is rejected.
+    ...    Uses a separate local variable for the bad class name — must NOT overwrite the
+    ...    suite-level ${CLASS_NAME}, which Cleanup Class Resources needs intact to delete
+    ...    the real class created by this suite.
     Set Suite Variable    ${NAME}    bad-class-vm
     Set Suite Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
+    ${real_class_name}=    Set Variable    ${CLASS_NAME}
     Set Suite Variable    ${CLASS_NAME}    does-not-exist
     ${output}=    Apply Template Expect Failure    microvm-class/vm-bad-class.yaml
+    Set Suite Variable    ${CLASS_NAME}    ${real_class_name}
     Should Contain    ${output}    not found
 
 *** Keywords ***
