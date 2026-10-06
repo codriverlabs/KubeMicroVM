@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   packages: write
 
 env:
@@ -64,49 +64,15 @@ jobs:
           echo "| \`ai.codriverlabs:operator-webhook\` | jar |" >> $GITHUB_STEP_SUMMARY
           echo "| \`ai.codriverlabs:kubemicrovm-uat\` | zip (robot-suite) |" >> $GITHUB_STEP_SUMMARY
 
-  # ─── GitHub Release ───────────────────────────────────────────────────────
-
-  release:
-    name: GitHub Release
-    needs: publish-maven
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Determine if pre-release
-        id: prerelease
-        run: |
-          echo "value=${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}" \
-            >> $GITHUB_OUTPUT
-
-      - uses: softprops/action-gh-release@v3
-        with:
-          generate_release_notes: true
-          prerelease: ${{ steps.prerelease.outputs.value == 'true' }}
-          body: |
-            ## KubeMicroVM Community ${{ github.ref_name }}
-
-            ### Maven artifacts (GitHub Packages)
-            ```xml
-            <!-- Core operator libraries -->
-            <dependency>
-              <groupId>ai.codriverlabs</groupId>
-              <artifactId>operator-core</artifactId>
-              <version>${{ github.ref_name }}</version>
-            </dependency>
-
-            <!-- UAT suite (Robot Framework tests + resources) -->
-            <dependency>
-              <groupId>ai.codriverlabs</groupId>
-              <artifactId>kubemicrovm-uat</artifactId>
-              <version>${{ github.ref_name }}</version>
-              <classifier>robot-suite</classifier>
-              <type>zip</type>
-            </dependency>
-            ```
-
-            ### UAT results
-            [63/63 PASS — view report](https://codriverlabs.github.io/KubeMicroVM/uat-reports/v${{ github.ref_name }}-ga/report.html)
+  # NOTE: The GitHub Release itself is created by native-build.yml's gated
+  # `release` job (needs: [native-cli, manifest, helm-chart, platform-versions,
+  # uat-m80]) — NOT here. Previously this workflow had its own independent
+  # `release` job calling softprops/action-gh-release, which raced with
+  # native-build.yml's: whichever finished first "won" the release page
+  # content, and this one (finishing in ~2 min, with no UAT gate) usually
+  # won over native-build.yml's complete, UAT-gated release — leaving a
+  # published release with only 2 Maven-related assets and a stale
+  # hardcoded "63/63 PASS" body, visible for the ~20-45 min window before
+  # native-build.yml's UAT-gated release finished and overwrote it (or,
+  # if that job failed, indefinitely). See commit history around v1.0.19
+  # for the investigation. Do not re-add a GitHub Release step here.

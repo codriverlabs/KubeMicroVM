@@ -403,6 +403,34 @@ jobs:
         with:
           generate_release_notes: true
           prerelease: ${{ steps.prerelease.outputs.value == 'true' }}
+          body: |
+            ## KubeMicroVM Community ${{ github.ref_name }}
+
+            ### Maven artifacts (GitHub Packages)
+            ```xml
+            <!-- Core operator libraries -->
+            <dependency>
+              <groupId>ai.codriverlabs</groupId>
+              <artifactId>operator-core</artifactId>
+              <version>${{ github.ref_name }}</version>
+            </dependency>
+
+            <!-- UAT suite (Robot Framework tests + resources) -->
+            <dependency>
+              <groupId>ai.codriverlabs</groupId>
+              <artifactId>kubemicrovm-uat</artifactId>
+              <version>${{ github.ref_name }}</version>
+              <classifier>robot-suite</classifier>
+              <type>zip</type>
+            </dependency>
+            ```
+
+            ### UAT results
+
+            The m80-emulator UAT suite (`uat/`) ran and passed as a release gate before this
+            release was published — see the `UAT (m80 emulator)` job on this workflow run for
+            the live result. Published, enriched reports for GA releases are tracked in
+            [docs/uat-reports/](https://codriverlabs.github.io/KubeMicroVM/uat-reports/).
           files: |
             dist/microvm-linux-amd64
             dist/microvm-linux-amd64.sha256

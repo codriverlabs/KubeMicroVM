@@ -31,8 +31,11 @@ RBAC-04 Auth Can-I With Subresource
 
 RBAC-05 Authorized SA Gets Token Via Operator
     [Tags]    smoke
+    [Documentation]    Endpoint propagation can lag VM state transitioning to Running —
+    ...    use the longer poll window (90s) rather than Get MicroVM Endpoint's 60s default,
+    ...    matching the headroom used in 03_networking.robot for the same race.
     Wait For VM Running    ${RBAC_VM}
-    ${endpoint}=    Get MicroVM Endpoint    ${RBAC_VM}
+    ${endpoint}=    Get MicroVM Endpoint    ${RBAC_VM}    timeout=90
     # Create test pod and call operator token endpoint
     Set Suite Variable    ${POD_NAME}    rbac-auth-pod-${RUN_ID}
     Set Suite Variable    ${SA_NAME}    rbac-app-sa
@@ -55,8 +58,12 @@ RBAC-07 Unauthorized SA Rejected
     Should Contain    ${result.stdout}    not authorized
 
 RBAC-08 Unlabelled Namespace Rejects MicroVM
-    Run Process    kubectl    create    namespace    rbac-unlabelled    --dry-run\=client    -o    yaml    stdout=${CURDIR}/ns.yaml
-    Run Process    kubectl    apply    -f    ${CURDIR}/ns.yaml
+    [Documentation]    Writes the namespace manifest to a temp file, not ${CURDIR}, so this
+    ...    suite doesn't leave a stray ns.yaml behind in the test source tree.
+    ${ns_file}=    Set Variable    ${TEMPDIR}/rbac-unlabelled-ns.yaml
+    Run Process    kubectl    create    namespace    rbac-unlabelled    --dry-run\=client    -o    yaml    stdout=${ns_file}
+    Run Process    kubectl    apply    -f    ${ns_file}
+    Remove File    ${ns_file}
     Set Suite Variable    ${NAME}    should-fail
     Set Suite Variable    ${VM_NAMESPACE}    rbac-unlabelled
     Set Suite Variable    ${IMAGE_REF}    ${SHARED_IMAGE}
