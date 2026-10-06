@@ -14,8 +14,14 @@ ${RUN_ID}      ${EMPTY}
 
 *** Test Cases ***
 QS-00 Installer Download And Checksum Verification
-    [Documentation]    Validates Step 1: download installer from release, verify SHA256, confirm executable
-    [Tags]    smoke
+    [Documentation]    Validates Step 1: download installer from release, verify SHA256, confirm executable.
+    ...                Tagged release-gate-skip: this test downloads from releases/latest, which cannot
+    ...                be complete while the UAT run gating THIS release's own publication is still in
+    ...                progress (the release job depends on this UAT job passing first). Excluded from
+    ...                the CI release-gate run (uat-m80 in native-build.yml) for that reason; still runs
+    ...                in all other contexts (local dev, ad-hoc verification against an already-published
+    ...                release) where releases/latest reflects a prior, settled release.
+    [Tags]    smoke    release-gate-skip
     ${dl}=    Run Process    curl    -fsSL
     ...    https://github.com/codriverlabs/KubeMicroVM/releases/latest/download/install_kube_microvm.sh
     ...    -o    /tmp/uat-check-installer.sh

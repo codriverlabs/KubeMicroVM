@@ -56,6 +56,13 @@ else
 EMULATED ?= false
 endif
 
+# Whether this run is gating a release's own publication (e.g. the uat-m80 CI
+# job in native-build.yml, which the release job depends on). Tests tagged
+# release-gate-skip hit releases/latest, which can't be complete while the
+# release it's gating is still in progress — excluded only in that context.
+# Defaults to false so local `make full`/`make m80-run` still exercises them.
+RELEASE_GATE ?= false
+
 # k3s-xpress provider — only used when CLUSTER_PROVIDER=k3s-xpress
 K3S_XPRESS_CLUSTER ?=
 K3S_XPRESS_REGION  ?= $(REGION)
@@ -114,6 +121,7 @@ m80-run: ## Run KubeMicroVM UAT against the running m80 stack
 	REGION="$(REGION)" \
 	CHART_VERSION="$(CHART_VERSION)" \
 	  "$(M80_DIR)/uat/run.sh" --exclude performance $(if $(filter true,$(EMULATED)),--exclude m80-endpoint-auth,) \
+	  $(if $(filter true,$(RELEASE_GATE)),--exclude release-gate-skip,) \
 	  --variable "EMULATED:$(EMULATED)"
 	@echo ""
 	@echo "Results: $(RESULTS)/report.html"

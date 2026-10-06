@@ -93,10 +93,16 @@ jobs:
           # job runs, which needs this job to pass first. uat/patch-m80-dockerfile.sh
           # (invoked by `make m80-run`) rewrites that RUN line to COPY in the binary
           # downloaded above instead, when present at the repo root.
+          #
+          # RELEASE_GATE=true additionally excludes tests tagged release-gate-skip
+          # (e.g. QS-00, which downloads install_kube_microvm.sh from releases/latest
+          # directly as part of testing the real install flow) — same circular
+          # dependency, at the test-content level this time. These still run in any
+          # other context (local dev, ad-hoc post-release verification).
           for attempt in 1 2; do
             echo "::group::UAT attempt ${attempt}"
             set +e
-            make full CHART_VERSION="${CHART_VERSION}" 2>&1 | tee "/tmp/uat-attempt-${attempt}.log"
+            make full CHART_VERSION="${CHART_VERSION}" RELEASE_GATE=true 2>&1 | tee "/tmp/uat-attempt-${attempt}.log"
             RC=${PIPESTATUS[0]}
             set -e
             echo "::endgroup::"
