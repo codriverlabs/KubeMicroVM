@@ -45,7 +45,7 @@ jobs:
 
   uat-m80:
     name: UAT (m80 emulator)
-    needs: [manifest, helm-chart]
+    needs: [native-cli, manifest, helm-chart]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -55,6 +55,12 @@ jobs:
       K3D_VERSION: v5.9.0
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: microvm-linux-amd64
+          path: .
+      - name: Make downloaded CLI executable
+        run: chmod +x microvm-linux-amd64
       - uses: actions/setup-node@v7
         with:
           node-version: '20'
@@ -75,10 +81,18 @@ jobs:
           CHART_VERSION: ${{ github.ref_name }}
         run: |
           CHART_VERSION="${CHART_VERSION#v}"
-          # Retry: the first attempt on a cold GitHub Actions runner does a from-scratch
-          # `npm install` for m80's chant cluster-config builder plus a `helm repo add
-          # jetstack && helm repo update`, both network-bound with no warm cache (unlike
-          # a persistent dev machine).
+          # Retry once: covers transient network blips in m80's own setup (helm repo
+          # add/update for cert-manager, etc).
+          #
+          # The microvm-linux-amd64 download-artifact step above is the real fix for
+          # the deterministic failure this job previously hit on every attempt:
+          # m80's uat/Dockerfile builds its test-runner container with
+          #   curl -fsSL .../releases/latest/download/microvm-linux-${TARGETARCH}
+          # which is a hard circular dependency when this job IS the release gate —
+          # releases/latest only becomes complete once native-build.yml's own release
+          # job runs, which needs this job to pass first. uat/patch-m80-dockerfile.sh
+          # (invoked by `make m80-run`) rewrites that RUN line to COPY in the binary
+          # downloaded above instead, when present at the repo root.
           for attempt in 1 2; do
             echo "::group::UAT attempt ${attempt}"
             set +e

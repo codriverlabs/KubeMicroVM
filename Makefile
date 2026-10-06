@@ -108,6 +108,7 @@ m80-run: ## Run KubeMicroVM UAT against the running m80 stack
 	@test -d "$(M80_DIR)" || \
 	  (echo "ERROR: m80 not found at $(M80_DIR). Run 'make m80-up' first." && exit 1)
 	@mkdir -p "$(RESULTS)"
+	@$(CURDIR)/uat/patch-m80-dockerfile.sh "$(M80_DIR)"
 	KUBEMICROVM="$(CURDIR)" \
 	RESULTS="$(RESULTS)" \
 	REGION="$(REGION)" \
