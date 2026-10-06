@@ -75,7 +75,22 @@ jobs:
           CHART_VERSION: ${{ github.ref_name }}
         run: |
           CHART_VERSION="${CHART_VERSION#v}"
-          make full CHART_VERSION="${CHART_VERSION}"
+          # Retry: the first attempt on a cold GitHub Actions runner does a from-scratch
+          # `npm install` for m80's chant cluster-config builder plus a `helm repo add
+          # jetstack && helm repo update`, both network-bound with no warm cache (unlike
+          # a persistent dev machine). Observed failing in ~3 minutes, before any k3d
+          # cluster or docker container exists (confirmed via the diagnostics step below
+          # reporting nothing running) — consistent with a transient resolve/fetch failure
+          # in that cold-start window rather than a cluster-level timeout.
+          for attempt in 1 2; do
+            if make full CHART_VERSION="${CHART_VERSION}"; then
+              exit 0
+            fi
+            echo "::warning::UAT attempt ${attempt} failed"
+            make m80-down || true
+            [ "${attempt}" = "2" ] && exit 1
+            sleep 10
+          done
       - name: Capture diagnostics on failure
         if: failure()
         run: |
