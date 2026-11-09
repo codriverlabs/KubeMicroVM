@@ -42,10 +42,16 @@ public class ImageBaseImagesCommand implements Runnable {
                                 ListManagedMicrovmImageVersionsRequest.builder()
                                         .imageIdentifier(imageArn).build())
                         .items();
-                System.out.printf("%-20s  %-30s  %s%n", "VERSION", "CREATED", "ARN");
+                System.out.printf("%-20s  %-18s  %-30s  %s%n", "VERSION", "ARCHITECTURES", "CREATED", "ARN");
                 for (var v : versions) {
-                    System.out.printf("%-20s  %-30s  %s%n",
+                    String architectures = v.hasSupportedCpuConfigurations()
+                            ? v.supportedCpuConfigurations().stream()
+                                    .map(CpuConfiguration::architectureAsString)
+                                    .collect(java.util.stream.Collectors.joining(","))
+                            : "-";
+                    System.out.printf("%-20s  %-18s  %-30s  %s%n",
                             v.imageVersion() != null ? v.imageVersion() : "-",
+                            architectures,
                             v.createdAt() != null ? v.createdAt().toString() : "-",
                             v.imageArn() != null ? v.imageArn() : "-");
                 }

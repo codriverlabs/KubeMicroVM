@@ -191,6 +191,7 @@ public class MicroVMValidatingWebhook {
                 MicroVMImage image = objectMapper.convertValue(rawObject, MicroVMImage.class);
                 if (image.getSpec() != null) {
                     validateMemorySizeMiB(image.getSpec(), errors);
+                    validateArchitecture(image.getSpec(), errors);
                     validateMaxVersionsToKeep(image.getSpec(), errors);
                     // Immutability check on UPDATE
                     if ("UPDATE".equals(request.getOperation()) && request.getOldObject() != null) {
@@ -317,6 +318,8 @@ public class MicroVMValidatingWebhook {
 
     private static final java.util.Set<Integer> ALLOWED_MEMORY_SIZES =
             java.util.Set.of(512, 1024, 2048, 4096, 8192);
+    private static final java.util.Set<String> ALLOWED_ARCHITECTURES =
+            java.util.Set.of("ARM_64", "X86_64");
 
     void validateMemorySizeMiB(MicroVMImageSpec spec, List<String> errors) {
         Integer memory = spec.getMemorySizeMiB();
@@ -324,6 +327,15 @@ public class MicroVMValidatingWebhook {
             errors.add(String.format(
                     "spec.memorySizeMiB must be one of %s, got %d",
                     ALLOWED_MEMORY_SIZES, memory));
+        }
+    }
+
+    void validateArchitecture(MicroVMImageSpec spec, List<String> errors) {
+        String architecture = spec.getArchitecture();
+        if (architecture != null && !ALLOWED_ARCHITECTURES.contains(architecture)) {
+            errors.add(String.format(
+                    "spec.architecture must be one of %s, got %s",
+                    ALLOWED_ARCHITECTURES, architecture));
         }
     }
 

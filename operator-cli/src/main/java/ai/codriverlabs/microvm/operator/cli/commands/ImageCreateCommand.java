@@ -28,6 +28,9 @@ public class ImageCreateCommand implements Runnable {
     @Option(names = {"--build-role-arn"}, description = "IAM role ARN Lambda assumes during image build")
     String buildRoleArn;
 
+    @Option(names = {"--architecture"}, description = "Target CPU architecture: ARM_64 or X86_64 (default: AWS ARM_64)")
+    String architecture;
+
     @Option(names = {"--auto-activate"}, defaultValue = "true", description = "Auto-activate on successful build")
     boolean autoActivate;
 
@@ -59,6 +62,7 @@ public class ImageCreateCommand implements Runnable {
             spec.setSource(source);
             spec.setBaseImageArn(baseImageArn);
             spec.setBuildRoleArn(buildRoleArn);
+            spec.setArchitecture(architecture);
             spec.setAutoActivate(autoActivate);
             image.setSpec(spec);
 
