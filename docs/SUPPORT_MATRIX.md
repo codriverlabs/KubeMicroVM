@@ -31,6 +31,7 @@
 | MicroVMImage (create, build, delete) | `production-supported` | 01 Quick Start |
 | MicroVMImage (adopt existing) | `integration-tested` | — |
 | MicroVMImage (memory sizing) | `production-supported` | 08 Memory Sizing |
+| MicroVMImage (CPU architecture: ARM_64 / X86_64) | `not-implemented` | — |
 | MicroVMImage (version pruning) | `integration-tested` | — |
 | MicroVMImage (generation update) | `integration-tested` | — |
 | MicroVMImage (ARN collision prevention — duplicate name webhook) | `production-supported` | 11 Admission (ADM-08/09) |

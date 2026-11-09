@@ -25,6 +25,9 @@ to AWS. The repository is pinned to AWS SDK for Java `2.57.7`; that SDK's
    image updates. AWS supports architecture changes as a new image version.
 5. Update the vendored AWS API schema reference and tests to cover default,
    `ARM_64`, and `X86_64` image requests and image updates.
+6. Add `--architecture` to `microvm image create` and display each managed base
+   image version's `supportedCpuConfigurations` in
+   `microvm image base-images --arn`.
 
 ## Compatibility and operational behavior
 

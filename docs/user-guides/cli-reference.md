@@ -138,6 +138,7 @@ microvm image create \
   --s3-key path/to/app.zip \
   --base-image "arn:aws:lambda:us-east-1:aws:microvm-image:al2023-1" \
   --build-role-arn "arn:aws:iam::123456789012:role/KubeMicroVMBuildRole" \
+  --architecture X86_64 \
   --wait
 ```
 
@@ -147,6 +148,7 @@ Options:
 - `--s3-key` — S3 key of the zip (required)
 - `--base-image` — base image ARN
 - `--build-role-arn` — IAM role for build
+- `--architecture` — target image CPU architecture: `ARM_64` or `X86_64`; omit for AWS default (`ARM_64`)
 - `--auto-activate` — activate on successful build
 - `--wait` — wait for build to complete
 - `--wait-timeout` — timeout in seconds (default: 600)
@@ -175,6 +177,10 @@ microvm image base-images
 microvm image base-images --region eu-west-1
 microvm image base-images --arn arn:aws:lambda:us-east-1:aws:microvm-image:al2023-1
 ```
+
+When `--arn` is provided, the output includes each base-image version's supported
+CPU architectures. Select an `ARM_64` or `X86_64` architecture that the chosen
+base-image version advertises.
 
 ### `microvm image version-delete`
 
