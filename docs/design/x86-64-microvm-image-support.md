@@ -45,3 +45,6 @@ base image version must advertise `X86_64` support through
   default behavior.
 - Run the repository compile, integration-test, and native-build checks before
   pushing code changes.
+- Run `uat/tests/12_cpu_architecture.robot` against an EKS cluster using a
+  release-candidate chart that contains this feature before marking support as
+  production-supported.

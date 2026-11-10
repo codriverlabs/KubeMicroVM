@@ -131,7 +131,10 @@ uat/
 │   ├── 07_drift_autosuspend.robot    # Drift & Auto-Suspend (5 tests)
 │   ├── 08_memory_sizing.robot   # Memory Sizing guide (6 tests)
 │   ├── 09_performance_scale.robot    # Performance: 1000 VMs via ReplicaSet (8 tests)
-│   └── 10_burst_quota_warmup.robot   # Burst: 3×500 parallel for quota warmup (8 tests)
+│   ├── 10_burst_quota_warmup.robot   # Burst: 3×500 parallel for quota warmup (8 tests)
+│   ├── 11_admission_and_failed_state.robot # Admission and failed-state validation
+│   ├── 12_cpu_architecture.robot     # CPU Architecture guide (4 tests)
+│   └── 99_final_cleanup.robot        # Removes remaining shared resources
 ├── templates/
 │   ├── burst/                   # Burst test templates (image + replicaset)
 │   └── ...
