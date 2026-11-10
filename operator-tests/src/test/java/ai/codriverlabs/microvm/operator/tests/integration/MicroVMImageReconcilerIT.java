@@ -59,7 +59,7 @@ class MicroVMImageReconcilerIT {
                 .thenReturn(CompletableFuture.failedFuture(
                         software.amazon.awssdk.services.lambdamicrovms.model.ResourceNotFoundException
                                 .builder().message("Image not found").build()));
-        when(mockImageClient.createImage(eq("hello-node"), anyString(), anyString(), anyString(), any()))
+        when(mockImageClient.createImage(eq("hello-node"), anyString(), anyString(), anyString(), any(), any()))
                 .thenReturn(CompletableFuture.completedFuture(createResp));
 
         var ctx = mockContext();
@@ -73,7 +73,31 @@ class MicroVMImageReconcilerIT {
         assertEquals("1.0", image.getStatus().getLatestVersion());
         assertEquals("PENDING", image.getStatus().getLatestVersionState());
         verify(mockImageClient).createImage(eq("hello-node"),
-                eq("s3://test-bucket/test/app.zip"), anyString(), anyString(), any());
+                eq("s3://test-bucket/test/app.zip"), anyString(), anyString(), any(), isNull());
+    }
+
+    @Test
+    @DisplayName("CREATE: reconciler forwards X86_64 architecture to the AWS client")
+    void create_forwardsX86Architecture() throws Exception {
+        var image = testImage("x86-node");
+        image.getSpec().setArchitecture("X86_64");
+        client.resource(image).create();
+
+        var createResp = CreateMicrovmImageResponse.builder()
+                .imageArn("arn:aws:lambda:us-east-1:123456789012:microvm-image:x86-node")
+                .imageVersion("1.0")
+                .state(MicrovmImageState.CREATING)
+                .build();
+        when(mockImageClient.getImage(anyString())).thenReturn(CompletableFuture.failedFuture(
+                software.amazon.awssdk.services.lambdamicrovms.model.ResourceNotFoundException
+                        .builder().message("Image not found").build()));
+        when(mockImageClient.createImage(eq("x86-node"), anyString(), anyString(), anyString(), any(), eq("X86_64")))
+                .thenReturn(CompletableFuture.completedFuture(createResp));
+
+        reconciler.reconcile(image, mockContext());
+
+        verify(mockImageClient).createImage(eq("x86-node"),
+                eq("s3://test-bucket/test/app.zip"), anyString(), anyString(), any(), eq("X86_64"));
     }
 
     @Test
@@ -107,7 +131,7 @@ class MicroVMImageReconcilerIT {
         assertTrue(result.isPatchStatus());
         assertEquals("CREATING", image.getStatus().getImageState());
         assertEquals("IN_PROGRESS", image.getStatus().getLatestVersionState());
-        verify(mockImageClient, never()).createImage(any(), any(), any(), any(), any());
+        verify(mockImageClient, never()).createImage(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -158,16 +182,40 @@ class MicroVMImageReconcilerIT {
                 .imageVersion("2.0")
                 .state(MicrovmImageState.UPDATING)
                 .build();
-        when(mockImageClient.updateImage(anyString(), anyString(), anyString(), anyString()))
+        when(mockImageClient.updateImage(anyString(), anyString(), anyString(), anyString(), any()))
                 .thenReturn(CompletableFuture.completedFuture(updateResp));
 
         reconciler.reconcile(image, mockContext());
 
         verify(mockImageClient).updateImage(
                 eq("arn:aws:lambda:us-east-1:123456789012:microvm-image:hello-node"),
-                eq("s3://test-bucket/test/app.zip"), anyString(), anyString());
+                eq("s3://test-bucket/test/app.zip"), anyString(), anyString(), isNull());
         assertEquals(2L, image.getStatus().getObservedGeneration());
         assertEquals("2.0", image.getStatus().getLatestVersion());
+    }
+
+    @Test
+    @DisplayName("UPDATE: reconciler forwards X86_64 architecture for a new image version")
+    void update_forwardsX86Architecture() throws Exception {
+        var image = testImage("hello-node");
+        image.getSpec().setArchitecture("X86_64");
+        image.getMetadata().setGeneration(2L);
+        var status = new ai.codriverlabs.microvm.operator.core.model.MicroVMImageStatus();
+        status.setImageArn("arn:aws:lambda:us-east-1:123456789012:microvm-image:hello-node");
+        status.setImageState("CREATED");
+        status.setLatestVersion("1.0");
+        status.setLatestVersionState("SUCCESSFUL");
+        status.setObservedGeneration(1L);
+        image.setStatus(status);
+
+        when(mockImageClient.updateImage(anyString(), anyString(), anyString(), anyString(), eq("X86_64")))
+                .thenReturn(CompletableFuture.completedFuture(UpdateMicrovmImageResponse.builder()
+                        .imageVersion("2.0").state(MicrovmImageState.UPDATING).build()));
+
+        reconciler.reconcile(image, mockContext());
+
+        verify(mockImageClient).updateImage(anyString(), eq("s3://test-bucket/test/app.zip"),
+                anyString(), anyString(), eq("X86_64"));
     }
 
     @Test
@@ -223,7 +271,7 @@ class MicroVMImageReconcilerIT {
         assertEquals("CREATED", image.getStatus().getImageState());
         assertEquals("1.0", image.getStatus().getActiveVersion());
         // createImage must NOT be called — we adopted, not created
-        verify(mockImageClient, never()).createImage(any(), any(), any(), any(), any());
+        verify(mockImageClient, never()).createImage(any(), any(), any(), any(), any(), any());
     }
 
     @Test

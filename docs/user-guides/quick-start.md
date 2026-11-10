@@ -90,6 +90,7 @@ spec:
     s3Key: microvm/app.zip
   baseImageArn: "arn:aws:lambda:us-east-1:aws:microvm-image:al2023-1"
   buildRoleArn: "arn:aws:iam::123456789012:role/KubeMicroVMBuildRole"
+  # Omit architecture to use AWS's ARM_64 default. See cpu-architecture.md to build X86_64.
 ```
 
 ```bash

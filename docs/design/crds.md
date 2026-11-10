@@ -194,8 +194,9 @@ spec:
   # Base image (Lambda-managed)
   baseImageArn: "arn:aws:lambda:us-east-1::microvm-base-image:al2023/x86_64/standard:latest"
 
-  # CPU architecture
-  architecture: ARM_64          # ARM_64 (default)
+  # CPU architecture. Omit for AWS default (ARM_64).
+  # The base image version and source artifact must support this architecture.
+  architecture: X86_64          # ARM_64 or X86_64
 
   # Compute sizing (baseline — peak is 4x automatically)
   memorySizeMB: 2048            # 512, 1024, 2048 (default), 4096, 8192

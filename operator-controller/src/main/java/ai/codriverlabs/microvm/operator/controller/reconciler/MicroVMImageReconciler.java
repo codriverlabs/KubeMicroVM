@@ -99,7 +99,7 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
                 try {
                     var response = imageClient.createImage(
                             name, s3Uri, spec.getBaseImageArn(), spec.getBuildRoleArn(),
-                            spec.getMemorySizeMiB())
+                            spec.getMemorySizeMiB(), spec.getArchitecture())
                             .get(TIMEOUT_S, TimeUnit.SECONDS);
 
                     status.setImageArn(response.imageArn());
@@ -127,7 +127,8 @@ public class MicroVMImageReconciler implements Reconciler<MicroVMImage>, Cleaner
                 String s3Uri = "s3://" + spec.getSource().getS3Bucket() + "/" + spec.getSource().getS3Key();
                 LOG.infof("Updating image %s (generation %d -> %d)", name, observed, gen);
                 var response = imageClient.updateImage(
-                        status.getImageArn(), s3Uri, spec.getBaseImageArn(), spec.getBuildRoleArn())
+                        status.getImageArn(), s3Uri, spec.getBaseImageArn(), spec.getBuildRoleArn(),
+                        spec.getArchitecture())
                         .get(TIMEOUT_S, TimeUnit.SECONDS);
                 status.setImageState(response.stateAsString());
                 status.setLatestVersion(response.imageVersion());

@@ -47,6 +47,7 @@
 2. Operator calls `create-microvm-image` with:
    - S3 bucket/key for source artifact
    - Base image ARN
+   - Optional CPU architecture (`ARM_64` or `X86_64`; omitted uses AWS's `ARM_64` default)
    - Build timeout
    - Ready hook configuration
 3. Operator stores `status.imageArn` from response
@@ -55,9 +56,9 @@
 
 ### Update Flow (new version)
 
-1. User updates `spec.source.s3Key` (new zip)
+1. User updates `spec.source.s3Key`, `spec.baseImageArn`, or `spec.architecture`
 2. Operator detects `observedGeneration != metadata.generation`
-3. Operator calls `create-microvm-image-version` (creates version N+1)
+3. Operator calls `update-microvm-image` to create version N+1 with the requested configuration
 4. Polls until SUCCESSFUL
 5. Activates new version, deactivates previous
 

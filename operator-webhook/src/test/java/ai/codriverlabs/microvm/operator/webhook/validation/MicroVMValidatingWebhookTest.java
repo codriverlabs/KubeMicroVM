@@ -109,6 +109,39 @@ class MicroVMValidatingWebhookTest {
         assertTrue(errors.isEmpty(), "Null memorySizeMiB should be accepted (AWS default)");
     }
 
+    // --- MicroVMImage architecture validation ---
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ARM_64", "X86_64"})
+    void validArchitectureAccepted(String architecture) {
+        MicroVMImageSpec spec = new MicroVMImageSpec();
+        spec.setArchitecture(architecture);
+
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateArchitecture(spec, errors);
+        assertTrue(errors.isEmpty(), "Architecture " + architecture + " should be accepted: " + errors);
+    }
+
+    @Test
+    void nullArchitectureAccepted() {
+        MicroVMImageSpec spec = new MicroVMImageSpec();
+
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateArchitecture(spec, errors);
+        assertTrue(errors.isEmpty(), "Null architecture should preserve the AWS ARM_64 default");
+    }
+
+    @Test
+    void invalidArchitectureRejected() {
+        MicroVMImageSpec spec = new MicroVMImageSpec();
+        spec.setArchitecture("AMD64");
+
+        List<String> errors = new java.util.ArrayList<>();
+        webhook.validateArchitecture(spec, errors);
+        assertEquals(1, errors.size());
+        assertTrue(errors.get(0).contains("spec.architecture must be one of"));
+    }
+
     @Test
     void memorySizeMiBImmutabilityEnforced() {
         MicroVMImageSpec oldSpec = new MicroVMImageSpec();

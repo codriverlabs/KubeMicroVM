@@ -13,6 +13,8 @@ public class MicroVMImageSpec {
     private String region;
     /** Baseline memory in MiB. Valid: 512, 1024, 2048, 4096, 8192. Omit for AWS default (2048). */
     private Integer memorySizeMiB;
+    /** Target CPU architecture. Valid: ARM_64 or X86_64. Omit for AWS default (ARM_64). */
+    private String architecture;
     /**
      * Optional: maximum number of image versions to retain.
      * After each successful version activation, versions beyond this count
@@ -41,6 +43,9 @@ public class MicroVMImageSpec {
 
     public Integer getMemorySizeMiB() { return memorySizeMiB; }
     public void setMemorySizeMiB(Integer memorySizeMiB) { this.memorySizeMiB = memorySizeMiB; }
+
+    public String getArchitecture() { return architecture; }
+    public void setArchitecture(String architecture) { this.architecture = architecture; }
 
     public Integer getMaxVersionsToKeep() { return maxVersionsToKeep; }
     public void setMaxVersionsToKeep(Integer maxVersionsToKeep) { this.maxVersionsToKeep = maxVersionsToKeep; }

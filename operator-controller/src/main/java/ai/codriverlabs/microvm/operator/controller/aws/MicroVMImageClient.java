@@ -33,12 +33,18 @@ public class MicroVMImageClient {
 
     public CompletableFuture<CreateMicrovmImageResponse> createImage(
             String name, String s3Uri, String baseImageArn, String buildRoleArn) {
-        return createImage(name, s3Uri, baseImageArn, buildRoleArn, null);
+        return createImage(name, s3Uri, baseImageArn, buildRoleArn, null, null);
     }
 
     public CompletableFuture<CreateMicrovmImageResponse> createImage(
             String name, String s3Uri, String baseImageArn, String buildRoleArn,
             Integer memorySizeMiB) {
+        return createImage(name, s3Uri, baseImageArn, buildRoleArn, memorySizeMiB, null);
+    }
+
+    public CompletableFuture<CreateMicrovmImageResponse> createImage(
+            String name, String s3Uri, String baseImageArn, String buildRoleArn,
+            Integer memorySizeMiB, String architecture) {
         var builder = CreateMicrovmImageRequest.builder()
                 .name(name)
                 .codeArtifact(CodeArtifact.fromUri(s3Uri))
@@ -50,17 +56,31 @@ public class MicroVMImageClient {
                             .minimumMemoryInMiB(memorySizeMiB)
                             .build()));
         }
+        if (architecture != null) {
+            builder.cpuConfigurations(List.of(
+                    CpuConfiguration.builder().architecture(architecture).build()));
+        }
         return sdk.createMicrovmImage(builder.build());
     }
 
     public CompletableFuture<UpdateMicrovmImageResponse> updateImage(
             String imageIdentifier, String s3Uri, String baseImageArn, String buildRoleArn) {
-        return sdk.updateMicrovmImage(UpdateMicrovmImageRequest.builder()
+        return updateImage(imageIdentifier, s3Uri, baseImageArn, buildRoleArn, null);
+    }
+
+    public CompletableFuture<UpdateMicrovmImageResponse> updateImage(
+            String imageIdentifier, String s3Uri, String baseImageArn, String buildRoleArn,
+            String architecture) {
+        var builder = UpdateMicrovmImageRequest.builder()
                 .imageIdentifier(imageIdentifier)
                 .codeArtifact(CodeArtifact.fromUri(s3Uri))
                 .baseImageArn(baseImageArn)
-                .buildRoleArn(buildRoleArn)
-                .build());
+                .buildRoleArn(buildRoleArn);
+        if (architecture != null) {
+            builder.cpuConfigurations(List.of(
+                    CpuConfiguration.builder().architecture(architecture).build()));
+        }
+        return sdk.updateMicrovmImage(builder.build());
     }
 
     public CompletableFuture<GetMicrovmImageResponse> getImage(String imageIdentifier) {
