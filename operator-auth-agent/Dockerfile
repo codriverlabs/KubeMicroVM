@@ -1,4 +1,4 @@
-FROM public.ecr.aws/amazoncorretto/amazoncorretto:25-al2023-headless
+FROM public.ecr.aws/amazoncorretto/amazoncorretto:27-al2023-headless
 WORKDIR /app
 COPY target/quarkus-app/lib/ /app/lib/
 COPY target/quarkus-app/*.jar /app/
